@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 🎨 Styles globaux personnalisés */
+@layer base {
+  body {
+    @apply bg-neutral-50 text-neutral-900 font-sans antialiased;
+  }
+  
+  /* Scrollbar personnalisée pour chat et tableaux */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-neutral-100 rounded;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-neutral-300 rounded hover:bg-neutral-400 transition-colors;
+  }
+}
+
+@layer components {
+  /* 🎯 Composants réutilisables avec Tailwind */
+  
+  /* Badge de statut avec couleur dynamique */
+  .status-badge {
+    @apply px-2.5 py-0.5 rounded-full text-xs font-medium inline-flex items-center gap-1;
+  }
+  .status-normal { @apply bg-primary-50 text-primary-500; }
+  .status-pause { @apply bg-warning-50 text-warning-500; }
+  .status-delete { @apply bg-danger-50 text-danger-500; }
+  
+  /* Carte de classe responsive */
+  .class-card {
+    @apply bg-white rounded-lg shadow-sm border border-neutral-200 p-4 hover:shadow-md transition-shadow;
+  }
+  
+  /* Bouton d'action principal */
+  .btn-primary {
+    @apply bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  /* Input de formulaire stylisé */
+  .form-input {
+    @apply w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all;
+  }
+}
+
+/* 🎥 Styles spécifiques Jitsi / salle de classe */
+.jitsi-container {
+  @apply w-full h-full min-h-[500px] rounded-lg overflow-hidden;
+}
+
+/* Safe area pour mobile (iPhone notch) */
+.safe-area-pb {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Empêche le contenu d'être caché par la bottom nav sur mobile */
+@media (max-width: 768px) {
+  main {
+    padding-bottom: 80px !important;
+  }
+}
