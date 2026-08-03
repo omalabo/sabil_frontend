@@ -42,8 +42,8 @@ import { AbsenceSignaler, SeanceManquee } from '../../types';
 import { PlanningItem, User } from '../../types';
 import SubmitFactureModal from '../../components/shared/Submitfacturemodal';
 // Changer l'import
-import { WeekViewWithAdd } from '../../components/shared/Addseanceoverlay';
-import type { UpdateSeancePayload } from '../../components/shared/Addseanceoverlay';
+import { WeekViewWithAdd } from '../../components/shared/AddSeanceOverlay';
+import type { UpdateSeancePayload } from '../../components/shared/AddSeanceOverlay';
 // ─────────────────────────────────────────────────────────────
 // CONSTANTS
 // ─────────────────────────────────────────────────────────────
