@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useLocation, useNavigate, Link } from 'react-router-dom'
 import { useResetPasswordMutation } from '../../store/apiSlice'
-
+import logo from '../../assets/logo.png'
 /**
  * 🔓 Page "Réinitialiser le mot de passe"
  *
@@ -79,13 +79,9 @@ export default function ResetPassword() {
 
         {/* 🏷️ En-tête */}
         <div className="text-center mb-6">
-          <div className="text-4xl mb-2">🔐</div>
-          <h1 className="text-2xl font-bold text-neutral-900">
-            Réinitialiser le mot de passe
-          </h1>
-          <p className="text-neutral-600 mt-2">
-            Entrez le code reçu par email et votre nouveau mot de passe
-          </p>
+          <img src={logo} alt="Sabil Al Ilm" className="h-24 md:h-28 mx-auto mb-3 object-contain mix-blend-multiply" />
+          <h1 className="text-2xl font-bold text-neutral-900">Réinitialiser le mot de passe</h1>
+          <p className="text-neutral-600 mt-2">Entrez le code reçu par email et votre nouveau mot de passe</p>
         </div>
 
         {/* 📦 Formulaire */}
