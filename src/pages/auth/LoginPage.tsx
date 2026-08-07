@@ -4,6 +4,7 @@ import { useAppDispatch, useAppSelector } from '../../store/hooks'
 import { selectAuth, loginSuccess, loginFailure, setLoading } from '../../store/authSlice'
 import { useLoginMutation } from '../../store/apiSlice'
 import { ApiError } from '../../types'
+import logo from '../../assets/logo.png'
 
 /**
  * 🔐 Page de connexion
@@ -109,8 +110,11 @@ export default function LoginPage() {
         
         {/* 🏷️ Logo / En-tête */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-primary-700">Sabil Al Ilm</h1>
-          <p className="text-neutral-600 mt-2">Plateforme éducative</p>
+          <img
+            src={logo}
+            alt="Sabil Al Ilm – Le chemin de la Science"
+            className="h-32 md:h-40 mx-auto object-contain mix-blend-multiply"
+          />
         </div>
 
         {/* 📦 Carte de connexion */}
