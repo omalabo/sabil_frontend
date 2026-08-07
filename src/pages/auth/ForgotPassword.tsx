@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useForgotPasswordMutation } from '../../store/apiSlice'
-
+import logo from '../../assets/logo.png'
 /**
  * 📧 Page "Mot de passe oublié"
  * - Utilisateur saisit son email
@@ -43,13 +43,9 @@ export default function ForgotPassword() {
 
         {/* 🏷️ En-tête */}
         <div className="text-center mb-6">
-          <div className="text-4xl mb-2">🔑</div>
-          <h1 className="text-2xl font-bold text-neutral-900">
-            Mot de passe oublié
-          </h1>
-          <p className="text-neutral-600 mt-2">
-            Saisissez votre email, nous vous envoyons un code de vérification
-          </p>
+          <img src={logo} alt="Sabil Al Ilm" className="h-24 md:h-28 mx-auto mb-3 object-contain mix-blend-multiply" />
+          <h1 className="text-2xl font-bold text-neutral-900">Mot de passe oublié</h1>
+          <p className="text-neutral-600 mt-2">Saisissez votre email, nous vous envoyons un code de vérification</p>
         </div>
 
         {/* 📦 Formulaire */}
