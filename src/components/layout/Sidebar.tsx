@@ -28,6 +28,13 @@ const NOTIF_MARK_READ_ON_NAV: Record<string, string[]> = {
   // ⚠️ volontairement PAS '/eleve/classes' ni '/professeur/cours' :
   // ces notifs sont marquées lues plus finement dans ClasseDetail
 }
+interface MenuItem {
+  to: string
+  label: string
+  icon: string
+  mobileLabel: string
+  isLogout?: boolean
+}
 
 export default function Sidebar({ userRole, isActive = true }: SidebarProps) {
   const location = useLocation()
@@ -82,6 +89,13 @@ export default function Sidebar({ userRole, isActive = true }: SidebarProps) {
   `
 
   const getMenuItems = () => {
+    const logoutItem: MenuItem = {
+      to: '#logout',
+      label: 'Déconnexion',
+      icon: '🚪',
+      mobileLabel: 'Sortir',
+      isLogout: true,
+    }
     switch (userRole) {
       case 'eleve': {
         const fullMenu = [
@@ -90,6 +104,7 @@ export default function Sidebar({ userRole, isActive = true }: SidebarProps) {
           { to: '/eleve/diplomes', label: ' Mes diplômes', icon: '🎓', mobileLabel: 'Diplômes' },
           { to: '/eleve/chat-admin', label: ' Admin', icon: '💬', mobileLabel: 'Admin' },
           { to: '/eleve/factures', label: ' Mes Factures', icon: '💰', mobileLabel: 'Factures' },
+          logoutItem,
         ]
 
         // 🔒 Élève désactivé : accès restreint uniquement à la page Factures
@@ -104,6 +119,7 @@ export default function Sidebar({ userRole, isActive = true }: SidebarProps) {
           { to: '/professeur/planning', label: ' Planning', icon: '📅', mobileLabel: 'Planning' },
           { to: '/professeur/cours', label: 'Mes cours', icon: '🎓', mobileLabel: 'Mes cours' },
           { to: '/professeur/diplome', label: 'Diplomes', icon: '📚', mobileLabel: 'Diplomes' },
+          logoutItem,
         ]
       case 'admin':
         return [
@@ -113,6 +129,7 @@ export default function Sidebar({ userRole, isActive = true }: SidebarProps) {
           { to: '/admin/messages-prives', label: 'Messagerie etudiants', icon: '👨‍🏫', mobileLabel: 'Messagerie etudiants' },
           { to: '/admin/taches', label: ' Taches', icon: '📊', mobileLabel: 'Taches' },
           { to: '/admin/eleve-factures', label: 'Rappel Facture', icon: '📊', mobileLabel: 'Rappel Facture' },
+          logoutItem,
         ]
       case 'direction':
         return [
@@ -124,6 +141,7 @@ export default function Sidebar({ userRole, isActive = true }: SidebarProps) {
           { to: '/admin/messages-admins', label: 'admins', icon: '💬', mobileLabel: 'admins' },
           { to: '/direction/taches', label: ' Taches', icon: '📊', mobileLabel: 'Taches' },
           { to: '/direction/annonces', label: ' Annonces', icon: '🚩', mobileLabel: 'Annonces' },
+          logoutItem,
         ]
       default:
         return []
@@ -141,7 +159,15 @@ export default function Sidebar({ userRole, isActive = true }: SidebarProps) {
             <NavLink
               key={item.to}
               to={item.to}
-              onClick={() => handleMenuClick(item.to)}
+              onClick={(e) => {
+                if (item.isLogout) {
+                  e.preventDefault()
+                  localStorage.removeItem('sabil_token')
+                  window.location.href = '/login'
+                } else {
+                  handleMenuClick(item.to)
+                }
+              }}
               className={({ isActive: linkActive }) => getMobileLinkClasses(linkActive)}
             >
               <span className="relative text-xl">
@@ -177,7 +203,15 @@ export default function Sidebar({ userRole, isActive = true }: SidebarProps) {
             <NavLink
               key={item.to}
               to={item.to}
-              onClick={() => handleMenuClick(item.to)}
+              onClick={(e) => {
+                if (item.isLogout) {
+                  e.preventDefault()
+                  localStorage.removeItem('sabil_token')
+                  window.location.href = '/login'
+                } else {
+                  handleMenuClick(item.to)
+                }
+              }}
               className={({ isActive: linkActive }) => getLinkClasses(linkActive)}
             >
               <span className="relative text-lg">
