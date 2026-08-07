@@ -904,7 +904,7 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
     const token = localStorage.getItem('sabil_token')
     if (!token) { setWsStatus('disconnected'); return }
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const wsUrl = `${wsProtocol}//57.131.134.241:8001/ws/tableau/${classeId}/${seanceId}/?token=${token}`
+    const wsUrl = `${wsProtocol}//api.sabil-al-ilm.org/ws/tableau/${classeId}/${seanceId}/?token=${token}`
     const connect = () => {
       const ws = new WebSocket(wsUrl); wsRef.current = ws; setWsStatus('connecting')
       ws.onopen = () => { setWsStatus('connected'); ws.send(JSON.stringify({ type: 'request_state' })) }
