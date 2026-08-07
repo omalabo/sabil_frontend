@@ -5,7 +5,7 @@ COPY package*.json ./
 RUN npm install
 COPY . .
 # On s'assure que l'URL de l'API est bien celle de la prod pendant le build
-ENV VITE_API_BASE_URL=http://57.131.134.241:8001/api
+ENV VITE_API_BASE_URL=https://api.sabil-al-ilm.org/api
 RUN npm run build
 
 # Étape 2 : Servir les fichiers avec Nginx (ultra rapide et léger)
