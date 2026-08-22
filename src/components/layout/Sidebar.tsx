@@ -155,39 +155,44 @@ export default function Sidebar({ userRole, isActive = true }: SidebarProps) {
       {/* 📱 Bottom Navigation - Mobile/Tablette uniquement */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 px-2 py-1 z-50 safe-area-pb">
         <div className="flex items-center justify-around">
-          {menuItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              onClick={(e) => {
-                if (item.isLogout) {
-                  e.preventDefault()
-                  localStorage.removeItem('sabil_token')
-                  window.location.href = '/login'
-                } else {
-                  handleMenuClick(item.to)
-                }
-              }}
-              className={({ isActive: linkActive }) => getMobileLinkClasses(linkActive)}
-            >
-              <span className="relative text-xl">
-                {item.icon}
-                {hasNotifBadge(item.to) && (
-                  <span className="absolute -top-0.5 -right-1.5 w-2.5 h-2.5 rounded-full bg-orange-500 animate-pulse ring-2 ring-white" />
-                )}
-              </span>
-              <span className="text-[10px] font-medium">{item.mobileLabel}</span>
-            </NavLink>
-          ))}
+          {/* 🚫 On masque le Planning en mobile (il reste accessible uniquement via la sidebar PC) */}
+          {menuItems
+            .filter((item) => !item.to.includes('planning'))
+            .map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                onClick={(e) => {
+                  if (item.isLogout) {
+                    e.preventDefault()
+                    localStorage.removeItem('sabil_token')
+                    window.location.href = '/login'
+                  } else {
+                    handleMenuClick(item.to)
+                  }
+                }}
+                className={({ isActive: linkActive }) => getMobileLinkClasses(linkActive)}
+              >
+                <span className="relative text-xl">
+                  {item.icon}
+                  {hasNotifBadge(item.to) && (
+                    <span className="absolute -top-0.5 -right-1.5 w-2.5 h-2.5 rounded-full bg-orange-500 animate-pulse ring-2 ring-white" />
+                  )}
+                </span>
+                <span className="text-[10px] font-medium">{item.mobileLabel}</span>
+              </NavLink>
+            ))}
         </div>
       </nav>
-
       {/* 💻 Sidebar Desktop - Cachée sur mobile */}
       <aside className="hidden md:flex md:flex-col w-64 bg-white border-r border-neutral-200 h-screen sticky top-0">
         {/* Logo */}
-        <div className="p-4 border-b border-neutral-200">
-          <h1 className="text-xl font-bold text-primary-700">Sabil Al Ilm</h1>
-          <p className="text-xs text-neutral-500 mt-1">Plateforme éducative</p>
+        <div className="p-4 border-b border-neutral-200 flex items-center justify-center">
+          <img 
+            src="/logo.jpeg"  // ✅ Pas besoin d'import
+            alt="Sabil Al Ilm - Le chemin de la Science" 
+            className="h-32 w-auto object-contain"
+          />
         </div>
 
         {/* ⚠️ Bandeau si compte désactivé */}
