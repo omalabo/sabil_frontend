@@ -54,7 +54,63 @@ interface EleveRow {
 }
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
-const SALLE_STYLES = `@keyframes salle-pulse-ring{0%{transform:scale(1);opacity:.6}70%{transform:scale(1.35);opacity:0}100%{transform:scale(1.35);opacity:0}} @keyframes salle-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}} @keyframes panel-slide-in{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}} @keyframes content-fade-up{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}} @keyframes seance-glow{0%,100%{box-shadow:0 0 0 0 rgba(99,102,241,.25)}50%{box-shadow:0 0 0 8px rgba(99,102,241,0)}} .salle-join-btn{position:relative;display:inline-flex;align-items:center;gap:10px;padding:14px 36px;font-size:15px;font-weight:600;letter-spacing:.3px;color:#fff;background:linear-gradient(135deg,#1a73e8,#1557b0);border:none;border-radius:50px;cursor:pointer;box-shadow:0 4px 20px rgba(26,115,232,.45);transition:transform .15s,box-shadow .15s,opacity .15s} .salle-join-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 28px rgba(26,115,232,.55)} .salle-join-btn:disabled{opacity:.55;cursor:not-allowed} .salle-join-btn .spinner{width:18px;height:18px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite} @keyframes spin{to{transform:rotate(360deg)}} .salle-info-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:50px;font-size:13px;color:rgba(255,255,255,.7)} .salle-avatar-ring{position:absolute;inset:-6px;border-radius:50%;background:rgba(26,115,232,.35);animation:salle-pulse-ring 2.4s ease-out infinite} .panel-slide-in{animation:panel-slide-in .25s ease-out} .content-fade-up{animation:content-fade-up .3s ease-out} .seance-active-glow{animation:seance-glow 2s ease-in-out infinite} @keyframes todayPopupIn{from{opacity:0;transform:translateY(-6px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}} @keyframes tab-blink{0%,100%{opacity:1}50%{opacity:.3}} @keyframes slideInRight {from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; }} @keyframes facture-ping{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.3)}} @media (max-width: 767px) {.mobile-panel-toggle { display: flex !important; align-items: center; justify-content: center; } .main-content { margin-left: 0 !important; }} `
+const SALLE_STYLES = `@keyframes salle-pulse-ring{0%{transform:scale(1);opacity:.6}70%{transform:scale(1.35);opacity:0}100%{transform:scale(1.35);opacity:0}} @keyframes salle-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}} @keyframes panel-slide-in{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}} @keyframes content-fade-up{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}} @keyframes seance-glow{0%,100%{box-shadow:0 0 0 0 rgba(99,102,241,.25)}50%{box-shadow:0 0 0 8px rgba(99,102,241,0)}} .salle-join-btn{position:relative;display:inline-flex;align-items:center;gap:10px;padding:14px 36px;font-size:15px;font-weight:600;letter-spacing:.3px;color:#fff;background:linear-gradient(135deg,#1a73e8,#1557b0);border:none;border-radius:50px;cursor:pointer;box-shadow:0 4px 20px rgba(26,115,232,.45);transition:transform .15s,box-shadow .15s,opacity .15s} .salle-join-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 28px rgba(26,115,232,.55)} .salle-join-btn:disabled{opacity:.55;cursor:not-allowed} .salle-join-btn .spinner{width:18px;height:18px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite} @keyframes spin{to{transform:rotate(360deg)}} .salle-info-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:50px;font-size:13px;color:rgba(255,255,255,.7)} .salle-avatar-ring{position:absolute;inset:-6px;border-radius:50%;background:rgba(26,115,232,.35);animation:salle-pulse-ring 2.4s ease-out infinite} .panel-slide-in{animation:panel-slide-in .25s ease-out} .content-fade-up{animation:content-fade-up .3s ease-out} .seance-active-glow{animation:seance-glow 2s ease-in-out infinite} @keyframes todayPopupIn{from{opacity:0;transform:translateY(-6px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}} @keyframes tab-blink{0%,100%{opacity:1}50%{opacity:.3}} @keyframes slideInRight {from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; }} @keyframes facture-ping{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.3)}} @media (max-width: 767px) {.mobile-panel-toggle { display: flex !important; align-items: center; justify-content: center; } .main-content { margin-left: 0 !important; }} .time24-item:hover{background:rgba(255,255,255,.12)} 
+.chat-icon-btn {
+display: flex;
+align-items: center;
+justify-content: center;
+transition: transform .18s cubic-bezier(.34,1.56,.64,1), background .18s ease, color .18s ease;
+}
+.chat-icon-btn:hover {
+transform: scale(1.08);
+}
+.chat-icon-btn:active {
+transform: scale(.92);
+}
+.chat-icon-btn svg {
+transition: transform .18s ease;
+}
+.chat-attach-btn:hover svg {
+transform: rotate(-10deg) scale(1.08);
+}
+.chat-attach-active svg {
+transform: rotate(-10deg) scale(1.05);
+}
+.chat-mic-recording {
+position: relative;
+animation: chat-mic-pulse 1.4s ease-in-out infinite;
+}
+.chat-mic-recording:before {
+content: '';
+position: absolute;
+inset: -5px;
+border-radius: 50%;
+background: rgba(239,68,68,.18);
+animation: chat-mic-ring 1.4s ease-out infinite;
+pointer-events: none;
+}
+@keyframes chat-mic-pulse {
+0%, 100% {
+transform: scale(1);
+}
+50% {
+transform: scale(1.05);
+}
+}
+@keyframes chat-mic-ring {
+0% {
+transform: scale(.85);
+opacity: .8;
+}
+70% {
+transform: scale(1.35);
+opacity: 0;
+}
+100% {
+transform: scale(1.35);
+opacity: 0;
+}
+} `
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const DAYS_FR = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi']
@@ -173,6 +229,213 @@ function ElevesModal({ seance, onClose, onSaved }: { seance: Seance; onClose: ()
     </div>
   )
 }
+// ─── Sélecteur d'heure 24h garanti (identique au natif) ─────
+function Time24Picker({
+  value,
+  onChange,
+  style,
+  className
+}: {
+  value: string
+  onChange: (v: string) => void
+  style?: React.CSSProperties
+  className?: string
+}) {
+  const [open, setOpen] = useState(false)
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
+  const wrapRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const parts = value ? value.split(':') : ['', '']
+  const currentH = parts[0] ? parts[0].padStart(2, '0') : ''
+  const currentM = parts[1] ? parts[1].padStart(2, '0') : ''
+  const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'))
+  const minutes = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'))
+
+  const updatePos = useCallback(() => {
+    const rect = wrapRef.current?.getBoundingClientRect()
+    if (!rect) return
+    const dropdownHeight = 230
+    let top = rect.bottom + 4
+    if (top + dropdownHeight > window.innerHeight) {
+      top = Math.max(8, rect.top - dropdownHeight - 4)
+    }
+    setPos({ top, left: rect.left })
+  }, [])
+
+  useEffect(() => {
+    if (!open) return
+    updatePos()
+    const onClickOutside = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    const onScrollOrResize = () => updatePos()
+    document.addEventListener('mousedown', onClickOutside)
+    window.addEventListener('scroll', onScrollOrResize, true)
+    window.addEventListener('resize', onScrollOrResize)
+    return () => {
+      document.removeEventListener('mousedown', onClickOutside)
+      window.removeEventListener('scroll', onScrollOrResize, true)
+      window.removeEventListener('resize', onScrollOrResize)
+    }
+  }, [open, updatePos])
+
+  const formatTyped = (raw: string) => {
+    let digits = raw.replace(/\D/g, '').slice(0, 4)
+    if (!digits) return ''
+    if (digits.length === 1 && Number(digits) > 2) {
+      digits = `0${digits}`
+    }
+    if (digits.length <= 2) return digits
+    return `${digits.slice(0, 2)}:${digits.slice(2)}`
+  }
+
+  const normalizeValue = () => {
+    const v = value.trim()
+    if (!v) { onChange(''); return }
+    let h = 0
+    let m = 0
+    if (v.includes(':')) {
+      const [hh, mm] = v.split(':')
+      h = parseInt(hh, 10)
+      m = parseInt(mm, 10)
+    } else {
+      const digits = v.replace(/\D/g, '')
+      if (digits.length <= 2) {
+        h = parseInt(digits, 10)
+        m = 0
+      } else {
+        h = parseInt(digits.slice(0, 2), 10)
+        m = parseInt(digits.slice(2, 4), 10)
+      }
+    }
+    if (isNaN(h)) h = 0
+    if (isNaN(m)) m = 0
+    h = Math.min(23, Math.max(0, h))
+    m = Math.min(59, Math.max(0, m))
+    onChange(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`)
+  }
+
+  const chooseHour = (hh: string) => {
+    onChange(`${hh}:${currentM || '00'}`)
+    inputRef.current?.focus()
+  }
+  const chooseMinute = (mm: string) => {
+    onChange(`${currentH || '00'}:${mm}`)
+    inputRef.current?.focus()
+  }
+
+  const listStyle: React.CSSProperties = {
+    flex: 1,
+    maxHeight: 190,
+    overflowY: 'auto',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 2,
+    minWidth: 52
+  }
+  const itemBase: React.CSSProperties = {
+    padding: '4px 8px',
+    borderRadius: 6,
+    fontSize: 12,
+    textAlign: 'center',
+    cursor: 'pointer',
+    userSelect: 'none'
+  }
+  const inputStyle: React.CSSProperties = {
+    padding: '3px 6px',
+    borderRadius: 6,
+    fontSize: 10,
+    border: '1px solid rgba(255,255,255,.2)',
+    background: 'rgba(255,255,255,.1)',
+    color: '#fff',
+    outline: 'none',
+    width: 70,
+    textAlign: 'center',
+    cursor: 'text',
+    colorScheme: 'dark' as any
+  }
+
+  return (
+    <div ref={wrapRef} style={{ position: 'relative', display: 'inline-block' }}>
+      <input
+        ref={inputRef}
+        type="text"
+        inputMode="numeric"
+        maxLength={5}
+        placeholder="HH:MM"
+        value={value}
+        onChange={e => onChange(formatTyped(e.target.value))}
+        onBlur={normalizeValue}
+        onClick={() => setOpen(true)}
+        onKeyDown={e => {
+          if (e.key === 'Escape') setOpen(false)
+          if (e.key === 'Enter') {
+            normalizeValue()
+            setOpen(false)
+          }
+        }}
+        className={className}
+        style={className ? { cursor: 'text', colorScheme: 'dark' as any, ...style } : { ...inputStyle, ...style }}
+      />
+      {open && pos && (
+        <div
+          onMouseDown={e => e.preventDefault()}
+          style={{
+            position: 'fixed',
+            top: pos.top,
+            left: pos.left,
+            zIndex: 120,
+            display: 'flex',
+            gap: 8,
+            padding: 8,
+            background: '#1e1b4b',
+            border: '1px solid rgba(139,92,246,.35)',
+            borderRadius: 12,
+            boxShadow: '0 12px 32px rgba(0,0,0,.55)'
+          }}
+        >
+          <div style={listStyle}>
+            {hours.map(hh => (
+              <div
+                key={hh}
+                className="time24-item"
+                onMouseDown={e => e.preventDefault()}
+                onClick={() => chooseHour(hh)}
+                style={{
+                  ...itemBase,
+                  background: hh === currentH ? 'rgba(99,102,241,.6)' : undefined,
+                  color: hh === currentH ? '#fff' : 'rgba(255,255,255,.7)'
+                }}
+              >
+                {hh}
+              </div>
+            ))}
+          </div>
+          <div style={listStyle}>
+            {minutes.map(mm => (
+              <div
+                key={mm}
+                className="time24-item"
+                onMouseDown={e => e.preventDefault()}
+                onClick={() => chooseMinute(mm)}
+                style={{
+                  ...itemBase,
+                  background: mm === currentM ? 'rgba(99,102,241,.6)' : undefined,
+                  color: mm === currentM ? '#fff' : 'rgba(255,255,255,.7)'
+                }}
+              >
+                {mm}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 
 // ─── SeanceProfRow ───────────────────────────────────────────────────────────
 function SeanceProfRow({ seance, openForm = false, onFactureNeeded, dateOverride, heureInit, tempsInit }: {
@@ -242,7 +505,11 @@ function SeanceProfRow({ seance, openForm = false, onFactureNeeded, dateOverride
               <div className="flex flex-wrap gap-2">
                 <div className="flex flex-col gap-1">
                   <label className="text-[10px] font-semibold text-white/50 uppercase tracking-wider">Heure début</label>
-                  <input type="time" value={heureConnexion} onChange={e => setHeureConnexion(e.target.value)} className="px-2 py-1 text-xs bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-indigo-400 w-28" />
+                  <Time24Picker
+                    value={heureConnexion}
+                    onChange={setHeureConnexion}
+                    style={{ width: 112, padding: '4px 8px', fontSize: 12 }}
+                  />
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-[10px] font-semibold text-white/50 uppercase tracking-wider">Durée (min)</label>
@@ -903,8 +1170,7 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
   useEffect(() => {
     const token = localStorage.getItem('sabil_token')
     if (!token) { setWsStatus('disconnected'); return }
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const wsUrl = `${wsProtocol}//api.sabil-al-ilm.org/ws/tableau/${classeId}/${seanceId}/?token=${token}`
+    const wsUrl = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://localhost:8000/ws/tableau/${classeId}/${seanceId}/?token=${token}`
     const connect = () => {
       const ws = new WebSocket(wsUrl); wsRef.current = ws; setWsStatus('connecting')
       ws.onopen = () => { setWsStatus('connected'); ws.send(JSON.stringify({ type: 'request_state' })) }
@@ -925,7 +1191,7 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
   const handleRemoteEvent = useCallback((data: any) => {
     const canvas = canvasRef.current; const ctx = ctxRef.current; if (!canvas || !ctx) return
     if (data.type === 'draw') { ctx.globalCompositeOperation = data.tool === 'eraser' ? 'destination-out' : 'source-over'; ctx.strokeStyle = data.tool === 'highlighter' ? hexToRgba(data.color, 0.35) : data.color; ctx.lineWidth = data.lineWidth; ctx.globalAlpha = data.tool === 'highlighter' ? 0.35 : 1; ctx.beginPath(); ctx.moveTo(data.from.x, data.from.y); ctx.lineTo(data.to.x, data.to.y); ctx.stroke(); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1 }
-    else if (data.type === 'text') { ctx.font = `${data.fontSize || 20}px 'Amiri',serif`; ctx.fillStyle = data.color; ctx.direction = 'rtl'; ctx.fillText(data.text, data.x, data.y); ctx.direction = 'ltr' }
+    else if (data.type === 'text') { ctx.font = `${data.fontSize || 40}px 'Amiri',serif`; ctx.fillStyle = data.color; ctx.direction = 'rtl'; ctx.fillText(data.text, data.x, data.y); ctx.direction = 'ltr' }
     else if (data.type === 'clear') { fillBg(ctx, canvas, bgColor) }
     else if (data.type === 'cursor' && role === 'eleve') { setRemoteCursor({ x: data.x, y: data.y }) }
     else if (data.type === 'canvas_state') { const img = new Image(); img.onload = () => ctx.drawImage(img, 0, 0); img.src = data.dataUrl }
@@ -970,9 +1236,9 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
   const handleArabicConfirm = () => {
     if (!arabicText.trim() || !textPos) return
     const canvas = canvasRef.current; const ctx = ctxRef.current; if (!canvas || !ctx) return
-    const fontSize = 20; ctx.font = `${fontSize}px 'Amiri',serif`; ctx.fillStyle = color; ctx.direction = 'rtl'; ctx.fillText(arabicText, textPos.x, textPos.y); ctx.direction = 'ltr'
+    const fontSize = 80; ctx.font = `${fontSize}px 'Amiri',serif`; ctx.fillStyle = color; ctx.direction = 'rtl'; ctx.fillText(arabicText, textPos.x, textPos.y); ctx.direction = 'ltr'
     sendWs({ type: 'text', text: arabicText, x: textPos.x, y: textPos.y, fontSize, color }); setShowArabicKeyboard(false); setArabicText(''); setTextPos(null)
-  }
+    }
   return (
     <div className="flex flex-col h-full bg-neutral-50">
       <div className="flex items-center gap-2 px-3 py-2 bg-white border-b border-neutral-200 flex-wrap">
@@ -1028,6 +1294,56 @@ function MsgTicks({ msg, userId }: { msg: Message; userId: string }) {
   return <span style={{ color: '#9ca3af', fontSize: 13 }}>✓</span>
 }
 
+
+// ─── Icônes chat ───────────────────────────────────────────
+function ChatAttachIcon() {
+return (
+ <svg
+width="20"
+height="20"
+viewBox="0 0 24 24"
+fill="none"
+stroke="currentColor"
+strokeWidth="1.9"
+strokeLinecap="round"
+strokeLinejoin="round"
+ >
+ <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+ </svg>
+)
+}
+function ChatMicIcon() {
+return (
+ <svg
+width="20"
+height="20"
+viewBox="0 0 24 24"
+fill="none"
+stroke="currentColor"
+strokeWidth="1.9"
+strokeLinecap="round"
+strokeLinejoin="round"
+ >
+ <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+ <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+ <line x1="12" y1="19" x2="12" y2="23" />
+ <line x1="8" y1="23" x2="16" y2="23" />
+ </svg>
+)
+}
+function ChatStopIcon() {
+return (
+ <svg
+width="18"
+height="18"
+viewBox="0 0 24 24"
+fill="currentColor"
+ >
+ <rect x="6" y="6" width="12" height="12" rx="3" />
+ </svg>
+)
+}
+
 // ─── Composant principal ──────────────────────────────────────────────────────
 export default function ClasseDetail({ role }: ClasseDetailProps) {
   const { id } = useParams<{ id: string }>()
@@ -1048,7 +1364,7 @@ export default function ClasseDetail({ role }: ClasseDetailProps) {
   const [joiningSalle, setJoiningSalle] = useState(false)
   const [editingSeanceId, setEditingSeanceId] = useState<string | null>(null)
   const [editHeure, setEditHeure] = useState('')
-  const [editDuree, setEditDuree] = useState('')
+  const [editHeureFin, setEditHeureFin] = useState('')
   const [savingSeance, setSavingSeance] = useState(false)
   const [profFormOpenId, setProfFormOpenId] = useState<string | null>(null)
   const [showTodayPopup, setShowTodayPopup] = useState(false)
@@ -1057,6 +1373,8 @@ export default function ClasseDetail({ role }: ClasseDetailProps) {
   const [showAttachMenu, setShowAttachMenu] = useState(false)
   const photoInputRef = useRef<HTMLInputElement>(null)
   const docInputRef = useRef<HTMLInputElement>(null)
+  const chatScrollRef = useRef<HTMLDivElement>(null)
+  const shouldAutoScroll = useRef(true)
 
   // ═══════════════════════════════════════════════════════════════
   // 🆕 NOUVEAU : États pour les fichiers et l'enregistrement vocal
@@ -1361,14 +1679,36 @@ export default function ClasseDetail({ role }: ClasseDetailProps) {
   }, [activeClassId, activeTab])
 
   const lastMsgIdRef = useRef<string | null>(null)
-  useEffect(() => {
-    if (activeTab !== 'chat' || messages.length === 0) return
-    const lastId = messages[messages.length - 1].id
-    if (lastId !== lastMsgIdRef.current) {
-      lastMsgIdRef.current = lastId
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    useEffect(() => {
+    if (activeTab !== 'chat') return
+    if (messages.length === 0) return
+    const container = chatScrollRef.current
+    if (!container) return
+    const lastMessage = messages[messages.length - 1]
+    const lastId = lastMessage.id
+    const isFirstLoad = lastMsgIdRef.current === null
+    // ✅ Détecter si c'est vraiment un NOUVEAU message
+    const hasNewMessage = lastMsgIdRef.current !== null && lastMsgIdRef.current !== lastId
+    const expId = typeof lastMessage.expediteur === 'object'
+    ? (lastMessage.expediteur as any)?.id
+    : lastMessage.expediteur
+    const lastIsMine = expId === user?.id
+    // ✅ Ne scroller que si : premier chargement, OU nouveau message ET (c'est le mien OU je suis déjà en bas)
+    if (isFirstLoad || (hasNewMessage && lastIsMine) || (hasNewMessage && shouldAutoScroll.current)) {
+    container.scrollTo({
+    top: container.scrollHeight,
+    behavior: isFirstLoad ? 'auto' : 'smooth'
+    })
     }
-  }, [messages, activeTab])
+    lastMsgIdRef.current = lastId
+    }, [messages, activeTab, user?.id])
+
+  const handleChatScroll = () => {
+    const el = chatScrollRef.current
+    if (!el) return
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
+    shouldAutoScroll.current = distanceFromBottom < 150
+  }
 
   const toggleSelectMsg = (id: string) => {
     setSelectedMsgIds(prev => {
@@ -1681,16 +2021,23 @@ export default function ClasseDetail({ role }: ClasseDetailProps) {
   const handleEditSeance = (seance: Seance) => {
     setEditingSeanceId(seance.id)
     setEditHeure(seance.heure_debut_reelle?.substring(0, 5) || '')
-    setEditDuree(seance.duree_reelle_minutes?.toString() || '')
+    const fin = calcHeureFin(seance.heure_debut_reelle, seance.duree_reelle_minutes)
+    setEditHeureFin(fin === '--:--' ? '' : fin)
   }
+
   const handleSaveEditSeance = async (seanceId: string) => {
-    setSavingSeance(true)
-    try {
-      await updateSeance({
-        id: seanceId,
-        heure_debut_reelle: editHeure ? (editHeure.split(':').length === 3 ? editHeure : editHeure + ':00') : undefined,
-        duree_reelle_minutes: editDuree ? parseInt(editDuree) : undefined,
-      })
+     if (!editHeure || !editHeureFin) { alert('Renseignez l\'heure de début et de fin'); return }
+      const [h1, m1] = editHeure.split(':').map(Number)
+      const [h2, m2] = editHeureFin.split(':').map(Number)
+      const duree = (h2 * 60 + m2) - (h1 * 60 + m1)
+      if (duree <= 0) { alert('L\'heure de fin doit être après l\'heure de début'); return }
+      setSavingSeance(true)
+      try {
+        await updateSeance({
+          id: seanceId,
+          heure_debut_reelle: editHeure.split(':').length === 3 ? editHeure : editHeure + ':00',
+          duree_reelle_minutes: duree,   // ← le backend reçoit toujours la durée
+        })
       const updatedSeances: Record<string, Seance[]> = { ...seancesParClasse }
       for (const clsId of Object.keys(seancesParClasse)) {
         const res = await api.get(`/classes/${clsId}/seances/`)
@@ -1817,6 +2164,7 @@ const stopRecording = () => {
 // ═══════════════════════════════════════════════════════════════
 const handleSendMessage = async (e: React.FormEvent) => {
   e.preventDefault();
+  shouldAutoScroll.current = true
   if ((!messageText.trim() && selectedFiles.length === 0 && !audioBlob) || !activeClassId) return;
 
   try {
@@ -1925,7 +2273,26 @@ const handleSendMessage = async (e: React.FormEvent) => {
             <p className="text-sm text-neutral-600 mb-4">Confirmez la présence des élèves :</p>
             {studentsInClass.length > 0 && <div className="flex gap-2 mb-3"><button onClick={() => setStudentPresence(Object.fromEntries(studentsInClass.map(s => [s.id, true])))} className="flex-1 px-3 py-1.5 text-xs font-medium bg-green-100 text-green-700 rounded-lg hover:bg-green-200">✅ Tous présents</button><button onClick={() => setStudentPresence(Object.fromEntries(studentsInClass.map(s => [s.id, false])))} className="flex-1 px-3 py-1.5 text-xs font-medium bg-red-100 text-red-700 rounded-lg hover:bg-red-200">❌ Tous absents</button></div>}
             <div className="max-h-60 overflow-y-auto space-y-2 mb-4">{studentsInClass.map(s => (<label key={s.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-neutral-50"><span className="text-sm">{s.name}</span><div className="flex gap-2"><button type="button" onClick={() => setStudentPresence(prev => ({ ...prev, [s.id]: true }))} className={`px-3 py-1 text-xs rounded border ${studentPresence[s.id] === true ? 'bg-green-100 border-green-500 text-green-700' : 'border-neutral-200 text-neutral-500'}`}>Présent</button><button type="button" onClick={() => setStudentPresence(prev => ({ ...prev, [s.id]: false }))} className={`px-3 py-1 text-xs rounded border ${studentPresence[s.id] === false ? 'bg-red-100 border-red-500 text-red-700' : 'border-neutral-200 text-neutral-500'}`}>Absent</button></div></label>))}</div>
-            <div className="flex justify-end gap-3 mt-6"><button onClick={() => { setShowQueryFinModal(false); setCoursBienPasse(null); setLiveKitSession(null); setActiveTab('chat') }} className="px-4 py-2 text-neutral-600 hover:bg-neutral-100 rounded-lg text-sm">Ignorer</button><button onClick={handleSubmit} className="px-5 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-medium text-sm">Terminer</button></div>
+            
+            <div className="flex justify-end gap-3 mt-6">
+              {/* <button onClick={() => { setShowQueryFinModal(false); setCoursBienPasse(null); setLiveKitSession(null); setActiveTab('chat') }} className="px-4 py-2 text-neutral-600 hover:bg-neutral-100 rounded-lg text-sm">Ignorer</button> */}
+              <button 
+                onClick={handleSubmit} 
+                disabled={Object.keys(studentPresence).length === 0}
+                className={`px-5 py-2 rounded-xl font-medium text-sm transition ${
+                  Object.keys(studentPresence).length === 0
+                    ? 'bg-indigo-300 text-white cursor-not-allowed opacity-60'
+                    : 'bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer'
+                }`}
+              >
+                Terminer
+                {Object.keys(studentPresence).length > 0 && (
+                  <span className="ml-2 text-xs opacity-80">
+                    ({Object.keys(studentPresence).length}/{studentsInClass.length})
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )
@@ -1975,7 +2342,7 @@ const classesFiltrees = classes.filter((cls: Class) =>
           <div style={{ padding: '20px 16px 12px', position: 'relative', zIndex: 1, flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <div>
-                <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#fff', letterSpacing: '-0.3px' }}>{role === 'professeur' ? '👨‍🏫 Mes cours' : role === 'admin' || role === 'direction' ? '👁️ Classes observées' : '🎓 Mes classes'}
+                <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#fff', letterSpacing: '-0.3px' }}>{role === 'professeur' ? ' Mes cours' : role === 'admin' || role === 'direction' ? '👁️ Classes observées' : '🎓 Mes classes'}
                   {showFactureBlink && (
                     <span
                       onClick={dismissFactureBlink}
@@ -2157,11 +2524,11 @@ const classesFiltrees = classes.filter((cls: Class) =>
                             <option key={j} value={j} style={{ background: '#1e1b4b' }}>{j.charAt(0).toUpperCase()+j.slice(1)}</option>
                           ))}
                         </select>
-                        <input type="time" value={newCreneauDraft.heure} onChange={e => setNewCreneauDraft(d => ({ ...d, heure: e.target.value }))}
-                          style={{ padding: '3px 6px', borderRadius: 6, fontSize: 10, border: '1px solid rgba(255,255,255,.2)', background: 'rgba(255,255,255,.1)', color: '#fff', outline: 'none', width: 70 }} />
+                        <Time24Picker value={newCreneauDraft.heure} onChange={v => setNewCreneauDraft(d => ({ ...d, heure: v }))}
+                          style={{ width: 50, padding: '3px 6px', borderRadius: 6, fontSize: 10, border: '1px solid rgba(255,255,255,.2)', background: 'rgba(255,255,255,.1)', color: '#fff', outline: 'none' }} />
                         <span style={{ fontSize: 10, color: 'rgba(255,255,255,.4)' }}>→</span>
-                        <input type="time" value={newCreneauDraft.heureFin} onChange={e => setNewCreneauDraft(d => ({ ...d, heureFin: e.target.value }))}
-                          style={{ padding: '3px 6px', borderRadius: 6, fontSize: 10, border: '1px solid rgba(255,255,255,.2)', background: 'rgba(255,255,255,.1)', color: '#fff', outline: 'none', width: 70 }} />
+                        <Time24Picker value={newCreneauDraft.heureFin} onChange={v => setNewCreneauDraft(d => ({ ...d, heureFin: v }))}
+                          style={{ width: 50, padding: '3px 6px', borderRadius: 6, fontSize: 10, border: '1px solid rgba(255,255,255,.2)', background: 'rgba(255,255,255,.1)', color: '#fff', outline: 'none' }} />
                         {newCreneauDraft.heure && newCreneauDraft.heureFin && (() => {
                           const [h1,m1]=newCreneauDraft.heure.split(':').map(Number)
                           const [h2,m2]=newCreneauDraft.heureFin.split(':').map(Number)
@@ -2215,13 +2582,29 @@ const classesFiltrees = classes.filter((cls: Class) =>
                             </div>
                           </div>
                           {isEditing && (
-                            <div style={{ display: 'flex', gap: 4, alignItems: 'center', marginTop: 4 }} onClick={e => e.stopPropagation()}>
-                              <input type="time" value={editHeure} onChange={e => setEditHeure(e.target.value)} style={{ padding: '2px 6px', borderRadius: 6, fontSize: 11, border: '1px solid rgba(255,255,255,.25)', background: 'rgba(255,255,255,.1)', color: '#fff', outline: 'none', width: 75 }} />
-                              <input type="number" min="1" max="480" placeholder="min" value={editDuree} onChange={e => setEditDuree(e.target.value)} style={{ padding: '2px 6px', borderRadius: 6, fontSize: 11, border: '1px solid rgba(255,255,255,.25)', background: 'rgba(255,255,255,.1)', color: '#fff', outline: 'none', width: 45 }} />
+                            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center', marginTop: 4 }} onClick={e => e.stopPropagation()}>
+                              <Time24Picker
+                                value={editHeure}
+                                onChange={v => setEditHeure(v)}
+                                style={{ padding: '3px 6px', borderRadius: 6, fontSize: 10, border: '1px solid rgba(255,255,255,.25)', background: 'rgba(255,255,255,.1)', color: '#fff', outline: 'none', width: 70 }}
+                              />
+                              <span style={{ fontSize: 10, color: 'rgba(255,255,255,.4)' }}>→</span>
+                              <Time24Picker
+                                value={editHeureFin}
+                                onChange={v => setEditHeureFin(v)}
+                                style={{ padding: '3px 6px', borderRadius: 6, fontSize: 10, border: '1px solid rgba(255,255,255,.25)', background: 'rgba(255,255,255,.1)', color: '#fff', outline: 'none', width: 70 }}
+                              />
+                              {editHeure && editHeureFin && (() => {
+                                const [h1, m1] = editHeure.split(':').map(Number)
+                                const [h2, m2] = editHeureFin.split(':').map(Number)
+                                const d = (h2 * 60 + m2) - (h1 * 60 + m1)
+                                return d > 0 ? <span style={{ fontSize: 9, color: '#34d399' }}>{d}min</span> : null
+                              })()}
                               <button onClick={e => { e.stopPropagation(); handleSaveEditSeance(seance.id) }} disabled={savingSeance} style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: 'rgba(139,92,246,.6)', border: 'none', color: '#fff', cursor: 'pointer' }}>{savingSeance ? '…' : '✓'}</button>
                               <button onClick={e => { e.stopPropagation(); setEditingSeanceId(null) }} style={{ padding: '2px 6px', borderRadius: 6, fontSize: 11, background: 'rgba(255,255,255,.08)', border: 'none', color: 'rgba(255,255,255,.5)', cursor: 'pointer' }}>✕</button>
                             </div>
                           )}
+                          
                           {profFormOpenId === seance.id && (
                             <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,.08)' }}>
                               <SeanceProfRow
@@ -2247,7 +2630,7 @@ const classesFiltrees = classes.filter((cls: Class) =>
       {/* ═══════════════════════════════════════════════════════════════
       ZONE PRINCIPALE DROITE
       ═══════════════════════════════════════════════════════════════ */}
-      <main className="main-content" style={{ flex: 1, flexDirection: 'column', overflow: 'hidden', minWidth: 0,  display: (!activeClass && window.innerWidth < 768) ? 'none' : 'flex'}}>
+      <main className="main-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0,  display: (!activeClass && window.innerWidth < 768) ? 'none' : 'flex'}}>
             {!activeClass && window.innerWidth >= 768 ? (
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f0f2f5' }}>
                 <div style={{ textAlign: 'center', color: '#94a3b8' }}>
@@ -2407,44 +2790,53 @@ const classesFiltrees = classes.filter((cls: Class) =>
                 </div>
 
                 <div style={{ display: 'flex', gap: 4, position: 'relative', zIndex: 1, flexWrap: 'wrap' }}>
-                  {availableTabs.map(tab => (
-                    <button key={tab.id} onClick={() => {setActiveTab(tab.id as any)
-                      if (tab.id === 'infos' && showFactureBlink) dismissFactureBlink()
-                      if (tab.id === 'chat') {
-                        unreadNotifs
-                          .filter((n: any) => n.classe === activeClassId && CHAT_BADGE_TYPES.includes(n.type))
-                          .forEach((n: any) => markRead(n.id))
-                      }
-                    }} style={{
-                      padding: '6px 12px', borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                      border: activeTab === tab.id ? '1.5px solid rgba(139,92,246,.6)' : '1.5px solid rgba(255,255,255,.1)',
-                      background: activeTab === tab.id ? 'rgba(139,92,246,.3)' : 'rgba(255,255,255,.07)',
-                      color: activeTab === tab.id ? '#c4b5fd' : 'rgba(255,255,255,.5)',
-                      transition: 'all .15s', display: 'flex', alignItems: 'center', gap: 4, position: 'relative',
-                    }}>
-                      <span style={{
-                        animation: (tab as any).hasAlert ? 'tab-blink 1.2s ease-in-out infinite' : 'none'
+                  {availableTabs.map(tab => {
+                    const isSalle = tab.id === 'salle'
+                    const isActive = activeTab === tab.id
+                    // Style spécifique pour le bouton Salle : fond blanc
+                    const salleStyle = isSalle ? {
+                      border: isActive ? '1.5px solid #1a73e8' : '1.5px solid #ffffff',
+                      background: isActive ? '#d6dce9' : 'rgba(205, 208, 222, 0.95)',
+                      color: isActive ? '#1a73e8' : '#1e293b',
+                      boxShadow: '0 2px 8px rgba(255,255,255,.25)',
+                    } : {
+                      border: isActive ? '1.5px solid rgba(139,92,246,.6)' : '1.5px solid rgba(255,255,255,.1)',
+                      background: isActive ? 'rgba(139,92,246,.3)' : 'rgba(255,255,255,.07)',
+                      color: isActive ? '#c4b5fd' : 'rgba(255,255,255,.5)',
+                    }
+                    return (
+                      <button key={tab.id} onClick={() => {setActiveTab(tab.id as any)
+                        if (tab.id === 'infos' && showFactureBlink) dismissFactureBlink()
+                        if (tab.id === 'chat') {
+                          unreadNotifs
+                            .filter((n: any) => n.classe === activeClassId && CHAT_BADGE_TYPES.includes(n.type))
+                            .forEach((n: any) => markRead(n.id))
+                        }
+                      }} style={{
+                        padding: '6px 12px', borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                        transition: 'all .15s', display: 'flex', alignItems: 'center', gap: 4, position: 'relative',
+                        ...salleStyle,
                       }}>
-                        {tab.icon}
-                      </span>
+                        <span style={{
+                          animation: (tab as any).hasAlert ? 'tab-blink 1.2s ease-in-out infinite' : 'none'
+                        }}>
+                          {tab.icon}
+                        </span>
                         {(tab as any).hasAlert && (
                           <span style={{
                             width: 9, height: 9, borderRadius: '50%',
                             background: '#3ff460',
-                            border: '1.5px solid #1e1b4b',
+                            border: `1.5px solid ${isSalle ? '#fff' : '#1e1b4b'}`,
                             position: 'absolute', top: 3, right: 3
                           }} />
                         )}
-
-                      <span style={{ display: 'none' }} className="sm-show">{tab.label}</span>
-                      {tab.id === 'salle' && liveKitSession && (
-                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#34d399', position: 'absolute', top: 4, right: 4 }} />
-                      )}
-                      {(tab as any).hasAlert && (
-                        <span style={{ width: 9, height: 9, borderRadius: '50%', background: '#3ff460', border: '1.5px solid #1e1b4b', position: 'absolute', top: 3, right: 3 }} />
-                      )}
-                    </button>
-                  ))}
+                        <span style={{ display: 'none' }} className="sm-show">{tab.label}</span>
+                        {tab.id === 'salle' && liveKitSession && (
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#34d399', position: 'absolute', top: 4, right: 4 }} />
+                        )}
+                      </button>
+                    )
+                  })}
 
                   {/* 🆕 Bouton Panneau Classes (admin/prof/direction) */}
                   {(role === 'admin' || role === 'professeur' || role === 'direction') && (
@@ -2472,7 +2864,7 @@ const classesFiltrees = classes.filter((cls: Class) =>
                 {activeTab === 'salle' && (
                   <div style={{ display: 'flex', flex: 1, minHeight: 0, flexDirection: 'column' }}>
                     {liveKitSession && activeClass ? (
-                      <VideoRoom classe={activeClass} seance={{ id: liveKitSession.seanceId }} role={role === 'admin' || role === 'direction' ? 'eleve' : role} onLeave={(audioUrl?: string) => handleLeaveSession(audioUrl)} roomName={liveKitSession.roomName} token={liveKitSession.token} serverUrl={liveKitSession.serverUrl} isModerator={(role === 'admin' || role === 'direction') ? false : liveKitSession.isModerator} />
+                      <VideoRoom classe={activeClass} seance={{ id: liveKitSession.seanceId }} role={role === 'admin' || role === 'direction' ? 'eleve' : role} onLeave={(audioUrl?: string) => handleLeaveSession(audioUrl)} roomName={liveKitSession.roomName} token={liveKitSession.token} serverUrl={liveKitSession.serverUrl} isModerator={(role === 'admin' || role === 'direction') ? false : liveKitSession.isModerator} userId={user?.id} userName={user?.display_name || user?.prenom} />
                     ) : (
                       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(160deg, #0f1117 0%, #1a1d27 55%, #111827 100%)', position: 'relative', overflow: 'hidden', padding: '2rem' }}>
                         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(255,255,255,.04) 1px, transparent 1px)', backgroundSize: '28px 28px', pointerEvents: 'none' }} />
@@ -2523,18 +2915,19 @@ const classesFiltrees = classes.filter((cls: Class) =>
                       </div>
                     )}
 
-                    <div style={{ 
-                          flex: 1, 
-                          overflowY: 'auto', 
-                          padding: '20px', 
-                          display: 'flex', 
-                          flexDirection: 'column', 
-                          gap: '12px',
-                          background: '#f0f2f5',
-                          // Motif subtil en arrière-plan style WhatsApp/Telegram
-                          backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%239C92AC' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E")`,
-                          scrollBehavior: 'smooth'
-                        }}>
+                    <div 
+                      ref={chatScrollRef}
+                      onScroll={handleChatScroll}
+                      style={{ 
+                      flex: 1, 
+                      overflowY: 'auto', 
+                      padding: '20px', 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      gap: '12px',
+                      background: '#f0f2f5',
+                      // ... reste du style (garde le backgroundImage etc.)
+                    }}>
                       {messages.length === 0 ? (<div style={{ textAlign: 'center', margin: 'auto', color: '#94a3b8' }}><div style={{ fontSize: 40, marginBottom: 8 }}>💬</div><p style={{ fontSize: 13 }}>Soyez le premier à écrire !</p></div>)
                         : (<>
                             {isClasseLocked(activeClass) && (
@@ -2873,16 +3266,44 @@ const classesFiltrees = classes.filter((cls: Class) =>
                         {/* 4. Barre de saisie principale */}
                         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                           {/* Bouton 📎 qui ouvre le menu */}
-                          <button type="button" onClick={() => setShowAttachMenu(!showAttachMenu)} style={{ width: 40, height: 40, borderRadius: '50%', background: showAttachMenu ? '#e2e8f0' : 'transparent', border: 'none', cursor: 'pointer', fontSize: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background .15s', color: '#546572' }}>
-                            📎
+                          <button
+                            type="button"
+                            onClick={() => setShowAttachMenu(!showAttachMenu)}
+                            className={`chat-icon-btn chat-attach-btn${showAttachMenu ? ' chat-attach-active' : ''}`}
+                            title="Joindre un fichier"
+                            style={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: '50%',
+                            background: showAttachMenu ? '#e2e8f0' : 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: showAttachMenu ? '#3b82f6' : '#546572'
+                            }}
+                            >
+                            <ChatAttachIcon />
                           </button>
 
                           {/* Input Texte */}
                           <input type="text" value={messageText} onChange={e => setMessageText(e.target.value)} placeholder="Écrire un message…" style={{ flex: 1, padding: '10px 16px', borderRadius: 24, border: 'none', background: '#fff', fontSize: 15, outline: 'none', boxShadow: '0 1px 3px rgba(0,0,0,.05)' }} />
                           
                           {/* Bouton Micro (Vocal) */}
-                          <button type="button" onClick={isRecording ? stopRecording : startRecording} style={{ width: 40, height: 40, borderRadius: '50%', background: isRecording ? '#ef4444' : 'transparent', border: 'none', cursor: 'pointer', fontSize: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background .15s', color: isRecording ? '#fff' : '#546572' }}>
-                            {isRecording ? '⏹️' : '🎤'}
+                          <button
+                            type="button"
+                            onClick={isRecording ? stopRecording : startRecording}
+                            className={`chat-icon-btn${isRecording ? ' chat-mic-recording' : ''}`}
+                            title={isRecording ? "Arrêter l'enregistrement" : "Enregistrer une note vocale"}
+                            style={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: '50%',
+                            background: isRecording ? '#ef4444' : 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: isRecording ? '#fff' : '#546572'
+                            }}
+                            >
+                            {isRecording ? <ChatStopIcon /> : <ChatMicIcon />}
                           </button>
                           
                           {/* Bouton Envoyer */}
@@ -3284,7 +3705,7 @@ const classesFiltrees = classes.filter((cls: Class) =>
                     background: isActive ? (tab === 'active' ? '#3b82f6' : tab === 'pause' ? '#f97316' : '#ef4444') : 'transparent',
                     color: isActive ? '#fff' : '#4b5563',
                     transition: 'all 0.2s'
-                  }}>{tab === 'active' ? 'Actives' : tab === 'pause' ? 'Pause' : 'Signalées'} ({count})</button>
+                  }}>{tab === 'active' ? 'Actives' : tab === 'pause' ? 'Pause' : 'Supprimer'} ({count})</button>
                 )
               })}
             </div>
