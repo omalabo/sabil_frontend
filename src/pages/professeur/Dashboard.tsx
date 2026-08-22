@@ -31,7 +31,7 @@ export default function ProfDashboard() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-neutral-900">👨‍🏫 Tableau de bord Professeur</h1>
+      <h1 className="text-2xl font-bold text-neutral-900"> Tableau de bord Professeur</h1>
       
       {/* Compteurs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -134,10 +134,10 @@ export default function ProfDashboard() {
           <h3 className="font-semibold">📚 Gérer mes cours</h3>
           <p className="text-sm text-neutral-600">Créneaux, pauses, signalements, supports</p>
         </button>
-        <button onClick={() => navigate('/professeur/planning')} className="class-card text-left hover:border-primary-300 p-5 bg-white border border-neutral-200 rounded-lg shadow-sm transition-all">
+        {/* <button onClick={() => navigate('/professeur/planning')} className="class-card text-left hover:border-primary-300 p-5 bg-white border border-neutral-200 rounded-lg shadow-sm transition-all">
           <h3 className="font-semibold">📅 Mon Planning</h3>
           <p className="text-sm text-neutral-600">Disponibilités, synchronisation créneaux</p>
-        </button>
+        </button> */}
       </div>
     </div>
   )
