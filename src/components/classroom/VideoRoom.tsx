@@ -545,6 +545,7 @@ interface ControlBarProps {
   onToggleChat: () => void
   unreadCount: number
   isRecording: boolean
+  isRecordingLoading: boolean
   canRecord: boolean
   onToggleRecording: () => void
 }
@@ -556,6 +557,7 @@ function ControlBar({
   onToggleChat,
   unreadCount,
   isRecording,
+  isRecordingLoading,
   canRecord,
   onToggleRecording,
 }: ControlBarProps) {
@@ -827,6 +829,7 @@ function VideoRoomContent({
           onToggleChat={handleToggleChat}
           unreadCount={unreadCount}
           isRecording={isRecording}
+          isRecordingLoading={isRecordingLoading}
           canRecord={canRecord}
           onToggleRecording={onToggleRecording}
         />
