@@ -876,11 +876,28 @@ export default function VideoRoom({
   }, [role])
 
   const canRecord = ['professeur', 'admin', 'direction'].includes(role)
-
+  const [isRecordingLoading, setIsRecordingLoading] = useState(false)
+  
   const toggleRecording = async () => {
     if (!canRecord) return
-    console.log('🔴 Egress API à implémenter')
-    setIsRecording(v => !v)
+    setIsRecordingLoading(true)
+    try {
+      // Appel à ton backend Django qui parle à LiveKit
+      const res = await api.post(`/classes/${classe.id}/toggle-recording/`)
+      
+      if (res.data.status === 'started') {
+        setIsRecording(true)
+        alert("🔴 Enregistrement de la séance démarré")
+      } else {
+        setIsRecording(false)
+        alert("⏹️ Enregistrement de la séance arrêté. La vidéo sera bientôt disponible.")
+      }
+    } catch (err: any) {
+      console.error("Erreur enregistrement:", err)
+      alert("❌ Impossible de gérer l'enregistrement : " + (err.response?.data?.error || err.message))
+    } finally {
+      setIsRecordingLoading(false)
+    }
   }
 
   return (
