@@ -646,13 +646,13 @@ function ControlBar({
           <ControlButton
             active={isRecording}
             onClick={onToggleRecording}
+            disabled={isRecordingLoading}
             activeLabel="Stop enregistrement"
             inactiveLabel="Enregistrer"
             activeColor="bg-danger-600 hover:bg-danger-700 animate-pulse"
             inactiveColor="bg-neutral-700 hover:bg-neutral-600"
-            activeIcon={<span className="text-sm font-bold">⏹</span>}
-            inactiveIcon={<span className="w-3 h-3 rounded-full bg-danger-500 block" />}
-            disabled={false}
+            activeIcon={isRecordingLoading ? <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <span className="text-sm font-bold">⏹</span>}
+            inactiveIcon={isRecordingLoading ? <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <span className="w-3 h-3 rounded-full bg-red-500 block" />}
           />
         )}
 
