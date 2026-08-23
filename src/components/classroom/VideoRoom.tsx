@@ -737,6 +737,7 @@ interface VideoRoomContentProps {
   isModerator: boolean
   onLeave?: () => void
   isRecording: boolean
+  isRecordingLoading: boolean
   canRecord: boolean
   onToggleRecording: () => void
   localIdentity: string
@@ -746,7 +747,7 @@ interface VideoRoomContentProps {
 
 function VideoRoomContent({
   role, classe, isModerator, onLeave,
-  isRecording, canRecord, onToggleRecording, localIdentity,
+  isRecording, isRecordingLoading, canRecord, onToggleRecording, localIdentity,
   userId, userName
 }: VideoRoomContentProps) {
   const connectionState = useConnectionState()
@@ -929,6 +930,7 @@ export default function VideoRoom({
           isModerator={isModerator}
           onLeave={onLeave}
           isRecording={isRecording}
+          isRecordingLoading={isRecordingLoading}
           canRecord={canRecord}
           onToggleRecording={toggleRecording}
           localIdentity={localIdentity}
