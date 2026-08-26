@@ -2451,10 +2451,12 @@ const classesFiltrees = classes.filter((cls: Class) =>
           <div style={{ flex: 1, overflowY: 'auto', padding: '0 10px 20px', position: 'relative', zIndex: 1 }}>
             {loadingClasses || loadingSeances ? (
               <div style={{ textAlign: 'center', padding: '32px 16px', color: 'rgba(255,255,255,.3)', fontSize: 13 }}><span style={{ width: 20, height: 20, border: '2px solid rgba(255,255,255,.2)', borderTopColor: '#a78bfa', borderRadius: '50%', animation: 'spin .7s linear infinite', display: 'inline-block' }} /></div>
-            ) : Object.keys(groupedSeances).length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '32px 16px', color: 'rgba(255,255,255,.3)', fontSize: 13 }}><div style={{ fontSize: 32, marginBottom: 8 }}>🌙</div>Aucune séance{filterDay ? ` pour ${filterDay}` : ''}</div>
-            
-            ) : classesFiltrees.map((cls: Class) => {
+            ) : classes.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '32px 16px', color: 'rgba(255,255,255,.3)', fontSize: 13 }}>
+                  <div style={{ fontSize: 32, marginBottom: 8 }}>🌙</div>
+                  Aucune classe disponible
+                </div>
+              ) : classesFiltrees.map((cls: Class) => {
                 const clsId = cls.id
                 const seances = (seancesParClasse[clsId] ?? []).filter(s => s.statut !== 'supprimer' && s.statut !== 'supprimer')
                 const isActive = activeClassId === clsId
