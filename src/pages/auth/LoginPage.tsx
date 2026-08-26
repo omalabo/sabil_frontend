@@ -4,7 +4,6 @@ import { useAppDispatch, useAppSelector } from '../../store/hooks'
 import { selectAuth, loginSuccess, loginFailure, setLoading } from '../../store/authSlice'
 import { useLoginMutation } from '../../store/apiSlice'
 import { ApiError } from '../../types'
-import logo from '../../assets/logo.png'
 
 /**
  * 🔐 Page de connexion
@@ -105,17 +104,22 @@ export default function LoginPage() {
   }
 
   return (
+    
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-white p-4">
       <div className="w-full max-w-md">
         
-        {/* 🏷️ Logo / En-tête */}
-        <div className="text-center mb-8">
-          <img
-            src={logo}
-            alt="Sabil Al Ilm – Le chemin de la Science"
-            className="h-32 md:h-40 mx-auto object-contain mix-blend-multiply"
-          />
-        </div>
+    
+
+      {/* 🏷️ Logo / En-tête */}
+        <div className="p-4 flex items-center justify-center">
+        <img 
+          src="/logo_login.png" 
+          alt="Sabil Al Ilm - Le chemin de la Science" 
+          className="h-[190px] w-auto object-contain"
+        />
+      </div>
+
+
 
         {/* 📦 Carte de connexion */}
         <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 border border-neutral-200">
