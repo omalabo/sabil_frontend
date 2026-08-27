@@ -887,7 +887,10 @@ export default function VideoRoom({
     setIsRecordingLoading(true)
     try {
       // Appel à ton backend Django qui parle à LiveKit
-      const res = await api.post(`/classes/${classe.id}/toggle-recording/`)
+      // const res = await api.post(`/classes/${classe.id}/toggle-recording/`)
+      const res = await api.post(`/classes/${classe.id}/toggle-recording/`, {
+        room_name: roomName 
+      })
       
       if (res.data.status === 'started') {
         setIsRecording(true)
