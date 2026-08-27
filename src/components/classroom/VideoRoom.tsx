@@ -850,6 +850,7 @@ export default function VideoRoom({
   userName,
 }: VideoRoomProps) {
   const [isRecording, setIsRecording] = useState(false)
+  const [startedEgressIds, setStartedEgressIds] = useState<string[]>([])
   const permissionStreamRef = useRef<MediaStream | null>(null)
 
   // Identité locale extraite du token (décodage basique JWT)
@@ -885,23 +886,37 @@ export default function VideoRoom({
   const toggleRecording = async () => {
     if (!canRecord) return
     setIsRecordingLoading(true)
+    
     try {
-      // Appel à ton backend Django qui parle à LiveKit
-      // const res = await api.post(`/classes/${classe.id}/toggle-recording/`)
-      const res = await api.post(`/classes/${classe.id}/toggle-recording/`, {
-        room_name: roomName 
-      })
-      
-      if (res.data.status === 'started') {
-        setIsRecording(true)
-        alert("🔴 Enregistrement de la séance démarré")
+      if (isRecording && startedEgressIds.length > 0) {
+        // MODE ARRÊT : on envoie les egress_ids qu'on a démarrés
+        const res = await api.post(`/classes/${classe.id}/toggle-recording/`, {
+          room_name: roomName,
+          egress_ids_to_stop: startedEgressIds
+        })
+        
+        if (res.data.status === 'stopped') {
+          setIsRecording(false)
+          setStartedEgressIds([]) // On vide la liste
+          alert(`⏹️ ${res.data.message}`)
+        }
       } else {
-        setIsRecording(false)
-        alert("⏹️ Enregistrement de la séance arrêté. La vidéo sera bientôt disponible.")
+        // MODE DÉMARRAGE : on lance un nouvel enregistrement
+        const res = await api.post(`/classes/${classe.id}/toggle-recording/`, {
+          room_name: roomName
+        })
+        
+        if (res.data.status === 'started') {
+          setIsRecording(true)
+          // On stocke les nouveaux egress_ids
+          const newIds = res.data.jobs.map((j: any) => j.egress_id)
+          setStartedEgressIds(prev => [...prev, ...newIds])
+          alert(`🔴 ${res.data.message}`)
+        }
       }
     } catch (err: any) {
       console.error("Erreur enregistrement:", err)
-      alert("❌ Impossible de gérer l'enregistrement : " + (err.response?.data?.error || err.message))
+      alert("❌ " + (err.response?.data?.error || err.message))
     } finally {
       setIsRecordingLoading(false)
     }
