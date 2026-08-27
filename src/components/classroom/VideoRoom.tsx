@@ -884,43 +884,37 @@ export default function VideoRoom({
   const [isRecordingLoading, setIsRecordingLoading] = useState(false)
   
   const toggleRecording = async () => {
-    if (!canRecord) return
-    setIsRecordingLoading(true)
-    
-    try {
-      if (isRecording && startedEgressIds.length > 0) {
-        // MODE ARRÊT : on envoie les egress_ids qu'on a démarrés
-        const res = await api.post(`/classes/${classe.id}/toggle-recording/`, {
-          room_name: roomName,
-          egress_ids_to_stop: startedEgressIds
-        })
-        
-        if (res.data.status === 'stopped') {
-          setIsRecording(false)
-          setStartedEgressIds([]) // On vide la liste
-          alert(`⏹️ ${res.data.message}`)
-        }
-      } else {
-        // MODE DÉMARRAGE : on lance un nouvel enregistrement
-        const res = await api.post(`/classes/${classe.id}/toggle-recording/`, {
-          room_name: roomName
-        })
-        
-        if (res.data.status === 'started') {
-          setIsRecording(true)
-          // On stocke les nouveaux egress_ids
-          const newIds = res.data.jobs.map((j: any) => j.egress_id)
-          setStartedEgressIds(prev => [...prev, ...newIds])
-          alert(`🔴 ${res.data.message}`)
-        }
+  if (!canRecord) return
+  setIsRecordingLoading(true)
+  
+  try {
+    if (isRecording && startedEgressIds.length > 0) {
+      // MODE ARRÊT : on envoie les IDs qu'on a démarrés
+      await api.post(`/classes/${classe.id}/toggle-recording/`, {
+        room_name: roomName,
+        egress_ids_to_stop: startedEgressIds
+      })
+      setIsRecording(false)
+      setStartedEgressIds([])
+      alert("⏹️ Enregistrement arrêté.")
+    } else {
+      // MODE DÉMARRAGE : on lance, on stocke les IDs
+      const res = await api.post(`/classes/${classe.id}/toggle-recording/`, {
+        room_name: roomName
+      })
+      if (res.data.status === 'started') {
+        const newIds = res.data.jobs.map((j: any) => j.egress_id)
+        setStartedEgressIds(prev => [...prev, ...newIds])
+        setIsRecording(true)
+        alert("🔴 Enregistrement démarré.")
       }
-    } catch (err: any) {
-      console.error("Erreur enregistrement:", err)
-      alert("❌ " + (err.response?.data?.error || err.message))
-    } finally {
-      setIsRecordingLoading(false)
     }
+  } catch (err: any) {
+    alert("❌ " + (err.response?.data?.error || err.message))
+  } finally {
+    setIsRecordingLoading(false)
   }
+}
 
   return (
     <div className="h-full flex flex-col bg-neutral-900 rounded-lg overflow-hidden relative">
