@@ -3082,11 +3082,11 @@ const classesFiltrees = classes.filter((cls: Class) =>
 
                                     {/* 🎬 VIDÉO */}
                                     {msg.type_message === 'video' && fileUrl && (
-                                      <div style={{ position: 'relative', background: '#000', overflow: 'hidden' }}>
+                                      <div style={{ position: 'relative', background: '#000', overflow: 'hidden',width: '100%', maxWidth: '320px', margin: '8px 0' }}>
                                         <video 
                                           controls 
                                           src={getFullUrl(msg.fichier_url)} 
-                                          style={{ width: '100%', maxWidth: '320px', display: 'block', maxHeight: '300px', cursor: 'pointer' }} 
+                                          style={{ width: '100%', display: 'block', maxHeight: '300px', cursor: 'pointer' }} 
                                           onClick={() => setPreviewMedia({ url: getFullUrl(msg.fichier_url)!, type: 'video', name: msg.nom_fichier })}
                                         />
                                         {warning && (
