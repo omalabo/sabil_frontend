@@ -817,6 +817,11 @@ export default function AbsenceAdminCalendar() {
   const [revoquer, { isLoading: isRevoking }]  = useRevoquerAbsenceMutation();
   const actionLoading = isSignaling || isRevoking;
 
+  const { data: profsData } = useGetUsersQuery({ role: 'professeur', page_size: 200 } as any);
+  const { data: classesEnPauseData } = useGetClassesQuery({ statut: 'en_pause' } as any);
+  const nbProfsGeres = profsData?.results?.length ?? 0;
+  const nbClassesEnPause = classesEnPauseData?.results?.length ?? 0;
+
   const filterDate = (dateStr: string) => dateStr <= todayStr && dateStr >= ABSENCE_DATE_MIN;
 
   const rawManquees:  SeanceManquee[]   = absData?.seances_manquees   ?? [];
@@ -955,6 +960,28 @@ export default function AbsenceAdminCalendar() {
 
         </div>
       </div>
+
+      {/* ── Stats ──────────────────────────────────────── */}
+<div className="grid grid-cols-2 gap-4">
+  <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
+    <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center">
+      <Users className="w-6 h-6 text-indigo-600" />
+    </div>
+    <div>
+      <p className="text-sm text-gray-500">Professeurs gérés</p>
+      <p className="text-3xl font-bold text-indigo-700">{nbProfsGeres}</p>
+    </div>
+  </div>
+  <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
+    <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center">
+      <PauseCircle className="w-6 h-6 text-orange-600" />
+    </div>
+    <div>
+      <p className="text-sm text-gray-500">Classes en pause</p>
+      <p className="text-3xl font-bold text-orange-600">{nbClassesEnPause}</p>
+    </div>
+  </div>
+</div>
 
       {/* ── Filtres classe + légende ──────────────────── */}
       {profId && <ClasseTabs profId={profId} selectedClasseId={classeId} onSelect={setClasseId} />}
