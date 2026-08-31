@@ -309,13 +309,14 @@ export const apiSlice = createApi({
 // CLASSES
 getClasses: builder.query<
   { results: Class[] },
-  { professeur_id?: string; include_deleted?: boolean }
+  { professeur_id?: string; include_deleted?: boolean; statut?: string }
 >({
-  query: ({ professeur_id, include_deleted }) => ({
+  query: ({ professeur_id, include_deleted, statut }) => ({
     url: 'classes/',
     params: {
       ...(professeur_id ? { professeur_id } : {}),
       ...(include_deleted ? { include_deleted: 'true' } : {}),
+      ...(statut ? { statut } : {}),
     },
   }),
   providesTags: ['Classes'],
