@@ -157,22 +157,22 @@ function DiplomaPreview({ form, innerRef }: { form: FormState; innerRef?: React.
       }}
     >
       {/* Nom de l'élève */}
-      <Field box={{ top: 419, left: 625, fontSize: 30, cursive: true, italic: true, color: '#1d3f7a' }}>
+      <Field box={{ top: 439, left: 625, fontSize: 30, cursive: true, italic: true, color: '#1d3f7a' }}>
         {form.nom_eleve_diplome}
       </Field>
 
       {/* Matière / session */}
-      <Field box={{ top: 483, left: 639, fontSize: 24, cursive: true, italic: true, color: '#1d3f7a' }}>
+      <Field box={{ top: 498, left: 639, fontSize: 24, cursive: true, italic: true, color: '#1d3f7a' }}>
         {form.matiere}
       </Field>
 
       {/* Note orale */}
-      <Field box={{ top: 545, left: 440, width: 137, align: 'center', fontSize: 15, weight: 600 }}>
+      <Field box={{ top: 554, left: 440, width: 137, align: 'center', fontSize: 15, weight: 600 }}>
         {form.note_orale}
       </Field>
 
       {/* Note écrite */}
-      <Field box={{ top: 545, left: 818, width: 71, align: 'center', fontSize: 14, weight: 600 }}>
+      <Field box={{ top: 554, left: 818, width: 71, align: 'center', fontSize: 14, weight: 600 }}>
         {form.note_ecrite}
       </Field>
 
@@ -181,8 +181,8 @@ function DiplomaPreview({ form, innerRef }: { form: FormState; innerRef?: React.
         <Field
           key={i}
           box={i === 0
-            ? { top: 590, left: 460, width: 515, align: 'left', fontSize: 16 }
-            : { top: 630, left: 355, width: 610, align: 'left', fontSize: 16 }}
+            ? { top: 601, left: 460, width: 515, align: 'left', fontSize: 16 }
+            : { top: 638, left: 355, width: 610, align: 'left', fontSize: 16 }}
         >
           {line}
         </Field>
@@ -192,7 +192,7 @@ function DiplomaPreview({ form, innerRef }: { form: FormState; innerRef?: React.
       {ensLines.map((line, i) => (
         <Field
           key={i}
-          box={{ top: 732 + i * 17, left: 425, width: 130, align: 'center', fontSize: 13, weight: 600 }}
+          box={{ top: 740 + i * 17, left: 425, width: 130, align: 'center', fontSize: 13, weight: 600 }}
         >
           {line}
         </Field>
@@ -225,13 +225,13 @@ function DiplomaPreview({ form, innerRef }: { form: FormState; innerRef?: React.
       )}
 
       {/* Date : jour / mois / année */}
-      <Field box={{ top: 725, left: 840, width: 48, align: 'center', fontSize: 15 }}>
+      <Field box={{ top: 733, left: 840, width: 48, align: 'center', fontSize: 15 }}>
         {day}
       </Field>
-      <Field box={{ top: 725, left: 905, width: 48, align: 'center', fontSize: 15 }}>
+      <Field box={{ top: 733, left: 905, width: 48, align: 'center', fontSize: 15 }}>
         {month}
       </Field>
-      <Field box={{ top: 725, left: 970, width: 62, align: 'center', fontSize: 15 }}>
+      <Field box={{ top: 733, left: 970, width: 62, align: 'center', fontSize: 15 }}>
         {year}
       </Field>
     </div>
