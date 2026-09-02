@@ -6,7 +6,7 @@ import {
   useCreateDiplomeMutation,
 } from '../../store/apiSlice'
 import { ClasseOption } from '../../types'
-import diplomaBg from '../../assets/diplome-bg.jpg'
+
 import SignaturePad from '../../components/shared/SignaturePad'
 import html2canvas from 'html2canvas'
 
@@ -142,7 +142,7 @@ function DiplomaPreview({ form, innerRef }: { form: FormState; innerRef?: React.
     () => wrapTextToLines(form.nom_enseignant, [130, 130], '13px Georgia, serif'),
     [form.nom_enseignant]
   )
-
+const diplomaBg = '/diplome-bg.jpg'
   return (
     <div
       ref={innerRef}
@@ -307,43 +307,77 @@ export default function GenerateurDiplome() {
   }
 
   // ✅ Génère le PNG du diplôme en 1280px et le retourne en Blob
-  const generateDiplomaImage = useCallback(async (): Promise<Blob> => {
-    const el = exportRef.current
-    if (!el) throw new Error('Export ref not found')
+const generateDiplomaImage = useCallback(async (): Promise<Blob> => {
+  const el = exportRef.current
+  if (!el) throw new Error('Export ref not found')
 
-    // Forcer la taille réelle pour un export net
-    const originalWidth = el.style.width
-    el.style.width = '1280px'
+  await document.fonts.ready
 
-    // Attendre que le background image soit chargé
-    await new Promise(r => setTimeout(r, 200))
+  const originalWidth = el.style.width
+  el.style.width = '1280px'
+  await new Promise(r => setTimeout(r, 300))
 
-    const canvas = await html2canvas(el, {
-      scale: 2,               // ×2 pour la qualité (2560px réel)
-      useCORS: true,          // ✅ important si l'image est servie par un autre domaine
-      allowTaint: true,
-      backgroundColor: null,  // transparent
-      logging: false,
-      width: 1280,
-      height: 853,
-      x: 0,
-      y: 0,
-      scrollX: 0,
-      scrollY: 0,
-      windowWidth: 1280,
-      windowHeight: 853,
-    })
+  const canvas = await html2canvas(el, {
+    scale: 2,
+    useCORS: true,
+    allowTaint: true,
+    backgroundColor: null,
+    logging: false,
+    width: 1280,
+    height: 853,
+    x: 0, y: 0,
+    scrollX: 0, scrollY: 0,
+    windowWidth: 1280,
+    windowHeight: 853,
+    // ✅ SEUL CHANGEMENT : onclone corrige le flex items-center DANS LE CLONE
+        // ✅ SEUL CHANGEMENT : onclone corrige le centrage DANS LE CLONE
+    onclone: (clonedDoc, clonedEl) => {
+      const fields = clonedEl.querySelectorAll('.flex.items-center')
+      fields.forEach((field: any) => {
+        const span = field.querySelector('span')
+        if (!span) return
+        const h = parseInt(field.style.height) || 20
+        
+        field.style.display = 'block'
+        field.style.height = `${h}px`
+        
+        span.style.position = 'absolute'
+        span.style.top = '0' // ✅ Tu as confirmé que '0' règle le décalage vertical
+        span.style.lineHeight = '1'
 
-    el.style.width = originalWidth
+        // ✅ Détection de l'alignement d'origine pour ne pas casser les champs spécifiques
+        const justifyContent = field.style.justifyContent
+        
+        if (justifyContent === 'flex-start') {
+          // Pour l'appréciation (alignée à gauche)
+          span.style.left = '0'
+          span.style.transform = 'translateY(-50%)'
+          span.style.textAlign = 'left'
+        } else if (justifyContent === 'flex-end') {
+          // Pour d'éventuels champs à droite
+          span.style.right = '0'
+          span.style.transform = 'translateY(-50%)'
+          span.style.textAlign = 'right'
+        } else {
+          // ✅ POUR TOUS LES AUTRES (Nom, Matière, Notes, Date) : VRAI CENTRAGE
+          span.style.left = '50%' // Remplace left: '0' et right: '0'
+          span.style.transform = 'translate(-50%, -50%)' // -50% en X (centre horizontal) et -50% en Y (garde ton ajustement vertical)
+          span.style.textAlign = 'center'
+        }
+      })
+    },
+  })
 
-    return new Promise((resolve, reject) => {
-      canvas.toBlob(
-        (blob) => (blob ? resolve(blob) : reject(new Error('toBlob failed'))),
-        'image/png',
-        1.0
-      )
-    })
-  }, [])
+  el.style.width = originalWidth
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => (blob ? resolve(blob) : reject(new Error('toBlob failed'))),
+      'image/png',
+      1.0
+    )
+  })
+}, [])
 
   async function handleSubmit() {
     setSubmitted(true)
