@@ -25,7 +25,7 @@ export default function AppLayout() {
   return (
     <div className="min-h-screen bg-neutral-50 flex">
       {/* 🧭 Sidebar de navigation - cachée sur mobile par défaut */}
-      <Sidebar userRole={user?.role} isActive={user?.is_active !== false} />
+      <Sidebar userRole={user?.role} userId={user?.id} isActive={user?.is_active !== false} />
       
       {/* 📱 Zone principale : TopBar + Contenu */}
       <div className="flex-1 flex flex-col min-w-0">
