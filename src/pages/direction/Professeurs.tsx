@@ -800,7 +800,7 @@ export default function DirectionProfesseurs() {
     <>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-neutral-900">👨‍🏫 Gestion des Professeurs</h1>
+          <h1 className="text-2xl font-bold text-neutral-900">Gestion des Professeurs</h1>
           <span className="text-sm text-neutral-500">{usersData?.count || 0} professeur(s)</span>
         </div>
 
