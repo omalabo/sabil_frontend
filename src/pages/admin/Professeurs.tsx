@@ -20,7 +20,7 @@ export default function AdminProfesseurs() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-neutral-900">👨‍🏫 Professeurs Assignés</h1>
+      <h1 className="text-2xl font-bold text-neutral-900">Professeurs Assignés</h1>
       <input type="search" placeholder="Rechercher un professeur..." value={search} onChange={e => setSearch(e.target.value)} className="form-input max-w-md" />
       <div className="flex flex-wrap gap-2">
         {profs.map(p => (
