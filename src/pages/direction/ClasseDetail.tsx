@@ -77,7 +77,7 @@ export default function DirectionClasseDetail() {
             onClick={() => navigate(`/direction/professeur/${classe.professeur?.id}/classes`)}
             className="px-4 py-2 bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 text-sm"
           >
-            👨‍🏫 Voir le professeur
+             Voir le professeur
           </button>
           <button 
             onClick={() => navigate(`/direction/gestion-inscriptions/${classe.id}`)}
