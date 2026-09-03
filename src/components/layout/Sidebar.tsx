@@ -4,33 +4,48 @@ import { useGetNotificationsQuery, useMarkNotificationReadMutation, useGetTaches
 
 interface SidebarProps {
   userRole?: UserRole
-  userId?: string
-  isActive?: boolean // 🔒 false = compte désactivé (utilisé pour restreindre le menu élève)
+  userId?: string // ✅ Ajouté
+  isActive?: boolean // 🔒 false = compte désactivé
 }
 
-// 🗺️ Association route du menu -> type(s) de notification qui doivent
-// déclencher le petit pastille orange clignotante sur ce lien.
-// Pour ajouter un nouveau cas : ajoute une entrée "route: ['type_notif']".
+// 🗺️ Association route du menu -> type(s) de notification
 const NOTIF_BADGE_MAP: Record<string, string[]> = {
-    '/direction/planning-global': ['changement_creneau','nouveau_creneau','classe_a_supprimer','classe_mise_en_pause'],
-    '/direction/classes':['new_message_chat_classe','new_facture_soumise','new_facture_soumise_recall','facture_payee',
-      'facture_confirmee','facture_totalement_payee'],
-    '/eleve/classes': ['nouveau_creneau', 'changement_creneau','new_facture_soumise','facture_confirmee','new_message_chat_classe'],
-    '/eleve/factures':['new_facture_soumise','facture_confirmee'],
-    
-    '/professeur/planning': ['inscription_eleve'],
-    '/professeur/cours':['new_message_chat_classe','facture_payee'],
-    '/admin/classes':['new_facture_soumise','facture_payee','facture_confirmee','new_message_chat_classe','facture_totalement_payee'],
+  '/direction/planning-global': ['changement_creneau', 'nouveau_creneau', 'classe_a_supprimer', 'classe_mise_en_pause'],
+  '/direction/classes': ['new_message_chat_classe', 'new_facture_soumise', 'new_facture_soumise_recall', 'facture_payee', 'facture_confirmee', 'facture_totalement_payee'],
+  '/eleve/classes': ['nouveau_creneau', 'changement_creneau', 'new_facture_soumise', 'facture_confirmee', 'new_message_chat_classe'],
+  '/eleve/factures': ['new_facture_soumise', 'facture_confirmee'],
+  '/professeur/planning': ['inscription_eleve'],
+  '/professeur/cours': ['new_message_chat_classe', 'facture_payee'],
+  '/admin/classes': ['new_facture_soumise', 'facture_payee', 'facture_confirmee', 'new_message_chat_classe', 'facture_totalement_payee'],
 }
 
-// Pour le marquage "lu" au clic — uniquement les routes SANS lecture plus fine en aval
+// Pour le marquage "lu" au clic
 const NOTIF_MARK_READ_ON_NAV: Record<string, string[]> = {
   '/direction/planning-global': ['changement_creneau', 'nouveau_creneau'],
-  // ⚠️ volontairement PAS '/eleve/classes' ni '/professeur/cours' :
-  // ces notifs sont marquées lues plus finement dans ClasseDetail
 }
 
-  // 📡 Récupération des tâches pour afficher le badge d'alarme
+interface MenuItem {
+  to: string
+  label: string
+  icon: string
+  mobileLabel: string
+  isLogout?: boolean
+}
+
+// ✅ CORRECTION : userId est maintenant bien déstructuré ici
+export default function Sidebar({ userRole, userId, isActive = true }: SidebarProps) {
+  const location = useLocation()
+
+  // 📡 Notifications non lues
+  const { data: notificationsData } = useGetNotificationsQuery(
+    { page: 1, lu: false },
+    {
+      pollingInterval: 30000,
+      skip: !userRole,
+    }
+  )
+
+  // ✅ CORRECTION : Ce bloc est maintenant BIEN À L'INTÉRIEUR du composant
   const { data: tachesRaw } = useGetTachesDirectionQuery(undefined, {
     pollingInterval: 30000,
     skip: !userId || (userRole !== 'admin' && userRole !== 'direction'),
@@ -46,41 +61,15 @@ const NOTIF_MARK_READ_ON_NAV: Record<string, string[]> = {
       tache.assignees.some((a) => a.user === userId)
   ).length
 
-
-interface MenuItem {
-  to: string
-  label: string
-  icon: string
-  mobileLabel: string
-  isLogout?: boolean
-}
-
-export default function Sidebar({ userRole, isActive = true }: SidebarProps) {
-  const location = useLocation()
-
-  // 📡 Notifications non lues, utilisées uniquement pour calculer les pastilles
-  // du menu (pas d'affichage de liste ici, ça reste dans le TopBar)
-  const { data: notificationsData } = useGetNotificationsQuery(
-    { page: 1, lu: false },
-    {
-      pollingInterval: 30000,
-      skip: !userRole,
-    }
-  )
-
   const unreadNotifs = notificationsData?.results?.filter((n) => !n.lu) || []
-
   const [markRead] = useMarkNotificationReadMutation()
 
   const hasNotifBadge = (route: string) => {
     const types = NOTIF_BADGE_MAP[route]
     if (!types) return false
-    console.log('DEBUG result', route, unreadNotifs.some((n) => types.includes((n as any).type)))
     return unreadNotifs.some((n) => types.includes((n as any).type))
   }
 
-  // ✅ Au clic sur un lien du menu, on marque comme lues les notifs
-  // correspondantes (celles qui ont déclenché la pastille sur ce lien)
   const handleMenuClick = (route: string) => {
     const types = NOTIF_MARK_READ_ON_NAV[route]
     if (!types) return
@@ -125,8 +114,6 @@ export default function Sidebar({ userRole, isActive = true }: SidebarProps) {
           { to: '/eleve/factures', label: ' Mes Factures', icon: '💰', mobileLabel: 'Factures' },
           logoutItem,
         ]
-
-        // 🔒 Élève désactivé : accès restreint uniquement à la page Factures
         if (!isActive) {
           return fullMenu.filter((item) => item.to === '/eleve/factures')
         }
@@ -173,7 +160,6 @@ export default function Sidebar({ userRole, isActive = true }: SidebarProps) {
       {/* 📱 Bottom Navigation - Mobile/Tablette uniquement */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 px-2 py-1 z-50 safe-area-pb">
         <div className="flex items-center justify-around">
-          {/* 🚫 On masque le Planning en mobile (il reste accessible uniquement via la sidebar PC) */}
           {menuItems
             .filter((item) => !item.to.includes('planning'))
             .map((item) => (
@@ -193,8 +179,17 @@ export default function Sidebar({ userRole, isActive = true }: SidebarProps) {
               >
                 <span className="relative text-xl">
                   {item.icon}
-                  {hasNotifBadge(item.to) && (
-                    <span className="absolute -top-0.5 -right-1.5 w-2.5 h-2.5 rounded-full bg-orange-500 animate-pulse ring-2 ring-white" />
+                  
+                  {/* ✅ Badge Tâches (Chiffré) */}
+                  {(item.to === '/admin/taches' || item.to === '/direction/taches') && nbMesTaches > 0 ? (
+                    <span className="absolute -top-1.5 -right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-white animate-pulse">
+                      {nbMesTaches > 99 ? '99+' : nbMesTaches}
+                    </span>
+                  ) : (
+                    /* ✅ Badge Notification classique (Point orange) */
+                    hasNotifBadge(item.to) && (
+                      <span className="absolute -top-0.5 -right-1.5 w-2.5 h-2.5 rounded-full bg-orange-500 animate-pulse ring-2 ring-white" />
+                    )
                   )}
                 </span>
                 <span className="text-[10px] font-medium">{item.mobileLabel}</span>
@@ -202,12 +197,13 @@ export default function Sidebar({ userRole, isActive = true }: SidebarProps) {
             ))}
         </div>
       </nav>
+
       {/* 💻 Sidebar Desktop - Cachée sur mobile */}
       <aside className="hidden md:flex md:flex-col w-64 bg-white border-r border-neutral-200 h-screen sticky top-0">
         {/* Logo */}
         <div className="p-4 border-b border-neutral-200 flex items-center justify-center">
           <img 
-            src="/logo.jpeg"  // ✅ Pas besoin d'import
+            src="/logo.jpeg"
             alt="Sabil Al Ilm - Le chemin de la Science" 
             className="h-32 w-auto object-contain"
           />
