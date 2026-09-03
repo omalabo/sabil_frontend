@@ -133,7 +133,7 @@ export default function Sidebar({ userRole, isActive = true }: SidebarProps) {
       case 'direction':
         return [
           { to: '/direction/dashboard', label: ' Supervision', icon: '🎯', mobileLabel: 'Accueil' },
-          { to: '/direction/comptes', label: ' Comptes', icon: '💰💰', mobileLabel: 'Comptes' },
+          { to: '/direction/comptes', label: ' Comptes', icon: '📜', mobileLabel: 'Comptes' },
           { to: '/direction/planning-global', label: ' Planning', icon: '📅', mobileLabel: 'Planning' },
           { to: '/direction/professeurs', label: ' Professeurs', icon: '🎓', mobileLabel: 'Profs' },
           { to: '/direction/classes', label: 'Cours', icon: '🎓', mobileLabel: 'Cours' },
