@@ -1,9 +1,10 @@
 import { NavLink, useLocation } from 'react-router-dom'
-import { UserRole } from '../../types'
-import { useGetNotificationsQuery, useMarkNotificationReadMutation } from '../../store/apiSlice'
+import { UserRole, TacheDirection } from '../../types'
+import { useGetNotificationsQuery, useMarkNotificationReadMutation, useGetTachesDirectionQuery } from '../../store/apiSlice'
 
 interface SidebarProps {
   userRole?: UserRole
+  userId?: string
   isActive?: boolean // 🔒 false = compte désactivé (utilisé pour restreindre le menu élève)
 }
 
@@ -28,6 +29,24 @@ const NOTIF_MARK_READ_ON_NAV: Record<string, string[]> = {
   // ⚠️ volontairement PAS '/eleve/classes' ni '/professeur/cours' :
   // ces notifs sont marquées lues plus finement dans ClasseDetail
 }
+
+  // 📡 Récupération des tâches pour afficher le badge d'alarme
+  const { data: tachesRaw } = useGetTachesDirectionQuery(undefined, {
+    pollingInterval: 30000,
+    skip: !userId || (userRole !== 'admin' && userRole !== 'direction'),
+  })
+
+  const taches: TacheDirection[] = Array.isArray(tachesRaw)
+    ? tachesRaw
+    : (tachesRaw as any)?.results ?? []
+
+  const nbMesTaches = taches.filter(
+    (tache) =>
+      !tache.faite &&
+      tache.assignees.some((a) => a.user === userId)
+  ).length
+
+
 interface MenuItem {
   to: string
   label: string
@@ -220,8 +239,17 @@ export default function Sidebar({ userRole, isActive = true }: SidebarProps) {
             >
               <span className="relative text-lg">
                 {item.icon}
-                {hasNotifBadge(item.to) && (
-                  <span className="absolute -top-0.5 -right-1 w-2.5 h-2.5 rounded-full bg-orange-500 animate-pulse ring-2 ring-white" />
+                
+                {/* ✅ Badge Tâches (Chiffré) */}
+                {(item.to === '/admin/taches' || item.to === '/direction/taches') && nbMesTaches > 0 ? (
+                  <span className="absolute -top-1.5 -right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-white animate-pulse">
+                    {nbMesTaches > 99 ? '99+' : nbMesTaches}
+                  </span>
+                ) : (
+                  /* ✅ Badge Notification classique (Point orange) */
+                  hasNotifBadge(item.to) && (
+                    <span className="absolute -top-0.5 -right-1 w-2.5 h-2.5 rounded-full bg-orange-500 animate-pulse ring-2 ring-white" />
+                  )
                 )}
               </span>
               <span>{item.label}</span>
