@@ -125,7 +125,9 @@ export default function MesDiplomes() {
               <div className="text-sm text-neutral-600 space-y-1 mb-4">
                 <div>
                   <span className="font-medium">Délivré le :</span>{' '}
-                  {new Date(d.delivre_at).toLocaleDateString('fr-FR')}
+                    {d.created_at && d.created_at !== '1970-01-01' 
+                      ? new Date(d.created_at).toLocaleDateString('fr-FR')
+                      : new Date().toLocaleDateString('fr-FR')}
                 </div>
                 <div className="flex gap-3">
                   <span>📖 Oral : <b className="text-blue-700">{d.note_orale || '—'}/20</b></span>
