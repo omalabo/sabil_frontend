@@ -1,33 +1,37 @@
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosError, InternalAxiosRequestConfig } from 'axios'
+import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios'
 import { store } from '../store/store'
-import { logout, clearAuth } from '../store/authSlice'
+import { logout, clearAuth, updateTokens } from '../store/authSlice'
 
-/**
- * Instance Axios configurée pour l'API Django DRF
- * - Base URL depuis variables d'environnement
- * - Interceptor pour injection automatique du token JWT
- * - Gestion centralisée des erreurs 401/403/500
- */
 const api: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api',
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   },
-  timeout: 30000, // 30 secondes
+  timeout: 30000,
 })
 
-/**
- * Interceptor de requête : ajoute le token JWT à chaque appel API
- * Exécuté AVANT l'envoi de la requête au serveur
- */
+// ── LOGIQUE ROBUSTE DE REFRESH TOKEN (File d'attente) ──
+let isRefreshing = false
+let failedQueue: { resolve: (value?: any) => void; reject: (reason?: any) => void }[] = []
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error)
+    } else {
+      prom.resolve(token)
+    }
+  })
+  failedQueue = []
+}
+
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const state = store.getState()
     const token = state.auth.token
     
     if (token && config.headers) {
-      // Format : "Bearer <token>" selon standard JWT
       config.headers.Authorization = `Bearer ${token}`
     }
     return config
@@ -35,36 +39,83 @@ api.interceptors.request.use(
   (error: AxiosError) => Promise.reject(error)
 )
 
-/**
- * Interceptor de réponse : gère les erreurs globales
- * Exécuté APRÈS la réponse du serveur (succès ou erreur)
- */
 api.interceptors.response.use(
-  (response) => response, // Succès : on retourne la réponse telle quelle
+  (response) => response,
   async (error: AxiosError) => {
-    const originalRequest = error.config
-    
-    // 🔴 Erreur 401 : token expiré ou invalide → déconnexion forcée
-    if (error.response?.status === 401) {
-      store.dispatch(clearAuth())
-      store.dispatch(logout())
-      // Optionnel : rediriger vers login via événement custom
-      window.dispatchEvent(new CustomEvent('auth:unauthorized'))
-      return Promise.reject(error)
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean }
+
+    // 🔴 Si erreur 401 ET que la requête n'a pas déjà été retentée
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      
+      // 1. Si un refresh est déjà en cours, on met la requête en file d'attente
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject })
+        })
+          .then((token) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`
+            return api(originalRequest)
+          })
+          .catch((err) => Promise.reject(err))
+      }
+
+      // 2. On marque la requête comme "déjà retentée" et on verrouille le refresh
+      originalRequest._retry = true
+      isRefreshing = true
+
+      try {
+        const state = store.getState()
+        const refreshToken = state.auth.refreshToken
+
+        if (!refreshToken) {
+          throw new Error('Aucun refresh token disponible')
+        }
+
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
+
+        // 3. Appel au backend pour obtenir de NOUVEAUX tokens
+        // On utilise axios de base (pas 'api') pour ne pas déclencher l'interceptor en boucle
+        const { data } = await axios.post(`${baseUrl}/token/refresh/`, {
+          refresh: refreshToken
+        })
+
+        const newAccessToken = data.access
+        const newRefreshToken = data.refresh // Django renvoie un nouveau refresh token car ROTATE_REFRESH_TOKENS = True
+
+        // 4. Mettre à jour le store et le localStorage
+        store.dispatch(updateTokens({ 
+          token: newAccessToken, 
+          refreshToken: newRefreshToken 
+        }))
+
+        // 5. Traiter la file d'attente (relancer les autres requêtes en attente)
+        processQueue(null, newAccessToken)
+
+        // 6. Relancer la requête originale qui avait échoué avec le nouveau token
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`
+        return api(originalRequest)
+
+      } catch (refreshError) {
+        // ⚠️ Le refresh a échoué (refresh token expiré après 7 jours, ou utilisateur banni)
+        // Là seulement, on déconnecte vraiment l'utilisateur
+        processQueue(refreshError, null)
+        store.dispatch(clearAuth())
+        store.dispatch(logout())
+        window.dispatchEvent(new CustomEvent('auth:unauthorized'))
+        return Promise.reject(refreshError)
+        
+      } finally {
+        // Dans tous les cas, on libère le verrou
+        isRefreshing = false
+      }
     }
     
-    // 🟡 Erreur 403 : permissions insuffisantes
+    // Gestion des autres erreurs (403, 500, etc.)
     if (error.response?.status === 403) {
       console.warn('Accès refusé : permissions insuffisantes')
-      // Optionnel : afficher toast d'erreur
-      return Promise.reject(error)
     }
-    
-    // 🔵 Erreur 500 : problème serveur
     if (error.response?.status === 500) {
       console.error('Erreur serveur interne')
-      // Optionnel : notifier l'utilisateur
-      return Promise.reject(error)
     }
     
     return Promise.reject(error)
