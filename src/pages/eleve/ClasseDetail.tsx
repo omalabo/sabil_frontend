@@ -1592,6 +1592,47 @@ export default function ClasseDetail({ role }: ClasseDetailProps) {
 
   const todayDayName = getTodayDayName()
 
+  
+  
+  // ✅ Vérifie si le message image_motivation est destiné à l'élève connecté
+  const isMotivationForMe = (msg: Message): boolean => {
+    if (msg.type_message !== 'image_motivation') return true
+    const content = msg.contenu || ''
+    // Si pas de préfixe WELCOME_, on affiche (fallback)
+    if (!content.startsWith('WELCOME_')) return true
+    // Sinon, on vérifie que l'ID correspond
+    return content.startsWith(`WELCOME_${user?.id}:`)
+  }
+
+    // ✅ Vérifie si le message image_motivation est destiné à l'élève connecté
+  const isMotivationForMe = (msg: Message): boolean => {
+    if (msg.type_message !== 'image_motivation') return true
+    const content = msg.contenu || ''
+    // Si pas de préfixe WELCOME_, on affiche (fallback)
+    if (!content.startsWith('WELCOME_')) return true
+    // Sinon, on vérifie que l'ID correspond
+    return content.startsWith(`WELCOME_${user?.id}:`)
+  }
+
+  // ✅ Extrait le contenu nettoyé (sans préfixe WELCOME_{id}:)
+  const getCleanContent = (contenu: string | null | undefined): string => {
+    if (!contenu) return '';
+    // Supprime le préfixe "WELCOME_{quelquechose}:"
+    return contenu.replace(/^WELCOME_[^:]+:/, '');
+  };
+
+  // ✅ Extrait l'URL de l'image de motivation (utilise getCleanContent)
+  const getMotivationImageUrl = (contenu: string | null | undefined): string => {
+    const cleaned = getCleanContent(contenu);
+    // Si c'est une image de motivation, on retourne le chemin nettoyé
+    // Sinon on retourne une chaîne vide
+    if (cleaned && cleaned.startsWith('/')) {
+      return cleaned;
+    }
+    return '';
+  };
+  
+  
 
   const getFullUrl = (url: string | null | undefined) => {
     if (!url) return '';
@@ -2947,7 +2988,7 @@ const classesFiltrees = classes.filter((cls: Class) =>
                                 </div>
                                 {getDepartMessage(activeClass?.statut)}
                               </div>
-                            )} {messages.map((msg, idx) => {
+                            )} {messages.filter(msg => isMotivationForMe(msg)).map((msg, idx) => {
                               const prevMsg = messages[idx - 1]
                               const showDateSeparator = !prevMsg || new Date(prevMsg.created_at).toDateString() !== new Date(msg.created_at).toDateString()
                               const isMe = msg.expediteur === user?.id;
@@ -3049,14 +3090,15 @@ const classesFiltrees = classes.filter((cls: Class) =>
                                             repliedMsg.type_message === 'audio' ? '🎤 Note vocale' :
                                             repliedMsg.type_message === 'fichier' ? '📄 Document' :
                                             repliedMsg.type_message === 'image' ? '📷 Photo' :
-                                            (repliedMsg.contenu)}
+                                            repliedMsg.type_message === 'image_motivation' ? '📷 Image motivation' :
+                                            getCleanContent(repliedMsg.contenu)}
                                           </div>
                                         </div>
                                       </div>
                                     )}
 
                                     {/* Contenu Texte */}
-                                    {msg.contenu && (
+                                    {msg.contenu && msg.type_message !== 'image_motivation' && (
                                       <div style={{ padding: '0 14px 8px', fontSize: '14px', color: '#111', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
                                         {msg.contenu}
                                       </div>
@@ -3154,6 +3196,33 @@ const classesFiltrees = classes.filter((cls: Class) =>
                                           </span>
                                         )}
                                       </a>
+                                    )}
+
+                                    {/* 🆕 IMAGES DE MOTIVATION (visibles uniquement par l'élève concerné) */}
+                                    {msg.type_message === 'image_motivation' && msg.contenu && (
+                                      <div style={{ padding: '4px 14px 8px' }}>
+                                        <img
+                                          src={getMotivationImageUrl(msg.contenu)}  // ✅ Utilise la fonction dédiée
+                                          alt="Motivation"
+                                          style={{
+                                            width: '100%',
+                                            maxWidth: '380px',
+                                            display: 'block',
+                                            borderRadius: '12px',
+                                            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                                            cursor: 'zoom-in',
+                                          }}
+                                          onClick={() => setPreviewMedia({
+                                            url: getMotivationImageUrl(msg.contenu),
+                                            type: 'image',
+                                            name: 'Image motivation'
+                                          })}
+                                          onError={(e) => {
+                                            (e.target as HTMLImageElement).style.display = 'none';
+                                            console.warn('Image motivation non trouvée:', getMotivationImageUrl(msg.contenu));
+                                          }}
+                                        />
+                                      </div>
                                     )}
 
                                     {/* Pied du message (Heure + Check) */}
