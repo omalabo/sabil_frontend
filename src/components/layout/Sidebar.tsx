@@ -112,7 +112,7 @@ export default function Sidebar({ userRole, userId, isActive = true }: SidebarPr
           { to: '/eleve/diplomes', label: ' Mes diplômes', icon: '🎓', mobileLabel: 'Diplômes' },
           { to: '/eleve/chat-admin', label: ' Admin', icon: '💬', mobileLabel: 'Admin' },
           { to: '/eleve/factures', label: ' Mes Factures', icon: '💰', mobileLabel: 'Factures' },
-          logoutItem,
+          
         ]
         if (!isActive) {
           return fullMenu.filter((item) => item.to === '/eleve/factures')
@@ -254,18 +254,20 @@ export default function Sidebar({ userRole, userId, isActive = true }: SidebarPr
         </nav>
 
         {/* Déconnexion */}
-        <div className="p-4 border-t border-neutral-200">
-          <button
-            onClick={() => {
-              localStorage.removeItem('sabil_token')
-              window.location.href = '/login'
-            }}
-            className="w-full flex items-center gap-3 px-4 py-2 text-sm text-danger-600 hover:bg-danger-50 rounded-lg transition-colors"
-          >
-            <span>🚪</span>
-            <span>Déconnexion</span>
-          </button>
-        </div>
+        {userRole !== 'eleve' && (
+          <div className="p-4 border-t border-neutral-200">
+            <button
+              onClick={() => {
+                localStorage.removeItem('sabil_token')
+                window.location.href = '/login'
+              }}
+              className="w-full flex items-center gap-3 px-4 py-2 text-sm text-danger-600 hover:bg-danger-50 rounded-lg transition-colors"
+            >
+              <span>🚪</span>
+              <span>Déconnexion</span>
+            </button>
+          </div>
+        )}
       </aside>
     </>
   )
