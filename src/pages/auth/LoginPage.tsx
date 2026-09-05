@@ -66,9 +66,11 @@ export default function LoginPage() {
         mustChangePassword: result.must_change_password,
       })) */
 
+              // ✅ Succès : mettre à jour le store Redux
         dispatch(loginSuccess({
-          user: result.user,  // ✅ l'objet vient directement du backend maintenant
+          user: result.user,  
           token: result.token,
+          refreshToken: result.refresh, // 👈 ICI : on prend result.refresh du backend
           mustChangePassword: result.must_change_password,
         }))
 
