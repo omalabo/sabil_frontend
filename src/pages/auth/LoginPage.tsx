@@ -115,7 +115,7 @@ export default function LoginPage() {
       {/* 🏷️ Logo / En-tête */}
         <div className="p-4 flex items-center justify-center">
         <img 
-          src="/logo_login.png" 
+          src="./logo_login.png" 
           alt="Sabil Al Ilm - Le chemin de la Science" 
           className="h-[190px] w-auto object-contain"
         />
