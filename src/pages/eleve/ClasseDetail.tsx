@@ -1618,7 +1618,7 @@ export default function ClasseDetail({ role }: ClasseDetailProps) {
     const cleaned = getCleanContent(contenu);
     // Si c'est une image de motivation, on retourne le chemin nettoyé
     // Sinon on retourne une chaîne vide
-    if (cleaned && cleaned.startsWith('./')) {
+    if (cleaned && cleaned.startsWith('/')) {
       return cleaned;
     }
     return '';
