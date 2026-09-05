@@ -157,12 +157,16 @@ export default function Sidebar({ userRole, userId, isActive = true }: SidebarPr
 
   return (
     <>
-      {/* 📱 Bottom Navigation - Mobile/Tablette uniquement */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 px-2 py-1 z-50 safe-area-pb">
-        <div className="flex items-center justify-around">
+   
+      {/* 📱 Bottom Navigation - Mobile/Tablette uniquement (Scrollable) */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 z-50 safe-area-pb">
+        {/* ✅ Ajout de overflow-x-auto, snap-x, et masquage de la scrollbar */}
+        <div className="flex items-center gap-1 overflow-x-auto snap-x snap-mandatory px-2 py-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {menuItems
             .filter((item) => !item.to.includes('planning'))
             .map((item) => (
+              /* ✅ flex-shrink-0 et min-w-[72px] empêchent l'écrasement des icônes */
+              /* ✅ snap-center permet au défilement de s'arrêter net sur l'icône */
               <NavLink
                 key={item.to}
                 to={item.to}
@@ -175,7 +179,14 @@ export default function Sidebar({ userRole, userId, isActive = true }: SidebarPr
                     handleMenuClick(item.to)
                   }
                 }}
-                className={({ isActive: linkActive }) => getMobileLinkClasses(linkActive)}
+                className={({ isActive: linkActive }) => `
+                  
+                  flex flex-col items-center justify-center gap-1 px-2 py-1.5 rounded-lg transition-all flex-shrink-0 snap-center min-w-[72px]
+                  ${linkActive 
+                    ? 'text-primary-600' 
+                    : 'text-neutral-500 hover:text-neutral-700'
+                  }
+                `}
               >
                 <span className="relative text-xl">
                   {item.icon}
@@ -192,7 +203,8 @@ export default function Sidebar({ userRole, userId, isActive = true }: SidebarPr
                     )
                   )}
                 </span>
-                <span className="text-[10px] font-medium">{item.mobileLabel}</span>
+                {/* text-center et leading-tight pour que le texte reste propre sur 2 lignes si nécessaire */}
+                <span className="text-[10px] font-medium text-center leading-tight">{item.mobileLabel}</span>
               </NavLink>
             ))}
         </div>
