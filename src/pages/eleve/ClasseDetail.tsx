@@ -1594,15 +1594,7 @@ export default function ClasseDetail({ role }: ClasseDetailProps) {
 
   
   
-  // ✅ Vérifie si le message image_motivation est destiné à l'élève connecté
-  const isMotivationForMe = (msg: Message): boolean => {
-    if (msg.type_message !== 'image_motivation') return true
-    const content = msg.contenu || ''
-    // Si pas de préfixe WELCOME_, on affiche (fallback)
-    if (!content.startsWith('WELCOME_')) return true
-    // Sinon, on vérifie que l'ID correspond
-    return content.startsWith(`WELCOME_${user?.id}:`)
-  }
+
 
     // ✅ Vérifie si le message image_motivation est destiné à l'élève connecté
   const isMotivationForMe = (msg: Message): boolean => {
