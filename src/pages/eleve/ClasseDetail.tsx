@@ -1630,7 +1630,7 @@ export default function ClasseDetail({ role }: ClasseDetailProps) {
     if (!url) return '';
     if (url.startsWith('http://') || url.startsWith('https://')) return url;
     // ⚠️ Remplace 'http://localhost:8000' par l'URL réelle de ton backend si elle est différente
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    const baseUrl = import.meta.env.VITE_API_URL || 'https://api.sabil-al-ilm.org/api';
     return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
   };
   const [previewMedia, setPreviewMedia] = useState<{ url: string; type: 'image' | 'video'; name?: string } | null>(null);
