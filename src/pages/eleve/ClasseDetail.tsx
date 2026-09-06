@@ -1657,7 +1657,7 @@ const getMotivationImageUrl = (contenu: string | null | undefined): string => {
   
   // Si l'index est valide, on retourne le chemin local RELATIF (./)
   if (imgIndex >= 0 && imgIndex < LOCAL_MOTIVATION_IMAGES.length) {
-    return './' + LOCAL_MOTIVATION_IMAGES[imgIndex];
+    return '/' + LOCAL_MOTIVATION_IMAGES[imgIndex];
   }
   
   return '';
