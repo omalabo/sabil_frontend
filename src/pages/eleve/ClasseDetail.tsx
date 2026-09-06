@@ -1597,14 +1597,14 @@ export default function ClasseDetail({ role }: ClasseDetailProps) {
 
 
     // ✅ Vérifie si le message image_motivation est destiné à l'élève connecté
-  const isMotivationForMe = (msg: Message): boolean => {
-    if (msg.type_message !== 'image_motivation') return true
-    const content = msg.contenu || ''
+  //const isMotivationForMe = (msg: Message): boolean => {
+  //  if (msg.type_message !== 'image_motivation') return true
+   // const content = msg.contenu || ''
     // Si pas de préfixe WELCOME_, on affiche (fallback)
-    if (!content.startsWith('WELCOME_')) return true
+   // if (!content.startsWith('WELCOME_')) return true
     // Sinon, on vérifie que l'ID correspond
-    return content.startsWith(`WELCOME_${user?.id}:`)
-  }
+   // return content.startsWith(`WELCOME_${user?.id}:`)
+ // }
 
   // ✅ Extrait le contenu nettoyé (sans préfixe WELCOME_{id}:)
   const getCleanContent = (contenu: string | null | undefined): string => {
@@ -1614,15 +1614,54 @@ export default function ClasseDetail({ role }: ClasseDetailProps) {
   };
 
   // ✅ Extrait l'URL de l'image de motivation (utilise getCleanContent)
-  const getMotivationImageUrl = (contenu: string | null | undefined): string => {
-    const cleaned = getCleanContent(contenu);
+  //const getMotivationImageUrl = (contenu: string | null | undefined): string => {
+ //   const cleaned = getCleanContent(contenu);
     // Si c'est une image de motivation, on retourne le chemin nettoyé
     // Sinon on retourne une chaîne vide
-    if (cleaned && cleaned.startsWith('/')) {
-      return cleaned;
-    }
-    return '';
-  };
+  //  if (cleaned && cleaned.startsWith('/')) {
+   //   return cleaned;
+  //  }
+  //  return '';
+ // };
+
+
+  // ✅ 1. On définit la liste locale des images (exactement comme elles sont nommées dans ton dossier public/webapp)
+const LOCAL_MOTIVATION_IMAGES = [
+  '01-bienvenue.jpeg',
+  '02-muhammad-ibn-nadr.jpeg',
+  '03-jafar-as-sadiq.jpeg',
+  '04-shaikh-muqbil.jpeg',
+  '05-abou-hourayra.jpeg',
+  '06-les-4-questions.jpeg',
+  '07-noter-prenom.jpeg',
+  '08-rappel-comportement.png',
+];
+
+// ✅ 2. Ta fonction de vérification reste inchangée (elle est parfaite)
+const isMotivationForMe = (msg: Message): boolean => {
+  if (msg.type_message !== 'image_motivation') return true;
+  const content = msg.contenu || '';
+  if (!content.startsWith('WELCOME_')) return true;
+  return content.startsWith(`WELCOME_${user?.id}:`);
+};
+
+// ✅ 3. La fonction "Magique" qui résout tout sans toucher à index.tsx
+const getMotivationImageUrl = (contenu: string | null | undefined): string => {
+  if (!contenu) return '';
+  
+  // Extrait le tag (ex: "WELCOME_123:img4" devient "img4")
+  const tag = contenu.replace(/^WELCOME_[^:]+:/, '');
+  
+  // Transforme "img4" en index 3 (car img1 = index 0)
+  const imgIndex = parseInt(tag.replace('img', ''), 10) - 1;
+  
+  // Si l'index est valide, on retourne le chemin local RELATIF (./)
+  if (imgIndex >= 0 && imgIndex < LOCAL_MOTIVATION_IMAGES.length) {
+    return './' + LOCAL_MOTIVATION_IMAGES[imgIndex];
+  }
+  
+  return '';
+};
   
   
 
