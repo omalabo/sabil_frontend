@@ -232,7 +232,7 @@ export interface AnnonceEleve {
 
 // ==================== MESSAGERIE ====================
 
-export type MessageType = 'texte' | 'fichier' | 'image' | 'audio' | 'systeme' | 'annonce'| 'video'
+export type MessageType = 'texte' | 'fichier' | 'image' | 'audio' | 'systeme' | 'annonce'| 'video' | 'image_motivation'
 export type CanalType = 'classe' | 'admin' | 'direction'
 
 export interface Message {
