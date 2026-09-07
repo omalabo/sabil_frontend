@@ -564,7 +564,8 @@ function ControlBar({
   const { localParticipant } = useLocalParticipant()
 
   const [micEnabled, setMicEnabled] = useState(true)
-  const [camEnabled, setCamEnabled] = useState(role === 'professeur')
+  //const [camEnabled, setCamEnabled] = useState(role === 'professeur')
+  const [camEnabled, setCamEnabled] = useState(false)
   const [screenSharing, setScreenSharing] = useState(false)
 
   const canShareScreen = ['professeur', 'eleve'].includes(role)
@@ -866,7 +867,8 @@ export default function VideoRoom({
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: true,
-          video: role === 'professeur',
+          //video: role === 'professeur',
+          video: false,
         })
         permissionStreamRef.current = stream
       } catch (err) {
@@ -915,7 +917,7 @@ export default function VideoRoom({
     setIsRecordingLoading(false)
   }
 }
-
+//video={role === 'professeur'}
   return (
     <div className="h-full flex flex-col bg-neutral-900 rounded-lg overflow-hidden relative">
       <LiveKitRoom
@@ -923,7 +925,7 @@ export default function VideoRoom({
         token={token}
         connect={true}
         audio={true}
-        video={role === 'professeur'}
+        video={false}
         screen={['professeur', 'eleve'].includes(role)}
         options={{
           adaptiveStream: true,
