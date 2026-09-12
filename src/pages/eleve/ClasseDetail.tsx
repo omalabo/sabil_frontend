@@ -1283,7 +1283,14 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
 }
 
 // ─── Composant ReadReceipts (Style Telegram) AVEC DEBUG ─────────────────────────────
-function MessageReadReceipts({ msg, userId, className }: { msg: Message; userId: string; className?: string }) {
+function MessageReadReceipts({ msg, userId, user, headerInscriptions, usersData, className }: { 
+  msg: Message; 
+  userId: string; 
+  user: any; 
+  headerInscriptions: any;
+  usersData: any;
+  className?: string 
+}) {
 const [showReadBy, setShowReadBy] = useState(false)
 const expId = typeof msg.expediteur === 'object' ? (msg.expediteur as any)?.id : msg.expediteur
 
@@ -1323,6 +1330,19 @@ if (totalRecipients === 0) {
 const hasRead = luPar.length > 0
 
 console.log('📊 Affichage:', { hasRead, totalRecipients })
+
+// Résoudre un ID en nom d'utilisateur
+const getUserName = (userId: string): string => {
+  if (userId === user?.id) return 'Vous'
+  // Chercher dans les inscriptions de la classe
+  const inscrit = headerInscriptions?.results?.find((i: any) => i.eleve_id === userId || i.user?.id === userId)
+  if (inscrit?.eleve_nom) return inscrit.eleve_nom
+  // Chercher dans les utilisateurs (profs)
+  const u = usersData?.results?.find((u: any) => u.id === userId)
+  if (u?.display_name) return u.display_name
+  // Fallback
+  return userId.substring(0, 8) + '…'
+}
 
 return (
 <>
@@ -1513,7 +1533,7 @@ return (
                     fontWeight: 700,
                     flexShrink: 0
                   }}>
-                    {receiverId.charAt(0).toUpperCase()}
+                    {getUserName(receiverId).charAt(0).toUpperCase()}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{
@@ -1524,7 +1544,7 @@ return (
                       overflow: 'hidden',
                       textOverflow: 'ellipsis'
                     }}>
-                      {receiverId}
+                      {getUserName(receiverId)}
                     </div>
                     <div style={{ fontSize: 11, color: '#9ca3af' }}>
                       ✓ Reçu
@@ -1552,6 +1572,7 @@ return (
 </>
 )
 }
+
 
 
 // ─── Icônes chat ───────────────────────────────────────────
@@ -3528,7 +3549,13 @@ const classesFiltrees = classes.filter((cls: Class) =>
                                       >
                                         ↩️
                                       </button>
-                                     {isMe && <MessageReadReceipts msg={msg} userId={user?.id ?? ''} />}
+                                       {isMe && <MessageReadReceipts 
+                                          msg={msg} 
+                                          userId={user?.id ?? ''} 
+                                          user={user}
+                                          headerInscriptions={headerInscriptions}
+                                          usersData={usersData}
+                                        />}
                                     </div>
 
                                   </div>
