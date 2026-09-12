@@ -1282,32 +1282,56 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
   )
 }
 
-// ─── Composant ReadReceipts (Style Telegram) ─────────────────────────────
+// ─── Composant ReadReceipts (Style Telegram) AVEC DEBUG ─────────────────────────────
 function MessageReadReceipts({ msg, userId, className }: { msg: Message; userId: string; className?: string }) {
 const [showReadBy, setShowReadBy] = useState(false)
 const expId = typeof msg.expediteur === 'object' ? (msg.expediteur as any)?.id : msg.expediteur
 
+// DEBUG: Logger les données du message
+console.log('🔍 MessageReadReceipts - Message:', {
+  msgId: msg.id,
+  expediteur: msg.expediteur,
+  expId,
+  userId,
+  isMe: expId === userId,
+  recu_par: msg.recu_par,
+  lu_par_ids: msg.lu_par_ids,
+  msg
+})
+
 // Ne montrer que pour les messages de l'utilisateur
-if (expId !== userId) return null
+if (expId !== userId) {
+  console.log('⚠️ Pas mon message, return null')
+  return null
+}
 
 const recuPar: string[] = msg.recu_par ?? []
 const luPar: string[] = msg.lu_par_ids ?? []
 const totalRecipients = recuPar.length + luPar.length
 
+console.log('✅ Mon message - Données:', { recuPar, luPar, totalRecipients })
+
 // Si personne n'a reçu le message
 if (totalRecipients === 0) {
-return (
-  <span style={{ color: '#9ca3af', fontSize: 13, cursor: 'default' }}>✓</span>
-)
+  console.log('📭 Personne n\'a reçu le message')
+  return (
+    <span style={{ color: '#9ca3af', fontSize: 13, cursor: 'default' }}>✓</span>
+  )
 }
 
 // Si certains ont lu
 const hasRead = luPar.length > 0
 
+console.log('📊 Affichage:', { hasRead, totalRecipients })
+
 return (
 <>
   <span
-    onClick={(e) => { e.stopPropagation(); setShowReadBy(true) }}
+    onClick={(e) => { 
+      e.stopPropagation(); 
+      console.log('🖱️ Clic sur les coches, ouverture popup');
+      setShowReadBy(true) 
+    }}
     style={{
       color: hasRead ? '#3b82f6' : '#9ca3af',
       fontSize: 13,
@@ -1345,6 +1369,9 @@ return (
         onClick={(e) => e.stopPropagation()}
         style={{
           position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
           zIndex: 91,
           background: '#fff',
           borderRadius: 12,
