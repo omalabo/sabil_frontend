@@ -1282,6 +1282,39 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
   )
 }
 
+
+// ─── Dictionnaire pour résoudre les IDs en Noms ──────────────────────────────
+const userNameMap = useMemo(() => {
+  const map: Record<string, string> = {}
+  
+  // 1. L'utilisateur actuel
+  if (user?.id) map[user.id] = 'Vous'
+
+  // 2. Depuis les inscriptions (élèves de la classe)
+  if (headerInscriptions?.results) {
+    headerInscriptions.results.forEach((insc: any) => {
+      const uid = insc.eleve_id || insc.eleve?.id
+      const name = insc.eleve_nom || insc.eleve?.display_name
+      console.log('🔍 Inscription:', { uid, name, insc }) // DEBUG
+      if (uid) map[uid] = name || uid.substring(0, 8) + '…'
+    })
+  }
+
+  // 3. Depuis la liste des utilisateurs (profs, admin, direction)
+  if (usersData?.results) {
+    usersData.results.forEach((u: any) => {
+      if (u?.id && u?.display_name) {
+        map[u.id] = u.display_name
+      }
+    })
+  }
+
+  console.log(' userNameMap construit:', map) // DEBUG
+  return map
+}, [user?.id, headerInscriptions?.results, usersData?.results])
+
+
+
 // ─── Composant ReadReceipts (Style Telegram) AVEC DEBUG ─────────────────────────────
 // ─── Composant ReadReceipts (Style Telegram) ─────────────────────────────
 function MessageReadReceipts({ msg, userId, userNameMap, className }: { 
@@ -2408,37 +2441,7 @@ const handleSendMessage = async (e: React.FormEvent) => {
 // ═══════════════════════════════════════════════════════════════
 
 
-// ─── Dictionnaire pour résoudre les IDs en Noms ──────────────────────────────
-const userNameMap = useMemo(() => {
-  const map: Record<string, string> = {}
-  
-  // 1. L'utilisateur actuel
-  if (user?.id) map[user.id] = 'Vous'
 
-  // 2. Depuis les inscriptions (élèves de la classe)
-  if (headerInscriptions?.results) {
-    headerInscriptions.results.forEach((insc: any) => {
-      // L'ID peut être dans eleve_id ou eleve.id
-      const uid = insc.eleve_id || insc.eleve?.id
-      // Le nom peut être dans eleve_nom (champ direct) ou eleve.display_name
-      const name = insc.eleve_nom || insc.eleve?.display_name || insc.display_name
-      if (uid) map[uid] = name || uid.substring(0, 8) + '…'
-    })
-  }
-
-  // 3. Depuis la liste des utilisateurs (profs, admin, direction)
-  if (usersData?.results) {
-    usersData.results.forEach((u: any) => {
-      if (u?.id && u?.display_name) {
-        map[u.id] = u.display_name
-      }
-    })
-  }
-
-  return map
-}, [user?.id, headerInscriptions?.results, usersData?.results])
-
-  
 
   // 🆕 Filtrage des onglets pour directeur
   const availableTabs = useMemo(() => {
