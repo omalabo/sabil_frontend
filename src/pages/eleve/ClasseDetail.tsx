@@ -1733,6 +1733,7 @@ export default function ClasseDetail({ role }: ClasseDetailProps) {
     { role: 'professeur', page: 1 },
     { skip: role !== 'admin' && role !== 'direction' }
   )
+  
   const adminProfIds = useMemo(
     () => (usersData?.results ?? []).map((u: any) => u.id),
     [usersData?.results]
@@ -1861,6 +1862,12 @@ export default function ClasseDetail({ role }: ClasseDetailProps) {
   const { data: headerInscriptions } = useGetInscriptionsQuery(
     { classe: activeClassId || '' },
     { skip: !activeClassId || !showClassInfo }
+  )
+
+  // nouvelle query, indépendante de showClassInfo, seulement active sur l'onglet chat
+  const { data: chatInscriptions } = useGetInscriptionsQuery(
+    { classe: activeClassId || '' },
+    { skip: !activeClassId || activeTab !== 'chat' }
   )
 
   
@@ -3557,7 +3564,7 @@ const classesFiltrees = classes.filter((cls: Class) =>
                                         msg={msg} 
                                         userId={user?.id ?? ''} 
                                         user={user}
-                                        headerInscriptions={headerInscriptions}
+                                        headerInscriptions={chatInscriptions}   // ← changé ici seulement
                                         usersData={usersData}
                                       />}
                                     </div>
