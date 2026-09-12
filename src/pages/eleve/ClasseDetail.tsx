@@ -3040,7 +3040,6 @@ const classesFiltrees = classes.filter((cls: Class) =>
                   }}>
                     <VideoRoom 
                       classe={activeClass} 
-                      seance={{ id: liveKitSession.seanceId }} 
                       role={role === 'admin' || role === 'direction' ? 'eleve' : role} 
                       onLeave={(audioUrl?: string) => handleLeaveSession(audioUrl)} 
                       roomName={liveKitSession.roomName} 
@@ -3049,6 +3048,24 @@ const classesFiltrees = classes.filter((cls: Class) =>
                       isModerator={(role === 'admin' || role === 'direction') ? false : liveKitSession.isModerator} 
                       userId={user?.id} 
                       userName={user?.display_name || user?.prenom} 
+                    />
+                  </div>
+                )}
+
+                {/* 🆕 Whiteboard TOUJOURS MONTÉ (reste connecté en arrière-plan) */}
+                {activeClassId && defaultSeanceId && (
+                  <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    zIndex: activeTab === 'tableau' ? 10 : 0,
+                    opacity: activeTab === 'tableau' ? 1 : 0,
+                    pointerEvents: activeTab === 'tableau' ? 'auto' : 'none',
+                    transition: 'opacity 0.3s ease'
+                  }}>
+                    <CollaborativeWhiteboard 
+                      classeId={activeClassId} 
+                      seanceId={defaultSeanceId} 
+                      role={role === 'admin' || role === 'direction' ? 'eleve' : role} 
                     />
                   </div>
                 )}
@@ -3532,9 +3549,9 @@ const classesFiltrees = classes.filter((cls: Class) =>
                   </div>
                 )}
 
-                {activeTab === 'tableau' && activeClassId && defaultSeanceId && (
+                {/* {activeTab === 'tableau' && activeClassId && defaultSeanceId && (
                   <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}><CollaborativeWhiteboard classeId={activeClassId} seanceId={defaultSeanceId} role={role === 'admin' || role === 'direction' ? 'eleve' : role} /></div>
-                )}
+                )} */}
 
                 {activeTab === 'supports' && (
                   <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', background: '#f8fafc' }}>
