@@ -14,7 +14,18 @@ interface Diplome {
   classe_nom: string
   professeur_nom: string
   created_at: string
-  image_diplome: string | null  // ✅ URL de l'image générée
+  image_diplome: string | null
+}
+
+// ── Helper pour construire l'URL absolue de l'image ───────────────────────────
+const getFullUrl = (url: string | null | undefined) => {
+  if (!url) return ''
+  // Si c'est déjà une URL absolue, on la retourne telle quelle
+  if (url.startsWith('http://') || url.startsWith('https://')) return url
+  
+  // Sinon, on préfixe avec l'URL de l'API (backend)
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+  return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`
 }
 
 // ── Page principale ────────────────────────────────────────────────────────────
@@ -44,20 +55,24 @@ export default function MesDiplomes() {
     )
   }
 
-  // ✅ Téléchargement direct de l'image
+  // ✅ Téléchargement direct de l'image (avec URL absolue)
   function handleDownload(d: Diplome) {
-    if (!d.image_diplome) return
+    const fullUrl = getFullUrl(d.image_diplome)
+    if (!fullUrl) return
+    
     const a = document.createElement('a')
-    a.href = d.image_diplome
+    a.href = fullUrl
     a.download = `Diplome-${d.nom_eleve_diplome}-${d.matiere}.png`
     document.body.appendChild(a)
     a.click()
     a.remove()
   }
 
-  // ✅ Impression directe de l'image
+  // ✅ Impression directe de l'image (avec URL absolue)
   function handlePrint(d: Diplome) {
-    if (!d.image_diplome) return
+    const fullUrl = getFullUrl(d.image_diplome)
+    if (!fullUrl) return
+    
     const win = window.open('', '_blank')
     if (!win) return
     win.document.write(`
@@ -67,12 +82,12 @@ export default function MesDiplomes() {
         <title>Diplôme - ${d.nom_eleve_diplome}</title>
         <style>
           @page { size: landscape; margin: 0; }
-          body { margin: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-          img { width: 100%; height: auto; }
+          body { margin: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #fff; }
+          img { max-width: 100%; max-height: 100vh; object-fit: contain; }
         </style>
       </head>
       <body>
-        <img src="${d.image_diplome}" onload="window.print(); window.close();" />
+        <img src="${fullUrl}" onload="setTimeout(() => { window.print(); window.close(); }, 500)" />
       </body>
       </html>
     `)
@@ -95,16 +110,22 @@ export default function MesDiplomes() {
             key={d.id}
             className="bg-white rounded-xl border border-neutral-200 shadow-sm hover:shadow-md transition overflow-hidden"
           >
-            {/* ✅ Miniature du diplôme */}
+            {/* ✅ Miniature du diplôme (avec URL absolue) */}
             {d.image_diplome && (
               <div
-                className="w-full aspect-[1280/853] bg-neutral-100 cursor-pointer"
+                className="w-full aspect-[1280/853] bg-neutral-100 cursor-pointer relative group"
                 onClick={() => setSelected(d)}
               >
                 <img
-                  src={d.image_diplome}
+                  src={getFullUrl(d.image_diplome)}
                   alt={`Diplôme ${d.matiere}`}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  onError={(e) => {
+                    // Fallback si l'image est vraiment introuvable
+                    (e.target as HTMLImageElement).style.display = 'none'
+                    ;(e.target as HTMLImageElement).parentElement!.innerHTML = 
+                      '<div class="flex items-center justify-center h-full text-neutral-400 text-sm">Image indisponible</div>'
+                  }}
                 />
               </div>
             )}
@@ -125,16 +146,16 @@ export default function MesDiplomes() {
               <div className="text-sm text-neutral-600 space-y-1 mb-4">
                 <div>
                   <span className="font-medium">Délivré le :</span>{' '}
-                    {d.created_at && d.created_at !== '1970-01-01' 
-                      ? new Date(d.created_at).toLocaleDateString('fr-FR')
-                      : new Date().toLocaleDateString('fr-FR')}
+                  {d.created_at && !d.created_at.startsWith('1970-01-01') 
+                    ? new Date(d.created_at).toLocaleDateString('fr-FR')
+                    : new Date().toLocaleDateString('fr-FR')}
                 </div>
                 <div className="flex gap-3">
                   <span>📖 Oral : <b className="text-blue-700">{d.note_orale || '—'}/20</b></span>
                   <span>💬 Écrit : <b className="text-blue-700">{d.note_ecrite || '—'}/20</b></span>
                 </div>
                 {d.appreciation && (
-                  <div className="italic text-neutral-500 text-xs line-clamp-2">
+                  <div className="italic text-neutral-500 text-xs line-clamp-2 mt-2">
                     « {d.appreciation} »
                   </div>
                 )}
@@ -143,19 +164,19 @@ export default function MesDiplomes() {
               <div className="flex gap-2">
                 <button
                   onClick={() => setSelected(d)}
-                  className="flex-1 px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-semibold rounded-lg"
+                  className="flex-1 px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-semibold rounded-lg transition"
                 >
                   👁️ Aperçu
                 </button>
                 <button
                   onClick={() => handlePrint(d)}
-                  className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg"
+                  className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition"
                 >
                   🖨️ Imprimer
                 </button>
                 <button
                   onClick={() => handleDownload(d)}
-                  className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg"
+                  className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition"
                   title="Télécharger en PNG"
                 >
                   ⬇️
@@ -166,44 +187,49 @@ export default function MesDiplomes() {
         ))}
       </div>
 
-      {/* ✅ Modale aperçu — affiche simplement l'image sauvegardée */}
+      {/* ✅ Modale aperçu — affiche simplement l'image avec URL absolue */}
       {selected && (
         <div
-          className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 overflow-auto"
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-auto"
           onClick={() => setSelected(null)}
         >
           <div
-            className="bg-white rounded-xl max-w-4xl w-full p-4 relative"
+            className="bg-white rounded-xl max-w-5xl w-full p-2 relative shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={() => setSelected(null)}
-              className="absolute top-2 right-2 w-8 h-8 rounded-full bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center text-neutral-600 z-10"
+              className="absolute -top-3 -right-3 w-10 h-10 rounded-full bg-white hover:bg-neutral-100 flex items-center justify-center text-neutral-600 z-10 shadow-lg border border-neutral-200 transition"
             >
               ✕
             </button>
-            {/* ✅ Juste l'image, plus besoin de recalquer */}
+            
             {selected.image_diplome ? (
               <img
-                src={selected.image_diplome}
+                src={getFullUrl(selected.image_diplome)}
                 alt={`Diplôme ${selected.matiere}`}
                 className="w-full h-auto rounded-lg"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none'
+                  alert("Impossible de charger l'image du diplôme.")
+                }}
               />
             ) : (
               <div className="text-center text-neutral-400 py-12">
                 Image du diplôme non disponible
               </div>
             )}
-            <div className="flex gap-2 mt-4 justify-end">
+            
+            <div className="flex gap-3 mt-4 justify-end p-2">
               <button
                 onClick={() => handlePrint(selected)}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition"
               >
                 🖨️ Imprimer
               </button>
               <button
                 onClick={() => handleDownload(selected)}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg"
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg transition"
               >
                 ⬇️ Télécharger PNG
               </button>
