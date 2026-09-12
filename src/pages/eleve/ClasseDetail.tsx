@@ -872,7 +872,7 @@ onClose()
   )
 }
 
-function EleveFacturesInline({ classeId }: { classeId: string }) {
+function EleveFacturesInline({ classeId, role }: { classeId: string; role: 'eleve' | 'professeur' | 'admin' | 'direction' }) {
   const [onglet, setOnglet] = useState<'a_payer' | 'paye' | 'confirmee'>('a_payer')
   const [page, setPage] = useState(1)
   const [payModal, setPayModal] = useState<FactureElevePayeItem | null>(null)
@@ -3613,7 +3613,7 @@ const classesFiltrees = classes.filter((cls: Class) =>
                      
                       {/* ── Section Factures selon le rôle ── */}
                       {role === 'eleve' && activeClassId && (
-                        <EleveFacturesInline classeId={activeClassId} />
+                        <EleveFacturesInline classeId={activeClassId} role={role} />
                       )}
 
                       {(role === 'professeur' || role === 'admin' || role === 'direction') && (
