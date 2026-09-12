@@ -1282,295 +1282,97 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
   )
 }
 
-function MessageReadReceipts({ msg, userId, user, headerInscriptions, usersData, className }: { 
+function MessageReadReceipts({ msg, userId, user }: { 
   msg: Message; 
   userId: string; 
   user: any; 
-  headerInscriptions: any;
-  usersData: any;
-  className?: string 
 }) {
-const [showReadBy, setShowReadBy] = useState(false)
-const expId = typeof msg.expediteur === 'object' ? (msg.expediteur as any)?.id : msg.expediteur
+  const [showReadBy, setShowReadBy] = useState(false)
+  const expId = typeof msg.expediteur === 'object' ? (msg.expediteur as any)?.id : msg.expediteur
+  if (expId !== userId) return null
 
-// DEBUG: Logger les données du message
-console.log('🔍 MessageReadReceipts - Message:', {
-  msgId: msg.id,
-  expediteur: msg.expediteur,
-  expId,
-  userId,
-  isMe: expId === userId,
-  recu_par: msg.recu_par,
-  lu_par_ids: msg.lu_par_ids,
-  msg
-})
+  // 🆕 on utilise les champs détaillés, avec fallback sur les IDs bruts si jamais absent
+  const luPar: { id: string; display_name: string }[] = (msg as any).lu_par_detail ?? []
+  const recuParRaw: { id: string; display_name: string }[] = (msg as any).recu_par_detail ?? []
 
-// Ne montrer que pour les messages de l'utilisateur
-if (expId !== userId) {
-  console.log('⚠️ Pas mon message, return null')
-  return null
-}
+  const luIds = new Set(luPar.map(u => u.id))
+  const recuSeul = recuParRaw.filter(u => !luIds.has(u.id)) // union sans doublons
+  const totalRecipients = luPar.length + recuSeul.length
+  const hasRead = luPar.length > 0
 
-const recuPar: string[] = msg.recu_par ?? []
-const luPar: string[] = msg.lu_par_ids ?? []
-const totalRecipients = recuPar.length + luPar.length
+  const getUserName = (u: { id: string; display_name: string }): string =>
+    u.id === user?.id ? 'Vous' : (u.display_name || 'Utilisateur')
 
-console.log('✅ Mon message - Données:', { recuPar, luPar, totalRecipients })
+  if (totalRecipients === 0) {
+    return <span style={{ color: '#9ca3af', fontSize: 13, cursor: 'default' }}>✓</span>
+  }
 
-// Si personne n'a reçu le message
-if (totalRecipients === 0) {
-  console.log('📭 Personne n\'a reçu le message')
   return (
-    <span style={{ color: '#9ca3af', fontSize: 13, cursor: 'default' }}>✓</span>
+    <>
+      <span
+        onClick={(e) => { e.stopPropagation(); setShowReadBy(true) }}
+        style={{ color: hasRead ? '#3b82f6' : '#9ca3af', fontSize: 13, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 2 }}
+        title={`${luPar.length} lu(s), ${recuSeul.length} reçu(s)`}
+      >
+        ✓✓
+        <span style={{ fontSize: 9, background: hasRead ? '#dbeafe' : '#f3f4f6', color: hasRead ? '#1d4ed8' : '#6b7280', padding: '1px 4px', borderRadius: 8, fontWeight: 600, marginLeft: 2 }}>
+          {totalRecipients}
+        </span>
+      </span>
+
+      {showReadBy && (
+        <>
+          <div onClick={(e) => { e.stopPropagation(); setShowReadBy(false) }} style={{ position: 'fixed', inset: 0, zIndex: 90 }} />
+          <div onClick={(e) => e.stopPropagation()} style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 91, background: '#fff', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,.2)', padding: 16, minWidth: 280, maxWidth: 360, maxHeight: 400, overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, paddingBottom: 10, borderBottom: '1px solid #e5e7eb' }}>
+              <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#1e1b4b' }}>📖 Vu par</h4>
+              <button onClick={() => setShowReadBy(false)} style={{ background: 'none', border: 'none', fontSize: 18, color: '#6b7280', cursor: 'pointer' }}>✕</button>
+            </div>
+
+            {luPar.length > 0 && (
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: '#16a34a', marginBottom: 8, textTransform: 'uppercase' }}>✓✓ Lu ({luPar.length})</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {luPar.map((u) => (
+                    <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', background: '#f0fdf4', borderRadius: 8, border: '1px solid #bbf7d0' }}>
+                      <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg, #16a34a, #15803d)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 13, fontWeight: 700 }}>
+                        {getUserName(u).charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#166534' }}>{getUserName(u)}</div>
+                        <div style={{ fontSize: 11, color: '#16a34a' }}>✓ Lu</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {recuSeul.length > 0 && (
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', marginBottom: 8, textTransform: 'uppercase' }}>✓✓ Reçu ({recuSeul.length})</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {recuSeul.map((u) => (
+                    <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', background: '#f9fafb', borderRadius: 8, border: '1px solid #e5e7eb' }}>
+                      <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg, #6b7280, #4b5563)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 13, fontWeight: 700 }}>
+                        {getUserName(u).charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>{getUserName(u)}</div>
+                        <div style={{ fontSize: 11, color: '#9ca3af' }}>✓ Reçu</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </>
   )
 }
 
-// Si certains ont lu
-const hasRead = luPar.length > 0
-
-console.log('📊 Affichage:', { hasRead, totalRecipients })
-
-// Résoudre un ID en nom d'utilisateur
-const getUserName = (userId: string): string => {
-  if (userId === user?.id) return 'Vous'
-  // Chercher dans les inscriptions de la classe
-  const inscrit = headerInscriptions?.results?.find((i: any) => i.eleve_id === userId || i.user?.id === userId)
-  if (inscrit?.eleve_nom) return inscrit.eleve_nom
-  // Chercher dans les utilisateurs (profs)
-  const u = usersData?.results?.find((u: any) => u.id === userId)
-  if (u?.display_name) return u.display_name
-  // Fallback
-  return userId.substring(0, 8) + '…'
-}
-
-return (
-<>
-  <span
-    onClick={(e) => { 
-      e.stopPropagation(); 
-      console.log('🖱️ Clic sur les coches, ouverture popup');
-      setShowReadBy(true) 
-    }}
-    style={{
-      color: hasRead ? '#3b82f6' : '#9ca3af',
-      fontSize: 13,
-      cursor: 'pointer',
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: 2
-    }}
-    title={`${luPar.length} lu(s), ${recuPar.length} reçu(s)`}
-  >
-    {hasRead ? '✓✓' : '✓✓'}
-    {totalRecipients > 0 && (
-      <span style={{
-        fontSize: 9,
-        background: hasRead ? '#dbeafe' : '#f3f4f6',
-        color: hasRead ? '#1d4ed8' : '#6b7280',
-        padding: '1px 4px',
-        borderRadius: 8,
-        fontWeight: 600,
-        marginLeft: 2
-      }}>
-        {totalRecipients}
-      </span>
-    )}
-  </span>
-
-  {/* Popup avec la liste des lecteurs */}
-  {showReadBy && (
-    <>
-      <div
-        onClick={(e) => { e.stopPropagation(); setShowReadBy(false) }}
-        style={{ position: 'fixed', inset: 0, zIndex: 90 }}
-      />
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          position: 'fixed',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          zIndex: 91,
-          background: '#fff',
-          borderRadius: 12,
-          boxShadow: '0 8px 32px rgba(0,0,0,.2)',
-          padding: 16,
-          minWidth: 280,
-          maxWidth: 360,
-          maxHeight: 400,
-          overflowY: 'auto',
-          animation: 'content-fade-up .2s ease-out'
-        }}
-      >
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 12,
-          paddingBottom: 10,
-          borderBottom: '1px solid #e5e7eb'
-        }}>
-          <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#1e1b4b' }}>
-            📖 Vu par
-          </h4>
-          <button
-            onClick={() => setShowReadBy(false)}
-            style={{
-              background: 'none',
-              border: 'none',
-              fontSize: 18,
-              color: '#6b7280',
-              cursor: 'pointer',
-              padding: '0 4px'
-            }}
-          >
-            ✕
-          </button>
-        </div>
-
-        {/* Section "Lu" */}
-        {luPar.length > 0 && (
-          <div style={{ marginBottom: 12 }}>
-            <div style={{
-              fontSize: 11,
-              fontWeight: 600,
-              color: '#16a34a',
-              marginBottom: 8,
-              textTransform: 'uppercase',
-              letterSpacing: '.5px'
-            }}>
-              ✓✓ Lu ({luPar.length})
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {luPar.map((readerId, idx) => (
-                <div
-                  key={readerId}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    padding: '8px 10px',
-                    background: '#f0fdf4',
-                    borderRadius: 8,
-                    border: '1px solid #bbf7d0'
-                  }}
-                >
-                  <div style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #16a34a, #15803d)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#fff',
-                    fontSize: 13,
-                    fontWeight: 700,
-                    flexShrink: 0
-                  }}>
-                    {getUserName(readerId).charAt(0).toUpperCase()}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{
-                      fontSize: 13,
-                      fontWeight: 600,
-                      color: '#166534',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis'
-                    }}>
-                      {getUserName(readerId)}
-                    </div>
-                    <div style={{ fontSize: 11, color: '#16a34a' }}>
-                      ✓ Lu
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Section "Reçu mais non lu" */}
-        {recuPar.length > 0 && (
-          <div>
-            <div style={{
-              fontSize: 11,
-              fontWeight: 600,
-              color: '#6b7280',
-              marginBottom: 8,
-              textTransform: 'uppercase',
-              letterSpacing: '.5px'
-            }}>
-              ✓✓ Reçu ({recuPar.length})
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {recuPar.map((receiverId, idx) => (
-                <div
-                  key={receiverId}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    padding: '8px 10px',
-                    background: '#f9fafb',
-                    borderRadius: 8,
-                    border: '1px solid #e5e7eb'
-                  }}
-                >
-                  <div style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #6b7280, #4b5563)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#fff',
-                    fontSize: 13,
-                    fontWeight: 700,
-                    flexShrink: 0
-                  }}>
-                    {getUserName(receiverId).charAt(0).toUpperCase()}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{
-                      fontSize: 13,
-                      fontWeight: 600,
-                      color: '#374151',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis'
-                    }}>
-                      {getUserName(receiverId)}
-                    </div>
-                    <div style={{ fontSize: 11, color: '#9ca3af' }}>
-                      ✓ Reçu
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {totalRecipients === 0 && (
-          <div style={{
-            textAlign: 'center',
-            padding: '20px 0',
-            color: '#9ca3af',
-            fontSize: 13
-          }}>
-            Personne n'a encore reçu ce message
-          </div>
-        )}
-      </div>
-    </>
-  )}
-</>
-)
-}
 
 // ─── Icônes chat ───────────────────────────────────────────
 function ChatAttachIcon() {
@@ -3560,13 +3362,7 @@ const classesFiltrees = classes.filter((cls: Class) =>
                                       >
                                         ↩️
                                       </button>
-                                      {isMe && <MessageReadReceipts 
-                                        msg={msg} 
-                                        userId={user?.id ?? ''} 
-                                        user={user}
-                                        headerInscriptions={chatInscriptions}   // ← changé ici seulement
-                                        usersData={usersData}
-                                      />}
+                                      {isMe && <MessageReadReceipts msg={msg} userId={user?.id ?? ''} user={user} />}
                                     </div>
 
                                   </div>
