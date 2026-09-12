@@ -138,10 +138,11 @@ function ElevesModal({ classe, onClose }: { classe: Class; onClose: () => void }
 
   return (
     <Modal title={`👨‍🎓 Élèves — ${classe.nom}`} onClose={onClose} wide>
-      <div className="flex gap-4 h-full" style={{ minHeight: 400 }}>
+      {/* <div className="flex gap-4 h-full" style={{ minHeight: 400 }}> */}
+        <div className="flex flex-col md:flex-row gap-4 h-auto md:h-full" style={{ minHeight: 400 }}>
 
         {/* ── COLONNE GAUCHE : liste des élèves disponibles ── */}
-        <div className="flex flex-col w-64 shrink-0 border border-neutral-200 rounded-lg overflow-hidden">
+        <div className="flex flex-col w-full md:w-64 shrink-0 border border-neutral-200 rounded-lg overflow-hidden">
           <div className="px-3 py-2 border-b border-neutral-200 bg-neutral-50 shrink-0">
             <p className="text-xs font-medium text-neutral-600 mb-1.5">Ajouter des élèves</p>
             <input
@@ -199,71 +200,94 @@ function ElevesModal({ classe, onClose }: { classe: Class; onClose: () => void }
         </div>
 
         {/* ── COLONNE DROITE : élèves inscrits ── */}
-        <div className="flex-1 min-w-0 flex flex-col">
-          <p className="text-xs font-medium text-neutral-600 mb-2">
-            Élèves inscrits ({inscrits.length})
-          </p>
+        {/* ── CONTENU DROITE : TABLEAU (Desktop) & CARTES (Mobile) ── */}
+<div className="flex-1 min-w-0 flex flex-col">
+  <p className="text-xs font-medium text-neutral-600 mb-2">
+    Élèves inscrits ({inscrits.length})
+  </p>
 
-          {inscLoading ? (
-            <div className="text-center py-8 text-neutral-400 text-sm">Chargement...</div>
-          ) : inscrits.length === 0 ? (
-            <div className="text-center py-8 text-neutral-400 text-sm">Aucun élève inscrit</div>
-          ) : (
-            <div className="overflow-auto flex-1">
-              <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-white">
-                  <tr className="text-left text-xs text-neutral-500 border-b border-neutral-100">
-                    <th className="pb-2 font-medium">Élève</th>
-                    {/* <th className="pb-2 font-medium">Statut</th> */}
-                    <th className="pb-2 font-medium">Inscrit le</th>
-                    <th className="pb-2 font-medium">Contrat</th>
-                    <th className="pb-2"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {inscrits.map((insc: Inscription) => (
-                    <tr key={insc.id} className="border-b border-neutral-50 hover:bg-neutral-50/60 group">
-                      <td className="py-2 pr-3">
-                        <p className="font-medium text-neutral-800">{insc.eleve_nom || String(insc.eleve)}</p>
-                      </td>
-                      {/* <td className="py-2 pr-3">
-                        <span className={`px-2 py-0.5 rounded text-xs ${
-                          insc.statut_inscription === 'actif'
-                            ? 'bg-success-100 text-success-700'
-                            : insc.statut_inscription === 'annule'
-                            ? 'bg-danger-100 text-danger-700'
-                            : 'bg-yellow-100 text-yellow-700'
-                        }`}>
-                          {insc.statut_inscription || 'actif'}
-                        </span>
-                      </td> */}
-                      <td className="py-2 pr-3 text-neutral-500">
-                        {insc.date_inscription
-                          ? new Date(insc.date_inscription).toLocaleDateString('fr-FR')
-                          : insc.created_at
-                          ? new Date(insc.created_at).toLocaleDateString('fr-FR')
-                          : '—'}
-                      </td>
-                      <td className="py-2 pr-3">
-                        {insc.contrat_signe
-                          ? <span className="text-success-600 text-xs">✅ Signé</span>
-                          : <span className="text-neutral-400 text-xs">—</span>
-                        }
-                      </td>
-                      <td className="py-2">
-                        <button
-                          onClick={() => handleDelete(insc.id, insc.eleve_nom || 'cet élève')}
-                          className="opacity-0 group-hover:opacity-100 text-xs text-danger-500 hover:text-danger-700 transition"
-                          title="Retirer de la classe"
-                        >
-                          ✕
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+  {inscLoading ? (
+    <div className="text-center py-8 text-neutral-400 text-sm">Chargement...</div>
+  ) : inscrits.length === 0 ? (
+    <div className="text-center py-8 text-neutral-400 text-sm">Aucun élève inscrit</div>
+  ) : (
+    <>
+      {/* 🖥️ VERSION DESKTOP : Le tableau classique */}
+      <div className="hidden md:block overflow-auto flex-1">
+        <table className="w-full text-sm">
+          <thead className="sticky top-0 bg-white">
+            <tr className="text-left text-xs text-neutral-500 border-b border-neutral-100">
+              <th className="pb-2 font-medium">Élève</th>
+              <th className="pb-2 font-medium">Inscrit le</th>
+              <th className="pb-2 font-medium">Contrat</th>
+              <th className="pb-2"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {inscrits.map((insc: Inscription) => (
+              <tr key={insc.id} className="border-b border-neutral-50 hover:bg-neutral-50/60 group">
+                <td className="py-2 pr-3">
+                  <p className="font-medium text-neutral-800">{insc.eleve_nom || String(insc.eleve)}</p>
+                </td>
+                <td className="py-2 pr-3 text-neutral-500">
+                  {insc.date_inscription ? new Date(insc.date_inscription).toLocaleDateString('fr-FR') : '—'}
+                </td>
+                <td className="py-2 pr-3">
+                  {insc.contrat_signe ? <span className="text-success-600 text-xs">✅ Signé</span> : <span className="text-neutral-400 text-xs">—</span>}
+                </td>
+                <td className="py-2">
+                  <button onClick={() => handleDelete(insc.id, insc.eleve_nom || 'cet élève')} className="opacity-0 group-hover:opacity-100 text-xs text-danger-500 hover:text-danger-700 transition">✕</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* 📱 VERSION MOBILE : Design "Cartes" Fun & Pratique */}
+        <div className="block md:hidden space-y-2 overflow-auto flex-1 pb-4">
+                {inscrits.map((insc: Inscription) => {
+                  const dateStr = insc.date_inscription 
+                     ? new Date(insc.date_inscription).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
+                     : '—';
+                  
+                  return (
+                    <div 
+                      key={insc.id} 
+                      className="bg-white border border-neutral-200 rounded-xl p-3 shadow-sm flex items-center justify-between hover:border-primary-300 hover:shadow-md transition-all active:scale-[0.98]"
+                    >
+                      {/* Infos Élève */}
+                      <div className="flex-1 min-w-0 mr-3">
+                        <p className="font-bold text-neutral-800 text-sm truncate">
+                          {insc.eleve_nom || String(insc.eleve)}
+                        </p>
+                        <div className="flex items-center gap-3 mt-1.5 text-xs text-neutral-500">
+                           <span className="flex items-center gap-1">
+                             📅 {dateStr}
+                           </span>
+                           <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-medium ${
+                             insc.contrat_signe 
+                               ? 'bg-success-100 text-success-700' 
+                               : 'bg-neutral-100 text-neutral-500'
+                           }`}>
+                             {insc.contrat_signe ? '✅ Signé' : '⏳ En attente'}
+                           </span>
+                        </div>
+                      </div>
+        
+                      {/* Action Supprimer */}
+                      <button
+                        onClick={() => handleDelete(insc.id, insc.eleve_nom || 'cet élève')}
+                        className="shrink-0 w-9 h-9 flex items-center justify-center rounded-full bg-danger-50 text-danger-600 hover:bg-danger-100 active:bg-danger-200 transition"
+                        title="Retirer"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           )}
         </div>
       </div>
