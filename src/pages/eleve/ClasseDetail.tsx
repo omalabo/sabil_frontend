@@ -3027,29 +3027,50 @@ const classesFiltrees = classes.filter((cls: Class) =>
                 </div>
               </div>
 
-              <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: '#f0f2f5' }}>
-                {activeTab === 'salle' && (
+              <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: '#f0f2f5', position: 'relative' }}>
+                {/* 🆕 VideoRoom TOUJOURS MONTÉ (reste connecté en arrière-plan) */}
+                {liveKitSession && activeClass && (
+                  <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    zIndex: activeTab === 'salle' ? 10 : 0,
+                    opacity: activeTab === 'salle' ? 1 : 0,
+                    pointerEvents: activeTab === 'salle' ? 'auto' : 'none',
+                    transition: 'opacity 0.3s ease'
+                  }}>
+                    <VideoRoom 
+                      classe={activeClass} 
+                      seance={{ id: liveKitSession.seanceId }} 
+                      role={role === 'admin' || role === 'direction' ? 'eleve' : role} 
+                      onLeave={(audioUrl?: string) => handleLeaveSession(audioUrl)} 
+                      roomName={liveKitSession.roomName} 
+                      token={liveKitSession.token} 
+                      serverUrl={liveKitSession.serverUrl} 
+                      isModerator={(role === 'admin' || role === 'direction') ? false : liveKitSession.isModerator} 
+                      userId={user?.id} 
+                      userName={user?.display_name || user?.prenom} 
+                    />
+                  </div>
+                )}
+                
+                {activeTab === 'salle' && !liveKitSession && (
                   <div style={{ display: 'flex', flex: 1, minHeight: 0, flexDirection: 'column' }}>
-                    {liveKitSession && activeClass ? (
-                      <VideoRoom classe={activeClass} seance={{ id: liveKitSession.seanceId }} role={role === 'admin' || role === 'direction' ? 'eleve' : role} onLeave={(audioUrl?: string) => handleLeaveSession(audioUrl)} roomName={liveKitSession.roomName} token={liveKitSession.token} serverUrl={liveKitSession.serverUrl} isModerator={(role === 'admin' || role === 'direction') ? false : liveKitSession.isModerator} userId={user?.id} userName={user?.display_name || user?.prenom} />
-                    ) : (
-                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(160deg, #0f1117 0%, #1a1d27 55%, #111827 100%)', position: 'relative', overflow: 'hidden', padding: '2rem' }}>
-                        <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(255,255,255,.04) 1px, transparent 1px)', backgroundSize: '28px 28px', pointerEvents: 'none' }} />
-                        <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem', maxWidth: '480px', width: '100%', textAlign: 'center' }}>
-                          <div style={{ position: 'relative' }}>
-                            <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: todaySeancesForActive.length > 0 ? 'linear-gradient(135deg, #1a73e8, #0d47a1)' : 'linear-gradient(135deg, #4b5563, #374151)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', boxShadow: todaySeancesForActive.length > 0 ? '0 8px 32px rgba(26,115,232,.4)' : 'none', position: 'relative', zIndex: 1 }}>🎥</div>
-                          </div>
-                          <div>
-                            <h2 style={{ margin: 0, fontSize: '22px', fontWeight: 700, color: '#fff' }}>{activeClass.nom}</h2>
-                            <p style={{ margin: '6px 0 0', fontSize: '14px', color: 'rgba(255,255,255,.5)' }}>{todaySeancesForActive.length > 0 ? 'Séance(s) du jour prête(s)' : 'Aucune séance prévue aujourd\'hui'}</p>
-                          </div>
-                          <button onClick={() => handleJoinSalle()} disabled={joiningSalle || todaySeancesForActive.length === 0} className="salle-join-btn">
-                            {joiningSalle ? <><span className="spinner" />Connexion…</> : <><span style={{ fontSize: '18px' }}>🚀</span>{role === 'admin' || role === 'direction' ? 'Rejoindre (observation)' : 'Démarrer la session vidéo'}</>}
-                          </button>
-                          {todaySeancesForActive.length === 0 && <p style={{ margin: 0, fontSize: '13px', color: '#f87171', fontWeight: 500 }}>⛔ Aucun créneau n'est planifié aujourd'hui pour cette classe.</p>}
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(160deg, #0f1117 0%, #1a1d27 55%, #111827 100%)', position: 'relative', overflow: 'hidden', padding: '2rem' }}>
+                      <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(255,255,255,.04) 1px, transparent 1px)', backgroundSize: '28px 28px', pointerEvents: 'none' }} />
+                      <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem', maxWidth: '480px', width: '100%', textAlign: 'center' }}>
+                        <div style={{ position: 'relative' }}>
+                          <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: todaySeancesForActive.length > 0 ? 'linear-gradient(135deg, #1a73e8, #0d47a1)' : 'linear-gradient(135deg, #4b5563, #374151)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', boxShadow: todaySeancesForActive.length > 0 ? '0 8px 32px rgba(26,115,232,.4)' : 'none', position: 'relative', zIndex: 1 }}>🎥</div>
                         </div>
+                        <div>
+                          <h2 style={{ margin: 0, fontSize: '22px', fontWeight: 700, color: '#fff' }}>{activeClass.nom}</h2>
+                          <p style={{ margin: '6px 0 0', fontSize: '14px', color: 'rgba(255,255,255,.5)' }}>{todaySeancesForActive.length > 0 ? 'Séance(s) du jour prête(s)' : 'Aucune séance prévue aujourd\'hui'}</p>
+                        </div>
+                        <button onClick={() => handleJoinSalle()} disabled={joiningSalle || todaySeancesForActive.length === 0} className="salle-join-btn">
+                          {joiningSalle ? <><span className="spinner" />Connexion…</> : <><span style={{ fontSize: '18px' }}>🚀</span>{role === 'admin' || role === 'direction' ? 'Rejoindre (observation)' : 'Démarrer la session vidéo'}</>}
+                        </button>
+                        {todaySeancesForActive.length === 0 && <p style={{ margin: 0, fontSize: '13px', color: '#f87171', fontWeight: 500 }}>⛔ Aucun créneau n'est planifié aujourd'hui pour cette classe.</p>}
                       </div>
-                    )}
+                    </div>
                   </div>
                 )}
 
