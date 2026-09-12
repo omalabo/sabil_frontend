@@ -1634,7 +1634,7 @@ const LOCAL_MOTIVATION_IMAGES = [
   '05-abou-hourayra.jpeg',
   '06-les-4-questions.jpeg',
   '07-noter-prenom.jpeg',
-  '08-rappel-comportement.png',
+  '08-rappel-comportement.jpeg',
 ];
 
 // ✅ 2. Ta fonction de vérification reste inchangée (elle est parfaite)
