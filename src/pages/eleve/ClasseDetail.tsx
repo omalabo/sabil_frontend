@@ -1283,168 +1283,6 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
 }
 
 
-// ─── Dictionnaire pour résoudre les IDs en Noms ──────────────────────────────
-const userNameMap = useMemo(() => {
-  const map: Record<string, string> = {}
-  
-  // 1. L'utilisateur actuel
-  if (user?.id) map[user.id] = 'Vous'
-
-  // 2. Depuis les inscriptions (élèves de la classe)
-  if (headerInscriptions?.results) {
-    headerInscriptions.results.forEach((insc: any) => {
-      const uid = insc.eleve_id || insc.eleve?.id
-      const name = insc.eleve_nom || insc.eleve?.display_name
-      console.log('🔍 Inscription:', { uid, name, insc }) // DEBUG
-      if (uid) map[uid] = name || uid.substring(0, 8) + '…'
-    })
-  }
-
-  // 3. Depuis la liste des utilisateurs (profs, admin, direction)
-  if (usersData?.results) {
-    usersData.results.forEach((u: any) => {
-      if (u?.id && u?.display_name) {
-        map[u.id] = u.display_name
-      }
-    })
-  }
-
-  console.log(' userNameMap construit:', map) // DEBUG
-  return map
-}, [user?.id, headerInscriptions?.results, usersData?.results])
-
-
-
-// ─── Composant ReadReceipts (Style Telegram) AVEC DEBUG ─────────────────────────────
-// ─── Composant ReadReceipts (Style Telegram) ─────────────────────────────
-function MessageReadReceipts({ msg, userId, userNameMap, className }: { 
-  msg: Message; 
-  userId: string; 
-  userNameMap: Record<string, string>;
-  className?: string 
-}) {
-  const [showReadBy, setShowReadBy] = useState(false)
-  const expId = typeof msg.expediteur === 'object' ? (msg.expediteur as any)?.id : msg.expediteur
-
-  if (expId !== userId) return null
-
-  const recuPar: string[] = msg.recu_par ?? []
-  const luPar: string[] = msg.lu_par_ids ?? []
-  const totalRecipients = recuPar.length + luPar.length
-
-  if (totalRecipients === 0) {
-    return <span style={{ color: '#9ca3af', fontSize: 13, cursor: 'default' }}>✓</span>
-  }
-
-  const hasRead = luPar.length > 0
-
-  // Fonction de résolution sécurisée
-  const getUserName = (id: string): string => {
-    return userNameMap[id] || id.substring(0, 8) + '…'
-  }
-
-  return (
-    <>
-      <span
-        onClick={(e) => { e.stopPropagation(); setShowReadBy(true) }}
-        style={{
-          color: hasRead ? '#3b82f6' : '#9ca3af',
-          fontSize: 13,
-          cursor: 'pointer',
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 2
-        }}
-        title={`${luPar.length} lu(s), ${recuPar.length} reçu(s)`}
-      >
-        {hasRead ? '✓✓' : '✓✓'}
-        {totalRecipients > 0 && (
-          <span style={{
-            fontSize: 9,
-            background: hasRead ? '#dbeafe' : '#f3f4f6',
-            color: hasRead ? '#1d4ed8' : '#6b7280',
-            padding: '1px 4px',
-            borderRadius: 8,
-            fontWeight: 600,
-            marginLeft: 2
-          }}>
-            {totalRecipients}
-          </span>
-        )}
-      </span>
-
-      {showReadBy && (
-        <>
-          <div onClick={(e) => { e.stopPropagation(); setShowReadBy(false) }} style={{ position: 'fixed', inset: 0, zIndex: 90 }} />
-          <div onClick={(e) => e.stopPropagation()} style={{
-            position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-            zIndex: 91, background: '#fff', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,.2)',
-            padding: 16, minWidth: 280, maxWidth: 360, maxHeight: 400, overflowY: 'auto',
-            animation: 'content-fade-up .2s ease-out'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, paddingBottom: 10, borderBottom: '1px solid #e5e7eb' }}>
-              <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#1e1b4b' }}>📖 Vu par</h4>
-              <button onClick={() => setShowReadBy(false)} style={{ background: 'none', border: 'none', fontSize: 18, color: '#6b7280', cursor: 'pointer', padding: '0 4px' }}>✕</button>
-            </div>
-
-            {/* Section "Lu" */}
-            {luPar.length > 0 && (
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: '#16a34a', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.5px' }}>✓✓ Lu ({luPar.length})</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {luPar.map((readerId) => {
-                    const name = getUserName(readerId);
-                    return (
-                      <div key={readerId} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', background: '#f0fdf4', borderRadius: 8, border: '1px solid #bbf7d0' }}>
-                        <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg, #16a34a, #15803d)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 13, fontWeight: 700, flexShrink: 0 }}>
-                          {/* ✅ ICI : On prend la 1ère lettre du NOM résolu, pas de l'ID */}
-                          {name.charAt(0).toUpperCase()}
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: 600, color: '#166534', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {name}
-                          </div>
-                          <div style={{ fontSize: 11, color: '#16a34a' }}>✓ Lu</div>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Section "Reçu mais non lu" */}
-            {recuPar.length > 0 && (
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.5px' }}>✓✓ Reçu ({recuPar.length})</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {recuPar.map((receiverId) => {
-                    const name = getUserName(receiverId);
-                    return (
-                      <div key={receiverId} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', background: '#f9fafb', borderRadius: 8, border: '1px solid #e5e7eb' }}>
-                        <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg, #6b7280, #4b5563)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 13, fontWeight: 700, flexShrink: 0 }}>
-                          {/* ✅ ICI : On prend la 1ère lettre du NOM résolu, pas de l'ID */}
-                          {name.charAt(0).toUpperCase()}
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: 600, color: '#374151', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {name}
-                          </div>
-                          <div style={{ fontSize: 11, color: '#9ca3af' }}>✓ Reçu</div>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-        </>
-      )}
-    </>
-  )
-}
-
 
 
 // ─── Icônes chat ───────────────────────────────────────────
@@ -1737,6 +1575,171 @@ export default function ClasseDetail({ role }: ClasseDetailProps) {
     { classe: activeClassId || '' },
     { skip: !activeClassId || !showClassInfo }
   )
+
+  
+// ─── Dictionnaire pour résoudre les IDs en Noms ──────────────────────────────
+const userNameMap = useMemo(() => {
+  const map: Record<string, string> = {}
+  
+  // 1. L'utilisateur actuel
+  if (user?.id) map[user.id] = 'Vous'
+
+  // 2. Depuis les inscriptions (élèves de la classe)
+  if (headerInscriptions?.results) {
+    headerInscriptions.results.forEach((insc: any) => {
+      const uid = insc.eleve_id || insc.eleve?.id
+      const name = insc.eleve_nom || insc.eleve?.display_name
+      console.log('🔍 Inscription:', { uid, name, insc }) // DEBUG
+      if (uid) map[uid] = name || uid.substring(0, 8) + '…'
+    })
+  }
+
+  // 3. Depuis la liste des utilisateurs (profs, admin, direction)
+  if (usersData?.results) {
+    usersData.results.forEach((u: any) => {
+      if (u?.id && u?.display_name) {
+        map[u.id] = u.display_name
+      }
+    })
+  }
+
+  console.log(' userNameMap construit:', map) // DEBUG
+  return map
+}, [user?.id, headerInscriptions?.results, usersData?.results])
+
+
+
+// ─── Composant ReadReceipts (Style Telegram) AVEC DEBUG ─────────────────────────────
+// ─── Composant ReadReceipts (Style Telegram) ─────────────────────────────
+function MessageReadReceipts({ msg, userId, userNameMap, className }: { 
+  msg: Message; 
+  userId: string; 
+  userNameMap: Record<string, string>;
+  className?: string 
+}) {
+  const [showReadBy, setShowReadBy] = useState(false)
+  const expId = typeof msg.expediteur === 'object' ? (msg.expediteur as any)?.id : msg.expediteur
+
+  if (expId !== userId) return null
+
+  const recuPar: string[] = msg.recu_par ?? []
+  const luPar: string[] = msg.lu_par_ids ?? []
+  const totalRecipients = recuPar.length + luPar.length
+
+  if (totalRecipients === 0) {
+    return <span style={{ color: '#9ca3af', fontSize: 13, cursor: 'default' }}>✓</span>
+  }
+
+  const hasRead = luPar.length > 0
+
+  // Fonction de résolution sécurisée
+  const getUserName = (id: string): string => {
+    return userNameMap[id] || id.substring(0, 8) + '…'
+  }
+
+  return (
+    <>
+      <span
+        onClick={(e) => { e.stopPropagation(); setShowReadBy(true) }}
+        style={{
+          color: hasRead ? '#3b82f6' : '#9ca3af',
+          fontSize: 13,
+          cursor: 'pointer',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 2
+        }}
+        title={`${luPar.length} lu(s), ${recuPar.length} reçu(s)`}
+      >
+        {hasRead ? '✓✓' : '✓✓'}
+        {totalRecipients > 0 && (
+          <span style={{
+            fontSize: 9,
+            background: hasRead ? '#dbeafe' : '#f3f4f6',
+            color: hasRead ? '#1d4ed8' : '#6b7280',
+            padding: '1px 4px',
+            borderRadius: 8,
+            fontWeight: 600,
+            marginLeft: 2
+          }}>
+            {totalRecipients}
+          </span>
+        )}
+      </span>
+
+      {showReadBy && (
+        <>
+          <div onClick={(e) => { e.stopPropagation(); setShowReadBy(false) }} style={{ position: 'fixed', inset: 0, zIndex: 90 }} />
+          <div onClick={(e) => e.stopPropagation()} style={{
+            position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+            zIndex: 91, background: '#fff', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,.2)',
+            padding: 16, minWidth: 280, maxWidth: 360, maxHeight: 400, overflowY: 'auto',
+            animation: 'content-fade-up .2s ease-out'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, paddingBottom: 10, borderBottom: '1px solid #e5e7eb' }}>
+              <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#1e1b4b' }}>📖 Vu par</h4>
+              <button onClick={() => setShowReadBy(false)} style={{ background: 'none', border: 'none', fontSize: 18, color: '#6b7280', cursor: 'pointer', padding: '0 4px' }}>✕</button>
+            </div>
+
+            {/* Section "Lu" */}
+            {luPar.length > 0 && (
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: '#16a34a', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.5px' }}>✓✓ Lu ({luPar.length})</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {luPar.map((readerId) => {
+                    const name = getUserName(readerId);
+                    return (
+                      <div key={readerId} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', background: '#f0fdf4', borderRadius: 8, border: '1px solid #bbf7d0' }}>
+                        <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg, #16a34a, #15803d)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 13, fontWeight: 700, flexShrink: 0 }}>
+                          {/* ✅ ICI : On prend la 1ère lettre du NOM résolu, pas de l'ID */}
+                          {name.charAt(0).toUpperCase()}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: '#166534', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {name}
+                          </div>
+                          <div style={{ fontSize: 11, color: '#16a34a' }}>✓ Lu</div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Section "Reçu mais non lu" */}
+            {recuPar.length > 0 && (
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.5px' }}>✓✓ Reçu ({recuPar.length})</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {recuPar.map((receiverId) => {
+                    const name = getUserName(receiverId);
+                    return (
+                      <div key={receiverId} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', background: '#f9fafb', borderRadius: 8, border: '1px solid #e5e7eb' }}>
+                        <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg, #6b7280, #4b5563)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 13, fontWeight: 700, flexShrink: 0 }}>
+                          {/* ✅ ICI : On prend la 1ère lettre du NOM résolu, pas de l'ID */}
+                          {name.charAt(0).toUpperCase()}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: '#374151', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {name}
+                          </div>
+                          <div style={{ fontSize: 11, color: '#9ca3af' }}>✓ Reçu</div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </>
+  )
+}
+
+  
   const activeClass = useMemo(() => classes.find(c => c.id === activeClassId), [classes, activeClassId])
 
   
