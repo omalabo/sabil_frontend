@@ -3355,7 +3355,7 @@ const classesFiltrees = classes.filter((cls: Class) =>
                                       >
                                         ↩️
                                       </button>
-                                       {isMe && <MessageReadReceipts msg={msg} userId={user?.id ?? ''} userNameMap={userNameMap} />}
+                                      {isMe && <MessageReadReceipts msg={msg} userId={user?.id ?? ''} />}
                                     </div>
 
                                   </div>
