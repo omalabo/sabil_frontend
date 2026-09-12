@@ -1470,7 +1470,7 @@ return (
                     fontWeight: 700,
                     flexShrink: 0
                   }}>
-                    {readerId.charAt(0).toUpperCase()}
+                    {getUserName(readerId).charAt(0).toUpperCase()}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{
@@ -1481,7 +1481,7 @@ return (
                       overflow: 'hidden',
                       textOverflow: 'ellipsis'
                     }}>
-                      {readerId}
+                      {getUserName(readerId)}
                     </div>
                     <div style={{ fontSize: 11, color: '#16a34a' }}>
                       ✓ Lu
