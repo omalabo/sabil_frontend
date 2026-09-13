@@ -1167,21 +1167,60 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
   const [wsStatus, setWsStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting')
   const COLORS = [{ label: 'Noir', value: '#1a1a2e' }, { label: 'Rouge', value: '#e63946' }, { label: 'Bleu', value: '#1d6fa4' }, { label: 'Vert', value: '#2d9e6b' }, { label: 'Orange', value: '#f4a261' }, { label: 'Violet', value: '#7b2d8b' }, { label: 'Blanc', value: '#ffffff' }]
   const ARABIC_CHARS = ['ا', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ', 'د', 'ذ', 'ر', 'ز', 'س', 'ش', 'ص', 'ض', 'ط', 'ظ', 'ع', 'غ', 'ف', 'ق', 'ك', 'ل', 'م', 'ن', 'ه', 'و', 'ي', 'ة', 'ى', 'لا', 'أ', 'إ', 'آ', 'ئ', 'ؤ', ' ', '،', '.']
+
   useEffect(() => {
     const token = localStorage.getItem('sabil_token')
     if (!token) { setWsStatus('disconnected'); return }
     const wsUrl = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://api.sabil-al-ilm.org/ws/tableau/${classeId}/${seanceId}/?token=${token}`
+    
+    let stateReceived = false
+    
     const connect = () => {
       const ws = new WebSocket(wsUrl); wsRef.current = ws; setWsStatus('connecting')
-      ws.onopen = () => { setWsStatus('connected'); ws.send(JSON.stringify({ type: 'request_state' })) }
-      ws.onmessage = e => { try { handleRemoteEvent(JSON.parse(e.data)) } catch { } }
+      ws.onopen = () => { 
+        setWsStatus('connected')
+        ws.send(JSON.stringify({ type: 'request_state' }))
+        
+        // 🆕 Retry après 2 secondes si pas de réponse
+        setTimeout(() => {
+          if (!stateReceived && ws.readyState === WebSocket.OPEN) {
+            console.log('🔄 Retry request_state...')
+            ws.send(JSON.stringify({ type: 'request_state' }))
+          }
+        }, 2000)
+      }
+      ws.onmessage = e => { 
+        try { 
+          const data = JSON.parse(e.data)
+          if (data.type === 'canvas_state') {
+            stateReceived = true
+          }
+          handleRemoteEvent(data)
+        } catch { } 
+      }
       ws.onclose = () => { setWsStatus('disconnected'); setTimeout(connect, 3000) }
       ws.onerror = () => setWsStatus('disconnected')
     }
     connect()
     return () => wsRef.current?.close()
   }, [classeId, seanceId])
-  useEffect(() => { const canvas = canvasRef.current; if (!canvas) return; const ctx = canvas.getContext('2d'); if (!ctx) return; ctxRef.current = ctx; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; fillBg(ctx, canvas, bgColor) }, [bgColor])
+  
+  useEffect(() => { 
+    const canvas = canvasRef.current; 
+    if (!canvas) return; 
+    const ctx = canvas.getContext('2d'); 
+    if (!ctx) return; 
+    ctxRef.current = ctx; 
+    ctx.lineCap = 'round'; 
+    ctx.lineJoin = 'round'; 
+    fillBg(ctx, canvas, bgColor) 
+    
+    // 🆕 Envoyer l'état complet du canvas après changement de fond
+    if (role === 'professeur' && wsRef.current?.readyState === WebSocket.OPEN) {
+      const dataUrl = canvas.toDataURL()
+      sendWs({ type: 'canvas_state', dataUrl })
+    }
+  }, [bgColor])
   const fillBg = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, bg: string) => {
     ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height)
     if (bg === 'grid') { ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = 1; for (let x = 0; x < canvas.width; x += 30) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke() } for (let y = 0; y < canvas.height; y += 30) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke() } }
@@ -1234,11 +1273,19 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
       sendWs({ type: 'canvas_state', dataUrl })
     }
   }
+  
   const handleUndo = () => {
     const canvas = canvasRef.current; const ctx = ctxRef.current; if (!canvas || !ctx || !historyRef.current.length) return
     const prev = historyRef.current.pop()!; redoRef.current.push(ctx.getImageData(0, 0, canvas.width, canvas.height)); ctx.putImageData(prev, 0, 0)
     sendWs({ type: 'undo', dataUrl: canvas.toDataURL() })
+    
+    // 🆕 Envoyer l'état complet du canvas après undo
+    if (role === 'professeur') {
+      const dataUrl = canvas.toDataURL()
+      sendWs({ type: 'canvas_state', dataUrl })
+    }
   }
+  
   const handleClear = () => {
     const canvas = canvasRef.current
     const ctx = ctxRef.current
@@ -1260,7 +1307,13 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
     const canvas = canvasRef.current; const ctx = ctxRef.current; if (!canvas || !ctx) return
     const fontSize = 80; ctx.font = `${fontSize}px 'Amiri',serif`; ctx.fillStyle = color; ctx.direction = 'rtl'; ctx.fillText(arabicText, textPos.x, textPos.y); ctx.direction = 'ltr'
     sendWs({ type: 'text', text: arabicText, x: textPos.x, y: textPos.y, fontSize, color }); setShowArabicKeyboard(false); setArabicText(''); setTextPos(null)
+    
+    // 🆕 Envoyer l'état complet du canvas après ajout de texte
+    if (role === 'professeur') {
+      const dataUrl = canvas.toDataURL()
+      sendWs({ type: 'canvas_state', dataUrl })
     }
+  }
   return (
     <div className="flex flex-col h-full bg-neutral-50">
       <div className="flex items-center gap-2 px-3 py-2 bg-white border-b border-neutral-200 flex-wrap">
