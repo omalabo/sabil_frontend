@@ -1223,15 +1223,37 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
     if (role === 'professeur') sendWs({ type: 'cursor', x: pos.x, y: pos.y })
     lastPos.current = pos
   }
-  const stopDraw = () => { isDrawing.current = false; lastPos.current = null }
+  const stopDraw = () => {
+    isDrawing.current = false
+    lastPos.current = null
+    
+    // 🆕 Envoyer l'état complet du canvas après chaque dessin
+    const canvas = canvasRef.current
+    if (canvas && role === 'professeur') {
+      const dataUrl = canvas.toDataURL()
+      sendWs({ type: 'canvas_state', dataUrl })
+    }
+  }
   const handleUndo = () => {
     const canvas = canvasRef.current; const ctx = ctxRef.current; if (!canvas || !ctx || !historyRef.current.length) return
     const prev = historyRef.current.pop()!; redoRef.current.push(ctx.getImageData(0, 0, canvas.width, canvas.height)); ctx.putImageData(prev, 0, 0)
     sendWs({ type: 'undo', dataUrl: canvas.toDataURL() })
   }
   const handleClear = () => {
-    const canvas = canvasRef.current; const ctx = ctxRef.current; if (!canvas || !ctx) return
-    historyRef.current.push(ctx.getImageData(0, 0, canvas.width, canvas.height)); redoRef.current = []; fillBg(ctx, canvas, bgColor); sendWs({ type: 'clear' })
+    const canvas = canvasRef.current
+    const ctx = ctxRef.current
+    if (!canvas || !ctx) return
+    
+    historyRef.current.push(ctx.getImageData(0, 0, canvas.width, canvas.height))
+    redoRef.current = []
+    fillBg(ctx, canvas, bgColor)
+    sendWs({ type: 'clear' })
+    
+    // 🆕 Envoyer l'état complet du canvas après avoir effacé
+    if (role === 'professeur') {
+      const dataUrl = canvas.toDataURL()
+      sendWs({ type: 'canvas_state', dataUrl })
+    }
   }
   const handleArabicConfirm = () => {
     if (!arabicText.trim() || !textPos) return
