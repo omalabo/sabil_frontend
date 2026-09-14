@@ -18,12 +18,21 @@ interface Diplome {
 }
 
 // ── Helper pour construire l'URL absolue de l'image ───────────────────────────
-const getFullUrl = (url: string | null | undefined) => {
-  if (!url) return ''
+//const getFullUrl = (url: string | null | undefined) => {
+  //if (!url) return ''
   // Si c'est déjà une URL absolue, on la retourne telle quelle
-  if (url.startsWith('http://') || url.startsWith('https://')) return url
+  //if (url.startsWith('http://') || url.startsWith('https://')) return url
   
   // Sinon, on préfixe avec l'URL de l'API (backend)
+  //const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+  //return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`
+//}
+
+const getFullUrl = (url: string | null | undefined) => {
+  if (!url) return ''
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url.replace(/^http:\/\//, 'https://')
+  }
   const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
   return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`
 }
