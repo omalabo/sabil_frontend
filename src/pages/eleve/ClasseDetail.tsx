@@ -1163,6 +1163,17 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
   const [showArabicKeyboard, setShowArabicKeyboard] = useState(false)
   const [arabicText, setArabicText] = useState('')
   const [textPos, setTextPos] = useState<{ x: number; y: number } | null>(null)
+  // 🆕 Texte flottant déplaçable (avant d'être figé sur le canvas)
+  const [floatingText, setFloatingText] = useState<{
+    text: string
+    x: number
+    y: number
+    color: string
+    fontSize: number
+  } | null>(null)
+  const [isDraggingText, setIsDraggingText] = useState(false)
+  const dragOffset = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
+  const floatingTextRef = useRef<HTMLDivElement>(null)
   const [remoteCursor, setRemoteCursor] = useState<{ x: number; y: number } | null>(null)
   const [wsStatus, setWsStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting')
   const COLORS = [{ label: 'Noir', value: '#1a1a2e' }, { label: 'Rouge', value: '#e63946' }, { label: 'Bleu', value: '#1d6fa4' }, { label: 'Vert', value: '#2d9e6b' }, { label: 'Orange', value: '#f4a261' }, { label: 'Violet', value: '#7b2d8b' }, { label: 'Blanc', value: '#ffffff' }]
@@ -1304,15 +1315,110 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
   }
   const handleArabicConfirm = () => {
     if (!arabicText.trim() || !textPos) return
-    const canvas = canvasRef.current; const ctx = ctxRef.current; if (!canvas || !ctx) return
-    const fontSize = 80; ctx.font = `${fontSize}px 'Amiri',serif`; ctx.fillStyle = color; ctx.direction = 'rtl'; ctx.fillText(arabicText, textPos.x, textPos.y); ctx.direction = 'ltr'
-    sendWs({ type: 'text', text: arabicText, x: textPos.x, y: textPos.y, fontSize, color }); setShowArabicKeyboard(false); setArabicText(''); setTextPos(null)
+    // 🆕 Créer un texte flottant déplaçable au lieu de dessiner directement
+    setFloatingText({
+      text: arabicText,
+      x: textPos.x,
+      y: textPos.y,
+      color: color,
+      fontSize: 80
+    })
+    setShowArabicKeyboard(false)
+    setArabicText('')
+    setTextPos(null)
+  }
+
+  // 🆕 Imprimer le texte flottant sur le canvas (après déplacement)
+  const commitFloatingText = useCallback(() => {
+    if (!floatingText) return
+    const canvas = canvasRef.current
+    const ctx = ctxRef.current
+    if (!canvas || !ctx) return
     
-    // 🆕 Envoyer l'état complet du canvas après ajout de texte
-    if (role === 'professeur') {
-      const dataUrl = canvas.toDataURL()
-      sendWs({ type: 'canvas_state', dataUrl })
+    // Dessiner le texte à sa position finale
+    ctx.font = `${floatingText.fontSize}px 'Amiri',serif`
+    ctx.fillStyle = floatingText.color
+    ctx.direction = 'rtl'
+    ctx.fillText(floatingText.text, floatingText.x, floatingText.y)
+    ctx.direction = 'ltr'
+    
+    // Envoyer aux autres utilisateurs
+    sendWs({
+      type: 'text',
+      text: floatingText.text,
+      x: floatingText.x,
+      y: floatingText.y,
+      fontSize: floatingText.fontSize,
+      color: floatingText.color
+    })
+    
+    setFloatingText(null)
+  }, [floatingText])
+  
+  // 🆕 Handlers pour le drag du texte flottant
+  const handleFloatingTextMouseDown = (e: React.MouseEvent) => {
+    if (!floatingTextRef.current) return
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDraggingText(true)
+    const rect = floatingTextRef.current.getBoundingClientRect()
+    dragOffset.current = {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
     }
+  }
+  
+  const handleFloatingTextMouseMove = (e: React.MouseEvent) => {
+    if (!isDraggingText || !floatingText || !floatingTextRef.current) return
+    const canvas = canvasRef.current
+    if (!canvas) return
+    
+    const canvasRect = canvas.getBoundingClientRect()
+    const scaleX = canvas.width / canvasRect.width
+    const scaleY = canvas.height / canvasRect.height
+    
+    // Calculer la nouvelle position relative au canvas
+    const newX = (e.clientX - canvasRect.left - dragOffset.current.x) * scaleX
+    const newY = (e.clientY - canvasRect.top - dragOffset.current.y + floatingText.fontSize * 0.3) * scaleY
+    
+    setFloatingText(prev => prev ? { ...prev, x: newX, y: newY } : null)
+  }
+  
+  const handleFloatingTextMouseUp = () => {
+    setIsDraggingText(false)
+  }
+  
+  // 🆕 Touch handlers pour mobile
+  const handleFloatingTextTouchStart = (e: React.TouchEvent) => {
+    if (!floatingTextRef.current) return
+    e.stopPropagation()
+    setIsDraggingText(true)
+    const touch = e.touches[0]
+    const rect = floatingTextRef.current.getBoundingClientRect()
+    dragOffset.current = {
+      x: touch.clientX - rect.left,
+      y: touch.clientY - rect.top
+    }
+  }
+  
+  const handleFloatingTextTouchMove = (e: React.TouchEvent) => {
+    if (!isDraggingText || !floatingText || !floatingTextRef.current) return
+    const canvas = canvasRef.current
+    if (!canvas) return
+    
+    const touch = e.touches[0]
+    const canvasRect = canvas.getBoundingClientRect()
+    const scaleX = canvas.width / canvasRect.width
+    const scaleY = canvas.height / canvasRect.height
+    
+    const newX = (touch.clientX - canvasRect.left - dragOffset.current.x) * scaleX
+    const newY = (touch.clientY - canvasRect.top - dragOffset.current.y + floatingText.fontSize * 0.3) * scaleY
+    
+    setFloatingText(prev => prev ? { ...prev, x: newX, y: newY } : null)
+  }
+  
+  const handleFloatingTextTouchEnd = () => {
+    setIsDraggingText(false)
   }
   return (
     <div className="flex flex-col h-full bg-neutral-50">
@@ -1333,14 +1439,82 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
         </div>
         <div className="flex gap-1 ml-auto">
           <button onClick={handleUndo} className="px-2 py-1 text-xs bg-neutral-100 hover:bg-neutral-200 rounded transition">↩ Annuler</button>
+          {floatingText && (
+            <button 
+              onClick={commitFloatingText} 
+              className="px-2 py-1 text-xs bg-green-50 hover:bg-green-100 text-green-700 rounded transition font-semibold animate-pulse"
+            >
+              ✓ Valider le texte
+            </button>
+          )}
           <button onClick={handleClear} className="px-2 py-1 text-xs bg-red-50 hover:bg-red-100 text-red-600 rounded transition">🗑️ Effacer</button>
         </div>
         <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${wsStatus === 'connected' ? 'bg-green-100 text-green-700' : wsStatus === 'connecting' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-600'}`}>
           {wsStatus === 'connected' ? '● En direct' : wsStatus === 'connecting' ? '⏳ Connexion…' : '✗ Déconnecté'}
         </span>
       </div>
-      <div className="flex-1 overflow-auto relative">
+      <div 
+        className="flex-1 overflow-auto relative"
+        onClick={() => {
+          // 🆕 Si on clique ailleurs que sur le texte flottant, on l'imprime
+          if (floatingText && !isDraggingText) {
+            commitFloatingText()
+          }
+        }}
+      >
         <canvas ref={canvasRef} width={1200} height={700} onMouseDown={startDraw} onMouseMove={draw} onMouseUp={stopDraw} onMouseLeave={stopDraw} onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={stopDraw} style={{ cursor: tool === 'cursor' ? 'default' : tool === 'eraser' ? 'crosshair' : tool === 'text' ? 'text' : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Ccircle cx='8' cy='8' r='7' fill='none' stroke='%23000' stroke-width='1'/%3E%3C/svg%3E") 8 8, crosshair`, display: 'block', touchAction: 'none', maxWidth: '100%' }} />
+        {/* 🆕 Texte flottant déplaçable */}
+        {floatingText && (
+          <div
+            ref={floatingTextRef}
+            onMouseDown={handleFloatingTextMouseDown}
+            onMouseMove={handleFloatingTextMouseMove}
+            onMouseUp={handleFloatingTextMouseUp}
+            onTouchStart={handleFloatingTextTouchStart}
+            onTouchMove={handleFloatingTextTouchMove}
+            onTouchEnd={handleFloatingTextTouchEnd}
+            onDoubleClick={(e) => { e.stopPropagation(); commitFloatingText() }}
+            style={{
+              position: 'absolute',
+              left: `${(floatingText.x / 1200) * 100}%`,
+              top: `${((floatingText.y - floatingText.fontSize * 0.3) / 700) * 100}%`,
+              fontFamily: "'Amiri', serif",
+              fontSize: `${(floatingText.fontSize / 1200) * 100}vmin`,
+              color: floatingText.color,
+              direction: 'rtl',
+              cursor: isDraggingText ? 'grabbing' : 'grab',
+              userSelect: 'none',
+              padding: '8px 12px',
+              background: isDraggingText ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.08)',
+              border: `2px dashed ${isDraggingText ? '#6366f1' : '#a5b4fc'}`,
+              borderRadius: 8,
+              boxShadow: isDraggingText ? '0 8px 24px rgba(99,102,241,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+              transition: isDraggingText ? 'none' : 'background 0.2s, box-shadow 0.2s',
+              zIndex: 10,
+              transform: 'translate(-50%, -50%)',
+              pointerEvents: 'auto',
+            }}
+            title="Déplacez le texte • Double-cliquez pour valider"
+          >
+            {floatingText.text}
+            <div style={{
+              position: 'absolute',
+              bottom: -28,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              fontSize: 10,
+              color: '#6366f1',
+              background: 'white',
+              padding: '2px 8px',
+              borderRadius: 10,
+              border: '1px solid #c7d2fe',
+              whiteSpace: 'nowrap',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+            }}>
+              ✋ Déplacez • Double-clic pour valider
+            </div>
+          </div>
+        )}
         {remoteCursor && role === 'eleve' && <div style={{ position: 'absolute', left: remoteCursor.x, top: remoteCursor.y, pointerEvents: 'none', transform: 'translate(-50%,-50%)', width: 12, height: 12, borderRadius: '50%', background: 'rgba(99,102,241,.7)', boxShadow: '0 0 0 4px rgba(99,102,241,.2)' }} />}
       </div>
       {showArabicKeyboard && (
