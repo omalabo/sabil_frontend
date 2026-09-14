@@ -142,7 +142,7 @@ export default function Sidebar({ userRole, userId, isActive = true }: SidebarPr
           { to: '/direction/comptes', label: ' Comptes', icon: '📜', mobileLabel: 'Comptes' },
           { to: '/direction/planning-global', label: ' Planning', icon: '📅', mobileLabel: 'Planning' },
           { to: '/direction/professeurs', label: ' Professeurs', icon: '🎓', mobileLabel: 'Profs' },
-          { to: '/direction/classes', label: 'Cours', icon: '🎓', mobileLabel: 'Cours' },
+          { to: '/direction/classes', label: 'Cours', icon: '📚', mobileLabel: 'Cours' },
           { to: '/admin/messages-admins', label: 'admins', icon: '💬', mobileLabel: 'admins' },
           { to: '/direction/taches', label: ' Taches', icon: '📊', mobileLabel: 'Taches' },
           { to: '/direction/annonces', label: ' Annonces', icon: '🚩', mobileLabel: 'Annonces' },
