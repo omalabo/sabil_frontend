@@ -219,7 +219,6 @@ function ElevesModal({ classe, onClose }: { classe: Class; onClose: () => void }
             <tr className="text-left text-xs text-neutral-500 border-b border-neutral-100">
               <th className="pb-2 font-medium">Élève</th>
               <th className="pb-2 font-medium">Inscrit le</th>
-              <th className="pb-2 font-medium">Contrat</th>
               <th className="pb-2"></th>
             </tr>
           </thead>
@@ -231,9 +230,6 @@ function ElevesModal({ classe, onClose }: { classe: Class; onClose: () => void }
                 </td>
                 <td className="py-2 pr-3 text-neutral-500">
                   {insc.date_inscription ? new Date(insc.date_inscription).toLocaleDateString('fr-FR') : '—'}
-                </td>
-                <td className="py-2 pr-3">
-                  {insc.contrat_signe ? <span className="text-success-600 text-xs">✅ Signé</span> : <span className="text-neutral-400 text-xs">—</span>}
                 </td>
                 <td className="py-2">
                   <button onClick={() => handleDelete(insc.id, insc.eleve_nom || 'cet élève')} className="opacity-0 group-hover:opacity-100 text-xs text-danger-500 hover:text-danger-700 transition">✕</button>
@@ -265,13 +261,7 @@ function ElevesModal({ classe, onClose }: { classe: Class; onClose: () => void }
                            <span className="flex items-center gap-1">
                              📅 {dateStr}
                            </span>
-                           <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-medium ${
-                             insc.contrat_signe 
-                               ? 'bg-success-100 text-success-700' 
-                               : 'bg-neutral-100 text-neutral-500'
-                           }`}>
-                             {insc.contrat_signe ? '✅ Signé' : '⏳ En attente'}
-                           </span>
+                           
                         </div>
                       </div>
         
