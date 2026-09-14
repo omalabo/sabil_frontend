@@ -56,16 +56,35 @@ export default function MesDiplomes() {
   }
 
   // ✅ Téléchargement direct de l'image (avec URL absolue)
-  function handleDownload(d: Diplome) {
+    // ✅ Téléchargement forcé de l'image (contourne l'ouverture dans l'onglet)
+  async function handleDownload(d: Diplome) {
     const fullUrl = getFullUrl(d.image_diplome)
     if (!fullUrl) return
     
-    const a = document.createElement('a')
-    a.href = fullUrl
-    a.download = `Diplome-${d.nom_eleve_diplome}-${d.matiere}.png`
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
+    try {
+      // 1. Récupérer l'image en tant que Blob (données brutes)
+      const response = await fetch(fullUrl)
+      if (!response.ok) throw new Error('Échec du téléchargement')
+      const blob = await response.blob()
+      
+      // 2. Créer une URL objet temporaire à partir du Blob
+      const blobUrl = window.URL.createObjectURL(blob)
+      
+      // 3. Créer le lien et déclencher le téléchargement
+      const a = document.createElement('a')
+      a.href = blobUrl
+      a.download = `Diplome-${d.nom_eleve_diplome}-${d.matiere}.png`
+      document.body.appendChild(a)
+      a.click()
+      
+      // 4. Nettoyage (très important pour libérer la mémoire)
+      a.remove()
+      window.URL.revokeObjectURL(blobUrl)
+      
+    } catch (error) {
+      console.error("Erreur lors du téléchargement :", error)
+      alert("Impossible de télécharger le diplôme automatiquement. Astuce : faites un clic droit sur l'aperçu > 'Enregistrer l'image sous...'")
+    }
   }
 
   // ✅ Impression directe de l'image (avec URL absolue)
