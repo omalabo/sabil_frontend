@@ -56,51 +56,37 @@ export default function MesDiplomes() {
   }
 
   // ✅ Téléchargement direct de l'image (avec URL absolue)
-      // ✅ Téléchargement FORCÉ via Blob (avec gestion CORS stricte)
   async function handleDownload(d: Diplome) {
     const fullUrl = getFullUrl(d.image_diplome)
     if (!fullUrl) return
     
     try {
-      // 1. Fetch avec mode CORS explicite
-      const response = await fetch(fullUrl, {
-        method: 'GET',
-        mode: 'cors', // Force la vérification CORS
-        credentials: 'include', // Inclut les cookies si nécessaire
-      })
-
-      if (!response.ok) {
-        throw new Error(`Erreur HTTP: ${response.status}`)
-      }
-
-      // 2. Conversion en Blob (données binaires)
+      // 1. Récupérer l'image en tant que Blob (données brutes)
+      const response = await fetch(fullUrl)
+      if (!response.ok) throw new Error('Échec du téléchargement')
       const blob = await response.blob()
       
-      // 3. Création d'une URL objet locale
+      // 2. Créer une URL objet temporaire à partir du Blob
       const blobUrl = window.URL.createObjectURL(blob)
       
-      // 4. Création du lien et déclenchement du clic
+      // 3. Créer le lien et déclencher le téléchargement
       const a = document.createElement('a')
       a.href = blobUrl
       a.download = `Diplome-${d.nom_eleve_diplome}-${d.matiere}.png`
       document.body.appendChild(a)
       a.click()
       
-      // 5. Nettoyage mémoire
+      // 4. Nettoyage (très important pour libérer la mémoire)
       a.remove()
       window.URL.revokeObjectURL(blobUrl)
       
     } catch (error) {
-      console.error("❌ Échec du téléchargement Blob (probablement un blocage CORS) :", error)
-      
-      // ⚠️ FALLBACK ULTIME : Si le serveur bloque toujours le fetch, 
-      // on ouvre dans un nouvel onglet, mais on ne peut pas faire mieux 
-      // sans modifier la config du serveur (voir Étape 2).
-      alert("Le téléchargement automatique a été bloqué par le navigateur. L'image va s'ouvrir dans un nouvel onglet, faites 'Clic droit > Enregistrer sous'.")
-      window.open(fullUrl, '_blank')
+      console.error("Erreur lors du téléchargement :", error)
+      alert("Impossible de télécharger le diplôme automatiquement. Astuce : faites un clic droit sur l'aperçu > 'Enregistrer l'image sous...'")
     }
   }
 
+  
   // ✅ Impression directe de l'image (avec URL absolue)
   function handlePrint(d: Diplome) {
     const fullUrl = getFullUrl(d.image_diplome)
