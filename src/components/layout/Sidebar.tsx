@@ -161,7 +161,7 @@ export default function Sidebar({ userRole, userId, isActive = true }: SidebarPr
       {/* 📱 Bottom Navigation - Mobile/Tablette uniquement (Scrollable) */}
        {/*<nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 z-50 safe-area-pb">*/}
 
-        // APRÈS
+      
         <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 z-50 safe-area-pb">
         {/* ✅ Ajout de overflow-x-auto, snap-x, et masquage de la scrollbar */}
         <div className="flex items-center gap-1 overflow-x-auto snap-x snap-mandatory px-2 py-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
