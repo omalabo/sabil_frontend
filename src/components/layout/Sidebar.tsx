@@ -159,7 +159,10 @@ export default function Sidebar({ userRole, userId, isActive = true }: SidebarPr
     <>
    
       {/* 📱 Bottom Navigation - Mobile/Tablette uniquement (Scrollable) */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 z-50 safe-area-pb">
+       {/*<nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 z-50 safe-area-pb">*/}
+
+        // APRÈS
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 z-50 safe-area-pb">
         {/* ✅ Ajout de overflow-x-auto, snap-x, et masquage de la scrollbar */}
         <div className="flex items-center gap-1 overflow-x-auto snap-x snap-mandatory px-2 py-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {menuItems
@@ -211,8 +214,9 @@ export default function Sidebar({ userRole, userId, isActive = true }: SidebarPr
       </nav>
 
       {/* 💻 Sidebar Desktop - Cachée sur mobile */}
-      <aside className="hidden md:flex md:flex-col w-64 bg-white border-r border-neutral-200 h-screen sticky top-0">
+        {/*<aside className="hidden md:flex md:flex-col w-64 bg-white border-r border-neutral-200 h-screen sticky top-0"> */}
         {/* Logo */}
+        <aside className="hidden lg:flex lg:flex-col w-64 bg-white border-r border-neutral-200 h-screen sticky top-0">
         <div className="p-4 border-b border-neutral-200 flex items-center justify-center">
           <img 
             src="/logo.jpeg"
