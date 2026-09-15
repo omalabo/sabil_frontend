@@ -2035,7 +2035,10 @@ const getMotivationImageUrl = (contenu: string | null | undefined): string => {
     const hasNonLues = annoncesActives.some((a: any) => !a.statut)
     
     const [leftPanelOpen, setLeftPanelOpen] = useState(true)
-
+    
+    // ✅ Détecte si on tourne dans l'app native (WebView Expo) — force le mode mobile
+    const isNativeApp = typeof window !== 'undefined' && !!(window as any).ReactNativeWebView
+    const isMobileLayout = isNativeApp || (typeof window !== 'undefined' && window.innerWidth < 768)
 
     
 
@@ -2377,7 +2380,8 @@ const getMotivationImageUrl = (contenu: string | null | undefined): string => {
     .filter((n: any) => n.classe === clsId && CLASSE_MARK_READ_TYPES.includes(n.type))
     .forEach((n: any) => markRead(n.id))
 
-    if (window.innerWidth < 768) setLeftPanelOpen(false)
+    //if (window.innerWidth < 768) setLeftPanelOpen(false)
+    if (isMobileLayout) setLeftPanelOpen(false)
   }
 
   const isClasseLocked = (c: { statut?: string } | null | undefined) =>
@@ -2743,11 +2747,16 @@ const classesFiltrees = classes.filter((cls: Class) =>
     <div style={{margin: -24, display: 'flex', height: '92vh', overflow: 'hidden', background: '#f0f2f5', fontFamily: "'DM Sans', 'Inter', system-ui, sans-serif" }}>
       {/* ═══════════════════════════════════════════════════════════════
       PANNEAU LATÉRAL GAUCHE
-      ═══════════════════════════════════════════════════════════════ */}
-      <aside style={{
-        width: leftPanelOpen ? (window.innerWidth < 768 ? '100%' : 310) : 0,
+      ═══════════════════════════════════════════════════════════════ 
+       width: leftPanelOpen ? (window.innerWidth < 768 ? '100%' : 310) : 0,
         minWidth: leftPanelOpen ? (window.innerWidth < 768 ? '100%' : 300) : 0,
         maxWidth: window.innerWidth < 768 ? '100%' : 360,
+      */}
+      <aside style={{
+       
+        width: leftPanelOpen ? (isMobileLayout ? '100%' : 310) : 0,
+        minWidth: leftPanelOpen ? (isMobileLayout ? '100%' : 300) : 0,
+        maxWidth: isMobileLayout ? '100%' : 360,
         background: 'linear-gradient(180deg, #1e1b4b 0%, #312e81 40%, #1e1b4b 100%)',
         borderRight: 'none', position: 'relative', overflow: 'hidden', flexShrink: 0,  transition: 'width 0.3s ease, min-width 0.3s ease',
       }}>
@@ -3046,8 +3055,8 @@ const classesFiltrees = classes.filter((cls: Class) =>
       {/* ═══════════════════════════════════════════════════════════════
       ZONE PRINCIPALE DROITE
       ═══════════════════════════════════════════════════════════════ */}
-      <main className="main-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0,  display: (!activeClass && window.innerWidth < 768) ? 'none' : 'flex'}}>
-            {!activeClass && window.innerWidth >= 768 ? (
+      <main className="main-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0,  display: (!activeClass && isMobileLayout) ? 'none' : 'flex'}}>
+      {!activeClass && !isMobileLayout ? (
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f0f2f5' }}>
                 <div style={{ textAlign: 'center', color: '#94a3b8' }}>
                   <div style={{ fontSize: 64, marginBottom: 16, opacity: .5 }}>🎓</div>
