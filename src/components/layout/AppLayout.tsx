@@ -12,10 +12,7 @@ export default function AppLayout() {
   const { user, token } = useAppSelector(selectAuth)
   const navigate = useNavigate() // ✅ Hook pour déclencher la navigation
 
-  // 🔒 Sécurité : si pas de token, rediriger vers login
-  if (!token) {
-    return <Navigate to="/login" replace />
-  }
+  
 
   // ✅ ÉTAPE 5 : Écouter les clics sur les notifications Push venant de React Native
   useEffect(() => {
@@ -44,6 +41,11 @@ export default function AppLayout() {
     };
   }, [navigate]); // Dépendance à navigate pour éviter les warnings React
 
+  // 🔒 Sécurité : si pas de token, rediriger vers login
+  if (!token) {
+    return <Navigate to="/login" replace />
+  }
+
   return (
     <div className="min-h-screen bg-neutral-50 flex">
       {/* 🧭 Sidebar de navigation - cachée sur mobile par défaut */}
@@ -55,7 +57,7 @@ export default function AppLayout() {
         <TopBar user={user} />
         
         {/* 🎯 Zone de contenu dynamique (pages enfants via Outlet) */}
-        <main className="flex-1 p-4 md:p-6 overflow-auto">
+        <main className="flex-1 p-4 lg:p-6 overflow-auto">
           <Outlet />
         </main>
       </div>
