@@ -1,4 +1,4 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
+import { createApi, fetchBaseQuery, BaseQueryFn, FetchArgs, FetchBaseQueryError } from '@reduxjs/toolkit/query/react'
 import { RootState } from './store'
 import { 
   User, Class, Message, PrivateMessage, Seance, Devoir, 
@@ -16,6 +16,114 @@ import {
   Diplome, CreateDiplomePayload, EleveOption, AdminEleveAPayer
 } from '../types'
 
+import { updateTokens, clearAuth, logout } from './authSlice'
+
+
+let isRefreshing = false
+let failedQueue: { resolve: (value?: any) => void; reject: (reason?: any) => void }[] = []
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error)
+    } else {
+      prom.resolve(token)
+    }
+  })
+  failedQueue = []
+}
+
+
+// 1. Configuration de base standard
+const baseQuery = fetchBaseQuery({
+  baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api',
+  prepareHeaders: (headers, { getState }) => {
+    const token = (getState() as RootState).auth.token
+    if (token) {
+      headers.set('authorization', `Bearer ${token}`)
+    }
+    return headers
+  },
+})
+
+
+// 2. Wrapper personnalisé qui gère le refresh automatique
+export const customBaseQuery: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> = async (
+  args,
+  api,
+  extraOptions
+) => {
+  let result = await baseQuery(args, api, extraOptions)
+
+  // Si on reçoit une 401 (Token d'accès expiré)
+  if (result.error && result.error.status === 401) {
+    const state = api.getState() as RootState
+    const refreshToken = state.auth.refreshToken
+
+    if (!refreshToken) {
+      api.dispatch(clearAuth())
+      api.dispatch(logout())
+      window.dispatchEvent(new CustomEvent('auth:unauthorized'))
+      return result
+    }
+
+    if (isRefreshing) {
+      // Si un refresh est déjà en cours, on met la requête en file d'attente
+      try {
+        await new Promise<string>((resolve, reject) => {
+          failedQueue.push({ resolve, reject })
+        })
+        // On relance la requête originale, le prepareHeaders prendra automatiquement le nouveau token du store
+        result = await baseQuery(args, api, extraOptions)
+      } catch (err) {
+        return { error: { status: 401, data: 'Refresh failed' } as FetchBaseQueryError }
+      }
+    } else {
+      isRefreshing = true
+      try {
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
+        
+        // Appel direct via fetch natif pour éviter tout conflit/boucle avec les intercepteurs Axios
+        const refreshResponse = await fetch(`${baseUrl}/token/refresh/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify({ refresh: refreshToken })
+        })
+
+        if (!refreshResponse.ok) {
+          throw new Error('Échec du rafraîchissement du token')
+        }
+
+        const data = await refreshResponse.json()
+        const newAccessToken = data.access
+        const newRefreshToken = data.refresh
+
+        // Mise à jour du store Redux (et du localStorage via le reducer)
+        api.dispatch(updateTokens({ token: newAccessToken, refreshToken: newRefreshToken }))
+
+        // Traiter la file d'attente des autres requêtes RTK Query en attente
+        processQueue(null, newAccessToken)
+
+        // Relancer la requête originale avec le nouveau token
+        result = await baseQuery(args, api, extraOptions)
+      } catch (refreshError) {
+        processQueue(refreshError, null)
+        api.dispatch(clearAuth())
+        api.dispatch(logout())
+        window.dispatchEvent(new CustomEvent('auth:unauthorized'))
+        return { error: { status: 401, data: 'Session expirée' } as FetchBaseQueryError }
+      } finally {
+        isRefreshing = false
+      }
+    }
+  }
+
+  return result
+}
+
 /**
  * RTK Query API Slice - Configuration centrale
  * - Cache automatique + revalidation intelligente
@@ -25,16 +133,7 @@ import {
 export const apiSlice = createApi({
   reducerPath: 'api',
   
-  baseQuery: fetchBaseQuery({
-    baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api',
-    prepareHeaders: (headers, { getState }) => {
-      const token = (getState() as RootState).auth.token
-      if (token) {
-        headers.set('authorization', `Bearer ${token}`)
-      }
-      return headers
-    },
-  }),
+  baseQuery: customBaseQuery,
 
   // 🔹 Tags étendus pour gestion fine du cache
   tagTypes: [
