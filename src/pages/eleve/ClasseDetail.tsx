@@ -2036,7 +2036,7 @@ const getMotivationImageUrl = (contenu: string | null | undefined): string => {
     
     const [leftPanelOpen, setLeftPanelOpen] = useState(true)
     // ✅ Seuil élargi à 1024px : tablette = mode mobile, cohérent partout (web, natif, tous navigateurs)
-    const isMobileLayout = typeof window !== 'undefined' && window.innerWidth < 1024
+    const isMobileLayout = typeof window !== 'undefined' && window.innerWidth < 1025
 
 
     
