@@ -54,7 +54,7 @@ interface EleveRow {
 }
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
-const SALLE_STYLES = `@keyframes salle-pulse-ring{0%{transform:scale(1);opacity:.6}70%{transform:scale(1.35);opacity:0}100%{transform:scale(1.35);opacity:0}} @keyframes salle-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}} @keyframes panel-slide-in{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}} @keyframes content-fade-up{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}} @keyframes seance-glow{0%,100%{box-shadow:0 0 0 0 rgba(99,102,241,.25)}50%{box-shadow:0 0 0 8px rgba(99,102,241,0)}} .salle-join-btn{position:relative;display:inline-flex;align-items:center;gap:10px;padding:14px 36px;font-size:15px;font-weight:600;letter-spacing:.3px;color:#fff;background:linear-gradient(135deg,#1a73e8,#1557b0);border:none;border-radius:50px;cursor:pointer;box-shadow:0 4px 20px rgba(26,115,232,.45);transition:transform .15s,box-shadow .15s,opacity .15s} .salle-join-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 28px rgba(26,115,232,.55)} .salle-join-btn:disabled{opacity:.55;cursor:not-allowed} .salle-join-btn .spinner{width:18px;height:18px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite} @keyframes spin{to{transform:rotate(360deg)}} .salle-info-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:50px;font-size:13px;color:rgba(255,255,255,.7)} .salle-avatar-ring{position:absolute;inset:-6px;border-radius:50%;background:rgba(26,115,232,.35);animation:salle-pulse-ring 2.4s ease-out infinite} .panel-slide-in{animation:panel-slide-in .25s ease-out} .content-fade-up{animation:content-fade-up .3s ease-out} .seance-active-glow{animation:seance-glow 2s ease-in-out infinite} @keyframes todayPopupIn{from{opacity:0;transform:translateY(-6px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}} @keyframes tab-blink{0%,100%{opacity:1}50%{opacity:.3}} @keyframes slideInRight {from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; }} @keyframes facture-ping{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.3)}} @media (max-width: 767px) {.mobile-panel-toggle { display: flex !important; align-items: center; justify-content: center; } .main-content { margin-left: 0 !important; }} .time24-item:hover{background:rgba(255,255,255,.12)} 
+const SALLE_STYLES = `@keyframes salle-pulse-ring{0%{transform:scale(1);opacity:.6}70%{transform:scale(1.35);opacity:0}100%{transform:scale(1.35);opacity:0}} @keyframes salle-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}} @keyframes panel-slide-in{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}} @keyframes content-fade-up{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}} @keyframes seance-glow{0%,100%{box-shadow:0 0 0 0 rgba(99,102,241,.25)}50%{box-shadow:0 0 0 8px rgba(99,102,241,0)}} .salle-join-btn{position:relative;display:inline-flex;align-items:center;gap:10px;padding:14px 36px;font-size:15px;font-weight:600;letter-spacing:.3px;color:#fff;background:linear-gradient(135deg,#1a73e8,#1557b0);border:none;border-radius:50px;cursor:pointer;box-shadow:0 4px 20px rgba(26,115,232,.45);transition:transform .15s,box-shadow .15s,opacity .15s} .salle-join-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 28px rgba(26,115,232,.55)} .salle-join-btn:disabled{opacity:.55;cursor:not-allowed} .salle-join-btn .spinner{width:18px;height:18px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite} @keyframes spin{to{transform:rotate(360deg)}} .salle-info-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:50px;font-size:13px;color:rgba(255,255,255,.7)} .salle-avatar-ring{position:absolute;inset:-6px;border-radius:50%;background:rgba(26,115,232,.35);animation:salle-pulse-ring 2.4s ease-out infinite} .panel-slide-in{animation:panel-slide-in .25s ease-out} .content-fade-up{animation:content-fade-up .3s ease-out} .seance-active-glow{animation:seance-glow 2s ease-in-out infinite} @keyframes todayPopupIn{from{opacity:0;transform:translateY(-6px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}} @keyframes tab-blink{0%,100%{opacity:1}50%{opacity:.3}} @keyframes slideInRight {from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; }} @keyframes facture-ping{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.3)}} @media (max-width: 1023px) {.mobile-panel-toggle { display: flex !important; align-items: center; justify-content: center; } .main-content { margin-left: 0 !important; }} .time24-item:hover{background:rgba(255,255,255,.12)} 
 .chat-icon-btn {
 display: flex;
 align-items: center;
@@ -2035,7 +2035,8 @@ const getMotivationImageUrl = (contenu: string | null | undefined): string => {
     const hasNonLues = annoncesActives.some((a: any) => !a.statut)
     
     const [leftPanelOpen, setLeftPanelOpen] = useState(true)
-    
+    // ✅ Seuil élargi à 1024px : tablette = mode mobile, cohérent partout (web, natif, tous navigateurs)
+    const isMobileLayout = typeof window !== 'undefined' && window.innerWidth < 1024
 
 
     
@@ -2378,7 +2379,8 @@ const getMotivationImageUrl = (contenu: string | null | undefined): string => {
     .filter((n: any) => n.classe === clsId && CLASSE_MARK_READ_TYPES.includes(n.type))
     .forEach((n: any) => markRead(n.id))
 
-    if (window.innerWidth < 768) setLeftPanelOpen(false)
+    //if (window.innerWidth < 768) setLeftPanelOpen(false)
+    if (isMobileLayout) setLeftPanelOpen(false)
    
   }
 
@@ -2750,9 +2752,10 @@ const classesFiltrees = classes.filter((cls: Class) =>
       */}
       <aside style={{
        
-        width: leftPanelOpen ? (window.innerWidth < 768 ? '100%' : 310) : 0,
-        minWidth: leftPanelOpen ? (window.innerWidth < 768 ? '100%' : 300) : 0,
-        maxWidth: window.innerWidth < 768 ? '100%' : 360,
+        width: leftPanelOpen ? (isMobileLayout ? '100%' : 310) : 0,
+        minWidth: leftPanelOpen ? (isMobileLayout ? '100%' : 300) : 0,
+        maxWidth: isMobileLayout ? '100%' : 360,
+      
         background: 'linear-gradient(180deg, #1e1b4b 0%, #312e81 40%, #1e1b4b 100%)',
         borderRight: 'none', position: 'relative', overflow: 'hidden', flexShrink: 0,  transition: 'width 0.3s ease, min-width 0.3s ease',
       }}>
@@ -3051,8 +3054,8 @@ const classesFiltrees = classes.filter((cls: Class) =>
       {/* ═══════════════════════════════════════════════════════════════
       ZONE PRINCIPALE DROITE
       ═══════════════════════════════════════════════════════════════ */}
-      <main className="main-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0,  display: (!activeClass && window.innerWidth < 768) ? 'none' : 'flex'}}>
-      {!activeClass && window.innerWidth >= 768 ? (
+      <main className="main-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0,  display: (!activeClass && isMobileLayout) ? 'none' : 'flex'}}>
+      {!activeClass && !isMobileLayout ? (
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f0f2f5' }}>
                 <div style={{ textAlign: 'center', color: '#94a3b8' }}>
                   <div style={{ fontSize: 64, marginBottom: 16, opacity: .5 }}>🎓</div>
