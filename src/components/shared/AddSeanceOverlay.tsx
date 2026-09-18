@@ -111,6 +111,18 @@ const resolveJourIdx = (item: PlanningItem): number => {
 const toHHMM = (t: string | null | undefined): string =>
   t?.match(/\d{2}:\d{2}/)?.[0] ?? '';
 
+// 🕒 Trouve l'index du créneau de 30min correspondant, même pour des minutes "impaires" (ex: 20:31 → slot 20:30)
+const toSlotIndex = (t: string | null | undefined): number => {
+  const hhmm = toHHMM(t);
+  if (!hhmm) return -1;
+  const [h, m] = hhmm.split(':').map(Number);
+  if (h === 0) return SLOTS.length - 1; // minuit → dernier slot dédié
+  const totalMinutesFromStart = (h - START_HOUR) * 60 + m;
+  if (totalMinutesFromStart < 0) return -1;
+  const slotIdx = Math.floor(totalMinutesFromStart / 30);
+  return slotIdx >= 0 && slotIdx < SLOTS.length - 1 ? slotIdx : -1;
+};
+
 const profName = (classe: PlanningItem['classe']): string =>
   classe.professeur?.display_name ?? '';
 
@@ -981,7 +993,7 @@ export function WeekViewWithAdd({
                 const rt = toHHMM(item.heure_debut_reelle);
                 if (ji === -1 || !rt) return null;
 
-                const si = SLOTS.indexOf(rt);
+                const si = toSlotIndex(item.heure_debut_reelle);
                 if (si === -1) return null;
 
                 // Calcul position/taille selon l'opération en cours
