@@ -35,8 +35,14 @@ const resolveWeekdayIndex = (item: PlanningItem): number => {
 };
 
 // 🕒 Extrait "HH:MM" proprement
+//const extractTimeKey = (timeStr: string | null): string => {
+  //return timeStr?.match(/\d{2}:\d{2}/)?.[0] || '';
+//};
+
+// 🕒 Extrait le bloc horaire "HH:00" pour le regroupement dans la grille (ex: "20:31" -> "20:00")
 const extractTimeKey = (timeStr: string | null): string => {
-  return timeStr?.match(/\d{2}:\d{2}/)?.[0] || '';
+  const match = timeStr?.match(/(\d{1,2}):\d{2}/);
+  return match ? `${match[1].padStart(2, '0')}:00` : '';
 };
 
 // 🔄 Calcule la date réelle d'une séance récurrente dans la semaine de référence
