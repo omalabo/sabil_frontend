@@ -203,6 +203,14 @@ export const apiSlice = createApi({
       }),
     }),
 
+    saveExpoToken: builder.mutation<{ status: string; message?: string }, { expo_token: string }>({
+      query: (body) => ({
+        url: '/auth/save-expo-token/',
+        method: 'POST',
+        body,
+      }),
+    }),
+
 
     // Lister les tâches (paramètre optionnel faite=true|false)
     getTachesDirection: builder.query<TacheDirection[], { faite?: boolean } | void>({
@@ -1356,5 +1364,6 @@ export const {
   useCreateDiplomeMutation,
   useUpdateDiplomeMutation,
   useGetMyDiplomesQuery,
-  useGetAdminElevesAPayerQuery 
+  useGetAdminElevesAPayerQuery,
+  useSaveExpoTokenMutation,
 } = apiSlice
