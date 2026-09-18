@@ -2,6 +2,7 @@ import { Outlet, Navigate, useNavigate } from 'react-router-dom' // ✅ Ajout de
 import { useEffect } from 'react' // ✅ Ajout de useEffect
 import { useAppSelector } from '../../store/hooks'
 import { selectAuth } from '../../store/authSlice'
+import { useSaveExpoTokenMutation } from '../../store/apiSlice'
 import Sidebar from './Sidebar'
 import TopBar from './TopBar'
 
@@ -11,6 +12,7 @@ import TopBar from './TopBar'
 export default function AppLayout() {
   const { user, token } = useAppSelector(selectAuth)
   const navigate = useNavigate() // ✅ Hook pour déclencher la navigation
+  const [saveExpoToken] = useSaveExpoTokenMutation()
 
   
 
@@ -26,6 +28,14 @@ export default function AppLayout() {
           console.log('🔔 Navigation depuis notification push vers :', data.url);
           navigate(data.url); // ✅ C'est ici que la magie opère
         }
+
+        if (data && data.type === 'EXPO_TOKEN' && data.token && token) {
+          saveExpoToken({ expo_token: data.token })
+            .unwrap()
+            .then((res) => console.log('📲 Token Expo sauvegardé:', res))
+            .catch((err) => console.error('Erreur sauvegarde token Expo:', err))
+        }
+        
       } catch (error) {
         // On ignore silencieusement les autres messages (ex: scripts tiers, WebView interne)
         // pour éviter de faire planter l'app si le JSON est invalide
@@ -39,7 +49,7 @@ export default function AppLayout() {
     return () => {
       window.removeEventListener('message', handleMessage);
     };
-  }, [navigate]); // Dépendance à navigate pour éviter les warnings React
+  }, [navigate, token, saveExpoToken]); // Dépendance à navigate pour éviter les warnings React
 
   // 🔒 Sécurité : si pas de token, rediriger vers login
   if (!token) {
