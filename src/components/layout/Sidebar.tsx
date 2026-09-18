@@ -109,7 +109,7 @@ export default function Sidebar({ userRole, userId, isActive = true }: SidebarPr
         const fullMenu = [
           { to: '/eleve/dashboard', label: 'Accueil', icon: '🏠', mobileLabel: 'Accueil' },
           { to: '/eleve/classes', label: ' Mes cours', icon: '📚', mobileLabel: 'Classes' },
-          { to: '/eleve/diplomes', label: ' Mes diplômes', icon: '🎓', mobileLabel: 'Diplômes' },
+          { to: '/eleve/diplomes', label: ' Mes diplômes', icon: '📄', mobileLabel: 'Diplômes' },
           { to: '/eleve/chat-admin', label: ' Admin', icon: '💬', mobileLabel: 'Admin' },
           { to: '/eleve/factures', label: ' Mes Factures', icon: '💰', mobileLabel: 'Factures' },
           
@@ -123,17 +123,17 @@ export default function Sidebar({ userRole, userId, isActive = true }: SidebarPr
         return [
           { to: '/professeur/dashboard', label: ' Tableau de bord', icon: '📊', mobileLabel: 'Accueil' },
           { to: '/professeur/planning', label: ' Planning', icon: '📅', mobileLabel: 'Planning' },
-          { to: '/professeur/cours', label: 'Mes cours', icon: '🎓', mobileLabel: 'Mes cours' },
-          { to: '/professeur/diplome', label: 'Diplomes', icon: '📚', mobileLabel: 'Diplomes' },
+          { to: '/professeur/cours', label: 'Mes cours', icon: '📚', mobileLabel: 'Mes cours' },
+          { to: '/professeur/diplome', label: 'Diplomes', icon: '📄', mobileLabel: 'Diplomes' },
           logoutItem,
         ]
       case 'admin':
         return [
           { to: '/admin/planning-global', label: 'Accueil', icon: '📅', mobileLabel: 'Accueil' },
-          { to: '/admin/classes', label: 'Classes', icon: '🎓', mobileLabel: 'Classes' },
-          { to: '/admin/messages-prives', label: 'Messagerie etudiants', icon: '🎓', mobileLabel: 'Messagerie etudiants' },
-          { to: '/admin/taches', label: ' Taches', icon: '📊', mobileLabel: 'Taches' },
-          { to: '/admin/eleve-factures', label: 'Rappel Facture', icon: '📊', mobileLabel: 'Rappel Facture' },
+          { to: '/admin/classes', label: 'Classes', icon: '📚', mobileLabel: 'Classes' },
+          { to: '/admin/messages-prives', label: 'Messagerie etudiants', icon: '💬', mobileLabel: 'Messagerie etudiants' },
+          { to: '/admin/taches', label: ' Taches', icon: '⚙️', mobileLabel: 'Taches' },
+          { to: '/admin/eleve-factures', label: 'Rappel Facture', icon: '💰', mobileLabel: 'Rappel Facture' },
           logoutItem,
         ]
       case 'direction':
@@ -141,10 +141,10 @@ export default function Sidebar({ userRole, userId, isActive = true }: SidebarPr
           { to: '/direction/dashboard', label: ' Supervision', icon: '🎯', mobileLabel: 'Accueil' },
           { to: '/direction/comptes', label: ' Comptes', icon: '📜', mobileLabel: 'Comptes' },
           { to: '/direction/planning-global', label: ' Planning', icon: '📅', mobileLabel: 'Planning' },
-          { to: '/direction/professeurs', label: ' Professeurs', icon: '🎓', mobileLabel: 'Profs' },
+          { to: '/direction/professeurs', label: ' Professeurs', icon: '✒️', mobileLabel: 'Profs' },
           { to: '/direction/classes', label: 'Cours', icon: '📚', mobileLabel: 'Cours' },
           { to: '/admin/messages-admins', label: 'admins', icon: '💬', mobileLabel: 'admins' },
-          { to: '/direction/taches', label: ' Taches', icon: '📊', mobileLabel: 'Taches' },
+          { to: '/direction/taches', label: ' Taches', icon: '⚙️', mobileLabel: 'Taches' },
           { to: '/direction/annonces', label: ' Annonces', icon: '🚩', mobileLabel: 'Annonces' },
           logoutItem,
         ]
