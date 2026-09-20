@@ -195,7 +195,7 @@ export default function DevoirEleves() {
           >
             ← Retour
           </button>
-          <h1 className="text-2xl font-bold text-neutral-900">👥 Élèves du devoir</h1>
+          <h1 className="text-2xl font-bold text-neutral-900"> Élèves du devoir</h1>
         </div>
 
         {/* Bouton Corriger (hors tableau) */}
