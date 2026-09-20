@@ -529,7 +529,7 @@ export default function ProfClasses() {
       {studentsModal.open && (
         <Modal
           onClose={() => { setStudentsModal({ open: false, classId: null }); setEditedStudents({}) }}
-          title="👥 Élèves de la classe"
+          title=" Élèves de la classe"
           size="lg"
         >
           <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
