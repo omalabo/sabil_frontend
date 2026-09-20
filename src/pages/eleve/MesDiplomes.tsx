@@ -53,7 +53,7 @@ export default function MesDiplomes() {
   if (!data.length) {
     return (
       <div className="max-w-2xl mx-auto p-8 text-center">
-        <div className="text-6xl mb-4">🎓</div>
+        <div className="text-6xl mb-4"></div>
         <h2 className="text-xl font-bold text-neutral-800 mb-2">
           Aucun diplôme pour le moment
         </h2>
