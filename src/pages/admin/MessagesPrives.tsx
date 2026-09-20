@@ -292,13 +292,17 @@ export default function AdminMessagesPrives() {
           {contacts.map((contact: User) => (
             <button
               key={contact.id}
-              onClick={() => setSelectedEleve(contact)}
+              onClick={() => {
+                setSelectedEleve(contact)
+                // 🆕 AJOUT CRUCIAL : Ferme le panneau de gauche sur mobile après sélection
+                if (window.innerWidth < 768) setLeftPanelOpen(false)
+              }}
               className={`w-full text-left p-3 border-b border-neutral-100 hover:bg-neutral-50 transition-colors ${
                 selectedEleve?.id === contact.id ? 'bg-primary-50 border-l-2 border-primary-500' : ''
               }`}
             >
               <p className="font-medium text-sm text-neutral-900">{contact.display_name || contact.email}</p>
-              <p className="text-xs text-neutral-500">{contact.role === 'direction' ? '🏛️ Direction' : ' Élève'}</p>
+              <p className="text-xs text-neutral-500">{contact.role === 'direction' ? '🏛️ Direction' : '🎓 Élève'}</p>
             </button>
           ))}
           {contacts.length === 0 && (
