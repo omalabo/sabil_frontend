@@ -118,7 +118,7 @@ export default function DirectionGestionInscriptions() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900">👥 Gestion des inscriptions</h1>
+          <h1 className="text-2xl font-bold text-neutral-900"> Gestion des inscriptions</h1>
           <p className="text-neutral-600">Classe : {classe?.nom} • {classe?.programme}</p>
         </div>
         <button onClick={() => navigate(-1)} className="text-neutral-600 hover:text-neutral-900">← Retour</button>
