@@ -225,7 +225,7 @@ function getDashboardPath(user?: { role?: string; is_active?: boolean }): string
   switch (user.role) {
     case 'eleve': return '/eleve/dashboard'
     case 'professeur': return '/professeur/dashboard'
-    case 'admin': return '/admin/dashboard'
+    case 'admin': return '/admin/planning-global'
     case 'direction': return '/direction/dashboard'
     default: return '/login'
   }
