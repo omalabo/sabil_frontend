@@ -2764,7 +2764,7 @@ const classesFiltrees = classes.filter((cls: Class) =>
           <div style={{ padding: '20px 16px 12px', position: 'relative', zIndex: 1, flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <div>
-                <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#fff', letterSpacing: '-0.3px' }}>{role === 'professeur' ? ' Mes cours' : role === 'admin' || role === 'direction' ? '👁️ Classes observées' : '🎓 Mes classes'}
+                <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#fff', letterSpacing: '-0.3px' }}>{role === 'professeur' ? ' Mes cours' : role === 'admin' || role === 'direction' ? 'Classes observées' : '🎓 Mes classes'}
                   {showFactureBlink && (
                     <span
                       onClick={dismissFactureBlink}
@@ -3124,7 +3124,7 @@ const classesFiltrees = classes.filter((cls: Class) =>
                             <span style={{ fontSize: 9, color: 'rgba(255,255,255,.4)', display: 'block', marginBottom: 4 }}>Élèves inscrits ({inscritCount})</span>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                               {headerInscriptions?.results?.slice(0, 4).map((insc: any) => (
-                                <span key={insc.id} style={{ fontSize: 10, padding: '2px 6px', background: 'rgba(255,255,255,.08)', borderRadius: 8, color: '#c4b5fd' }}>👤 {insc.eleve_nom}</span>
+                                <span key={insc.id} style={{ fontSize: 10, padding: '2px 6px', background: 'rgba(255,255,255,.08)', borderRadius: 8, color: '#c4b5fd' }}> {insc.eleve_nom}</span>
                               ))}
                               {inscritCount > 4 && <span style={{ fontSize: 10, padding: '2px 6px', background: 'rgba(255,255,255,.08)', borderRadius: 8, color: 'rgba(255,255,255,.6)' }}>+{inscritCount - 4} autres</span>}
                             </div>
@@ -3135,7 +3135,7 @@ const classesFiltrees = classes.filter((cls: Class) =>
 
                     {role === 'admin' && (
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: 'rgba(251,191,36,.15)', border: '1.5px solid rgba(251,191,36,.4)', color: '#fbbf24' }}>
-                        👁️ Mode observation
+                        Mode observation
                       </span>
                     )}
                 {/* 📅 Aujourd'hui — texte simple si 1 séance, popup si plusieurs */}
