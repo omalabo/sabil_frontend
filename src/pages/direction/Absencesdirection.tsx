@@ -63,7 +63,7 @@ function ProfFilter({ value, onChange }: { value: string; onChange: (id: string)
         className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 bg-white pr-7 focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100 appearance-none cursor-pointer"
         style={{ minWidth: 160 }}
       >
-        <option value="">👥 Tous les profs</option>
+        <option value="">Tous les profs</option>
         {profs.map((p: User) => (
           <option key={p.id} value={p.id}>{p.display_name || p.email}</option>
         ))}
