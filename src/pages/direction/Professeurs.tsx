@@ -137,7 +137,7 @@ function ElevesModal({ classe, onClose }: { classe: Class; onClose: () => void }
   }
 
   return (
-    <Modal title={`👨‍🎓 Élèves — ${classe.nom}`} onClose={onClose} wide>
+    <Modal title={` Élèves — ${classe.nom}`} onClose={onClose} wide>
       {/* <div className="flex gap-4 h-full" style={{ minHeight: 400 }}> */}
         <div className="flex flex-col md:flex-row gap-4 h-auto md:h-full" style={{ minHeight: 400 }}>
 
@@ -601,7 +601,7 @@ function ClassesModal({ prof, onClose }: { prof: User; onClose: () => void }) {
                               onClick={() => setElevesForClasse(c)}
                               className="text-xs bg-primary-50 text-primary-700 px-2 py-1 rounded hover:bg-primary-100 transition"
                             >
-                              👥
+                              ✅
                             </button>
 
                             {c.statut === 'a_supprimer' && (
