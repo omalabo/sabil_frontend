@@ -131,7 +131,7 @@ export default function Sidebar({ userRole, userId, isActive = true }: SidebarPr
         return [
           { to: '/admin/planning-global', label: 'Accueil', icon: '📅', mobileLabel: 'Accueil' },
           { to: '/admin/classes', label: 'Classes', icon: '📚', mobileLabel: 'Classes' },
-          { to: '/admin/messages-prives', label: 'Messagerie etudiants', icon: '💬', mobileLabel: 'Messagerie etudiants' },
+          { to: '/admin/messages-prives', label: 'Messagerie', icon: '💬', mobileLabel: 'Messagerie' },
           { to: '/admin/taches', label: ' Taches', icon: '⚙️', mobileLabel: 'Taches' },
           { to: '/admin/eleve-factures', label: 'Rappel Facture', icon: '💰', mobileLabel: 'Rappel Facture' },
           logoutItem,
