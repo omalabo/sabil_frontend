@@ -3263,7 +3263,7 @@ const classesFiltrees = classes.filter((cls: Class) =>
                   })}
 
                   {/* 🆕 Bouton Panneau Classes (admin/prof/direction) */}
-                  {(role === 'admin' || role === 'professeur' || role === 'direction') && (
+                  {(role === 'admin' || role === 'professeur') && (
                     <button onClick={() => {
                       setClassPanelOpen(true)
                       unreadNotifs
