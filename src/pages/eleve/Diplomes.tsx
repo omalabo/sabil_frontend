@@ -9,7 +9,7 @@ export default function EleveDiplomes() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-neutral-900">🎓 Parcours & Diplômes</h1>
+      <h1 className="text-2xl font-bold text-neutral-900">Parcours & Diplômes</h1>
       
       <div className="bg-white p-6 rounded-lg border border-neutral-200 shadow-sm">
         <h2 className="text-lg font-semibold mb-4">Arabe Mouqadima Ba → Tajwid Avancé</h2>
