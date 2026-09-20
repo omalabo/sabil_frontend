@@ -281,7 +281,7 @@ export default function DirectionGestionComptes() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-neutral-900">👥 Gestion des Comptes</h1>
+        <h1 className="text-2xl font-bold text-neutral-900"> Gestion des Comptes</h1>
         <button 
           onClick={() => {
             setEditingUser(null)
