@@ -45,7 +45,7 @@ function BadgePaiement({ statut_paiement }: { statut_paiement: FactureElevePayeI
 function BadgeStatut({ statut }: { statut: FactureElevePayeItem['statut'] }) {
   if (statut === 'confirmee') return (
     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 ring-1 ring-blue-200">
-      🎓 Confirmée
+      ✅✅ Confirmée
     </span>
   )
   if (statut === 'payee') return (
@@ -223,7 +223,7 @@ type Onglet = 'a_payer' | 'paye' | 'confirmee'
 const ONGLETS: { id: Onglet; label: string; icon: string }[] = [
   { id: 'a_payer',   label: 'À payer',    icon: '⏳' },
   { id: 'paye',      label: 'Payées',     icon: '✅' },
-  { id: 'confirmee', label: 'Confirmées', icon: '🎓' },
+  { id: 'confirmee', label: 'Confirmées', icon: '✅✅' },
 ]
 
 // ─── Composant principal ──────────────────────────────────────────────────────
@@ -552,7 +552,7 @@ export default function EleveFactures() {
         <p className="text-sm text-blue-800">
           Cliquez sur <strong>💳 Payer</strong> pour enregistrer un paiement partiel ou total.
           Le professeur recevra une notification et pourra <strong>confirmer</strong> la réception.
-          Une fois confirmée, la facture passe en onglet <strong>🎓 Confirmées</strong>.
+          Une fois confirmée, la facture passe en onglet <strong>✅✅ Confirmées</strong>.
         </p>
       </div>
 
