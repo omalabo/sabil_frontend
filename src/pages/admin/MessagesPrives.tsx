@@ -265,7 +265,7 @@ export default function AdminMessagesPrives() {
   return (
     <div style={{ margin: -24, display: 'flex', height: '92vh', overflow: 'hidden', background: '#f0f2f5' }}>
 
-      {/* 👥 Liste des élèves (sidebar gauche) — inchangée */}
+      {/*  Liste des élèves (sidebar gauche) — inchangée */}
       <div style={{
         width: leftPanelOpen ? (window.innerWidth < 768 ? '100%' : 256) : 0,
         minWidth: leftPanelOpen ? (window.innerWidth < 768 ? '100%' : 256) : 0,
@@ -288,7 +288,7 @@ export default function AdminMessagesPrives() {
               }`}
             >
               <p className="font-medium text-sm text-neutral-900">{contact.display_name || contact.email}</p>
-              <p className="text-xs text-neutral-500">{contact.role === 'direction' ? '🏛️ Direction' : '🎓 Élève'}</p>
+              <p className="text-xs text-neutral-500">{contact.role === 'direction' ? '🏛️ Direction' : ' Élève'}</p>
             </button>
           ))}
           {contacts.length === 0 && (
