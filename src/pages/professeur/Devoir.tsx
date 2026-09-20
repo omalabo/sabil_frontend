@@ -135,7 +135,7 @@ export default function Devoirs() {
                           }
                           className="text-xs bg-indigo-600 text-white px-2.5 py-1 rounded hover:bg-indigo-700 transition font-medium"
                         >
-                          👥 Élèves
+                           Élèves
                         </button>
 
                         {/* Bouton Corriger (uniquement si pas déjà corrigé) */}
