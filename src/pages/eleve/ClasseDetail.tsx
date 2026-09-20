@@ -184,7 +184,7 @@ function ElevesModal({ seance, onClose, onSaved }: { seance: Seance; onClose: ()
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh]">
         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
           <div>
-            <h3 className="text-lg font-semibold text-neutral-900">👥 Élèves — {formatDateSeance(seance)}</h3>
+            <h3 className="text-lg font-semibold text-neutral-900"> Élèves — {formatDateSeance(seance)}</h3>
             <p className="text-xs text-neutral-500 mt-0.5">Présence et durée de participation</p>
           </div>
           <button onClick={onClose} className="p-2 rounded-lg hover:bg-neutral-100 text-neutral-500">✕</button>
@@ -520,7 +520,7 @@ function SeanceProfRow({ seance, openForm = false, onFactureNeeded, dateOverride
                 <button onClick={handleSave} disabled={saving} className="flex-1 px-2 py-1.5 text-[11px] font-semibold rounded-lg bg-white/15 hover:bg-white/25 text-white transition flex items-center justify-center gap-1 disabled:opacity-50">
                   {saving ? <span className="w-3 h-3 border border-white/50 border-t-white rounded-full animate-spin" /> : '💾'} Sauvegarder
                 </button>
-                <button onClick={() => setShowEleves(true)} disabled={!hasPresenceToday} className={`px-2 py-1.5 text-[11px] font-semibold rounded-lg transition flex items-center gap-1 ${hasPresenceToday ? 'bg-white/15 hover:bg-white/25 text-white' : 'bg-white/5 text-white/25 cursor-not-allowed'}`}>👥 Élèves</button>
+                <button onClick={() => setShowEleves(true)} disabled={!hasPresenceToday} className={`px-2 py-1.5 text-[11px] font-semibold rounded-lg transition flex items-center gap-1 ${hasPresenceToday ? 'bg-white/15 hover:bg-white/25 text-white' : 'bg-white/5 text-white/25 cursor-not-allowed'}`}> Élèves</button>
               </div>
               <button onClick={handleValidateSeanceAndAllPresent} disabled={validatingAll} className="w-full px-2 py-2 text-[11px] font-semibold rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 text-white transition hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-1.5">
                 {validatingAll ? <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" /> : '✅'} Valider séance & Tous présents
