@@ -110,8 +110,18 @@ export default function DirectionChat() {
 
   const getFullUrl = (url: string | null | undefined) => {
     if (!url) return ''
-    if (url.startsWith('http://') || url.startsWith('https://')) return url
-    const baseUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000'
+    
+    // 1. Si c'est déjà une URL absolue, on force le HTTPS (indispensable pour la WebView iOS/Android)
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url.replace(/^http:\/\//, 'https://')
+    }
+    
+    // 2. On récupère l'URL de base et on retire le '/api' final si présent
+    // (car les fichiers médias Django sont servis à la racine : /media/..., pas /api/media/...)
+    const rawBaseUrl = (import.meta as any).env?.VITE_API_URL || 'https://api.sabil-al-ilm.org'
+    const baseUrl = rawBaseUrl.replace(/\/api\/?$/, '')
+    
+    // 3. On assemble le tout proprement
     return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`
   }
 
