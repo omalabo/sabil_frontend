@@ -284,7 +284,6 @@ export default function AdminMessagesPrives() {
       }}>
         <div className="p-4 border-b border-neutral-200">
           <h2 className="font-semibold text-neutral-900">💬 Messagerie Privée</h2>
-          <p className="text-xs text-neutral-500">Admin ↔ Élève uniquement</p>
         </div>
 
         <div className="flex-1 overflow-y-auto">
