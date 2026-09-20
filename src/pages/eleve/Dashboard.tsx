@@ -117,7 +117,7 @@ export default function EleveDashboard() {
           onClick={() => navigate('/eleve/diplomes')}
           className="class-card text-left hover:border-primary-300"
         >
-          <h3 className="font-semibold text-neutral-900">🎓 Mes Diplômes & Progression</h3>
+          <h3 className="font-semibold text-neutral-900"> Mes Diplômes & Progression</h3>
           <p className="text-sm text-neutral-600 mt-1">Suivez votre avancement et validez vos niveaux</p>
         </button>
         <button
