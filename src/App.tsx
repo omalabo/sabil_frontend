@@ -153,7 +153,7 @@ function App() {
 
         {/* ⚙️ Espace Admin */}
         <Route element={<RoleGuard allowedRoles={['admin']} />}>
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/dashboard" element={<AdminPlanningGlobal />} />
           <Route path="/admin/professeurs" element={<AdminProfesseurs />} />
           <Route path="/admin/professeur/:id/classes" element={<AdminClassesParProf />} />
           <Route path="/admin/signalements" element={<AdminSignalements />} /> {/* ✅ */}
