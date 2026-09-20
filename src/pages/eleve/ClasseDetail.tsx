@@ -960,7 +960,7 @@ function EleveFacturesInline({ classeId, role }: { classeId: string; role: 'elev
   const ONGLETS_LABELS = [
     { id: 'a_payer' as const, icon: '⏳', label: 'À payer' },
     { id: 'paye' as const, icon: '✅', label: 'Payées' },
-    { id: 'confirmee' as const, icon: '🎓', label: 'Confirmées' },
+    { id: 'confirmee' as const, icon: '✅✅', label: 'Confirmées' },
   ]
 
   return (
@@ -1086,7 +1086,7 @@ function EleveFacturesInline({ classeId, role }: { classeId: string; role: 'elev
                           background: f.statut === 'confirmee' ? '#dbeafe' : f.statut === 'payee' ? '#d1fae5' : '#f1f5f9',
                           color: f.statut === 'confirmee' ? '#1e40af' : f.statut === 'payee' ? '#065f46' : '#475569'
                         }}>
-                          {f.statut === 'confirmee' ? '🎓 Confirmée' : f.statut === 'payee' ? '✅ Payée' : '📄 Émise'}
+                          {f.statut === 'confirmee' ? '✅✅ Confirmée' : f.statut === 'payee' ? '✅ Payée' : '📄 Émise'}
                         </span>
                       </td>
                       {f.justificatif_url && (
@@ -2764,7 +2764,7 @@ const classesFiltrees = classes.filter((cls: Class) =>
           <div style={{ padding: '20px 16px 12px', position: 'relative', zIndex: 1, flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <div>
-                <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#fff', letterSpacing: '-0.3px' }}>{role === 'professeur' ? ' Mes cours' : role === 'admin' || role === 'direction' ? 'Classes observées' : '🎓 Mes classes'}
+                <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#fff', letterSpacing: '-0.3px' }}>{role === 'professeur' ? ' Mes cours' : role === 'admin' || role === 'direction' ? 'Classes observées' : ' Mes classes'}
                   {showFactureBlink && (
                     <span
                       onClick={dismissFactureBlink}
@@ -3058,7 +3058,7 @@ const classesFiltrees = classes.filter((cls: Class) =>
       {!activeClass && !isMobileLayout ? (
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f0f2f5' }}>
                 <div style={{ textAlign: 'center', color: '#94a3b8' }}>
-                  <div style={{ fontSize: 64, marginBottom: 16, opacity: .5 }}>🎓</div>
+                  <div style={{ fontSize: 64, marginBottom: 16, opacity: .5 }}></div>
                   <p style={{ fontSize: 18, fontWeight: 600, color: '#64748b', margin: 0 }}>Sélectionnez une classe</p>
                   <p style={{ fontSize: 13, marginTop: 6, color: '#94a3b8' }}>Choisissez un bloc dans le panneau de gauche</p>
                 </div>
@@ -3073,7 +3073,7 @@ const classesFiltrees = classes.filter((cls: Class) =>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, position: 'relative', zIndex: 1, flex: 1, minWidth: 200 }}>
                   <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(139,92,246,.2)', border: '2px solid rgba(139,92,246,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>
                     <button onClick={() => setLeftPanelOpen(p => !p)}
-                    title={leftPanelOpen ? 'Fermer le panneau' : 'Ouvrir le panneau'}>{leftPanelOpen ? '◀' : '🎓'}</button>
+                    title={leftPanelOpen ? 'Fermer le panneau' : 'Ouvrir le panneau'}>{leftPanelOpen ? '◀' : '▶'}</button>
                     </div>
                   <div style={{ flex: 1, minWidth: 0, position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: 10 }}>
                     <button
