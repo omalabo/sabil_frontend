@@ -129,7 +129,7 @@ export default function Sidebar({ userRole, userId, isActive = true }: SidebarPr
         ]
       case 'admin':
         return [
-          { to: '/admin/planning-global', label: 'Accueil', icon: '📅', mobileLabel: 'Accueil' },
+          { to: '/admin/dashboard', label: 'Accueil', icon: '📅', mobileLabel: 'Accueil' },
           { to: '/admin/classes', label: 'Classes', icon: '📚', mobileLabel: 'Classes' },
           { to: '/admin/messages-prives', label: 'Messagerie', icon: '💬', mobileLabel: 'Messagerie' },
           { to: '/admin/taches', label: ' Taches', icon: '⚙️', mobileLabel: 'Taches' },
