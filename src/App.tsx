@@ -153,7 +153,7 @@ function App() {
 
         {/* ⚙️ Espace Admin */}
         <Route element={<RoleGuard allowedRoles={['admin']} />}>
-          <Route path="/admin/dashboard" element={<AdminPlanningGlobal />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard  />} />
           <Route path="/admin/professeurs" element={<AdminProfesseurs />} />
           <Route path="/admin/professeur/:id/classes" element={<AdminClassesParProf />} />
           <Route path="/admin/signalements" element={<AdminSignalements />} /> {/* ✅ */}
@@ -225,7 +225,7 @@ function getDashboardPath(user?: { role?: string; is_active?: boolean }): string
   switch (user.role) {
     case 'eleve': return '/eleve/dashboard'
     case 'professeur': return '/professeur/dashboard'
-    case 'admin': return '/admin/planning-global'
+    case 'admin': return '/admin/dashboard'
     case 'direction': return '/direction/dashboard'
     default: return '/login'
   }
