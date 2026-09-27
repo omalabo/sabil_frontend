@@ -1241,7 +1241,17 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
   const handleRemoteEvent = useCallback((data: any) => {
     const canvas = canvasRef.current; const ctx = ctxRef.current; if (!canvas || !ctx) return
     if (data.type === 'draw') { ctx.globalCompositeOperation = data.tool === 'eraser' ? 'destination-out' : 'source-over'; ctx.strokeStyle = data.tool === 'highlighter' ? hexToRgba(data.color, 0.35) : data.color; ctx.lineWidth = data.lineWidth; ctx.globalAlpha = data.tool === 'highlighter' ? 0.35 : 1; ctx.beginPath(); ctx.moveTo(data.from.x, data.from.y); ctx.lineTo(data.to.x, data.to.y); ctx.stroke(); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1 }
-    else if (data.type === 'text') { ctx.font = `${data.fontSize || 40}px 'Amiri',serif`; ctx.fillStyle = data.color; ctx.direction = 'rtl'; ctx.fillText(data.text, data.x, data.y); ctx.direction = 'ltr' }
+    else if (data.type === 'text') {
+      ctx.font = `${data.fontSize || 40}px 'Amiri',serif`
+      ctx.fillStyle = data.color
+      ctx.direction = 'rtl'
+      ctx.textAlign = 'center'      // 🆕
+      ctx.textBaseline = 'middle'   // 🆕
+      ctx.fillText(data.text, data.x, data.y)
+      ctx.direction = 'ltr'
+      ctx.textAlign = 'start'       // 🆕
+      ctx.textBaseline = 'alphabetic' // 🆕
+    }
     else if (data.type === 'clear') { fillBg(ctx, canvas, bgColor) }
     else if (data.type === 'cursor' && role === 'eleve') { setRemoteCursor({ x: data.x, y: data.y }) }
     else if (data.type === 'canvas_state') { const img = new Image(); img.onload = () => ctx.drawImage(img, 0, 0); img.src = data.dataUrl }
@@ -1334,15 +1344,17 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
     const canvas = canvasRef.current
     const ctx = ctxRef.current
     if (!canvas || !ctx) return
-    
-    // Dessiner le texte à sa position finale
+
     ctx.font = `${floatingText.fontSize}px 'Amiri',serif`
     ctx.fillStyle = floatingText.color
     ctx.direction = 'rtl'
+    ctx.textAlign = 'center'      // 🆕
+    ctx.textBaseline = 'middle'   // 🆕
     ctx.fillText(floatingText.text, floatingText.x, floatingText.y)
     ctx.direction = 'ltr'
-    
-    // Envoyer aux autres utilisateurs
+    ctx.textAlign = 'start'       // 🆕 reset pour ne pas affecter d'autres dessins
+    ctx.textBaseline = 'alphabetic' // 🆕 reset
+
     sendWs({
       type: 'text',
       text: floatingText.text,
@@ -1351,7 +1363,7 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
       fontSize: floatingText.fontSize,
       color: floatingText.color
     })
-    
+
     setFloatingText(null)
   }, [floatingText])
   
@@ -1372,15 +1384,11 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
     if (!isDraggingText || !floatingText || !floatingTextRef.current) return
     const canvas = canvasRef.current
     if (!canvas) return
-    
     const canvasRect = canvas.getBoundingClientRect()
     const scaleX = canvas.width / canvasRect.width
     const scaleY = canvas.height / canvasRect.height
-    
-    // Calculer la nouvelle position relative au canvas
     const newX = (e.clientX - canvasRect.left - dragOffset.current.x) * scaleX
-    const newY = (e.clientY - canvasRect.top - dragOffset.current.y + floatingText.fontSize * 0.3) * scaleY
-    
+    const newY = (e.clientY - canvasRect.top - dragOffset.current.y) * scaleY   // ← plus de +fontSize*0.3
     setFloatingText(prev => prev ? { ...prev, x: newX, y: newY } : null)
   }
   
@@ -1464,57 +1472,58 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
       >
         <canvas ref={canvasRef} width={1200} height={700} onMouseDown={startDraw} onMouseMove={draw} onMouseUp={stopDraw} onMouseLeave={stopDraw} onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={stopDraw} style={{ cursor: tool === 'cursor' ? 'default' : tool === 'eraser' ? 'crosshair' : tool === 'text' ? 'text' : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Ccircle cx='8' cy='8' r='7' fill='none' stroke='%23000' stroke-width='1'/%3E%3C/svg%3E") 8 8, crosshair`, display: 'block', touchAction: 'none', maxWidth: '100%' }} />
         {/* 🆕 Texte flottant déplaçable */}
-        {floatingText && (
-          <div
-            ref={floatingTextRef}
-            onMouseDown={handleFloatingTextMouseDown}
-            onMouseMove={handleFloatingTextMouseMove}
-            onMouseUp={handleFloatingTextMouseUp}
-            onTouchStart={handleFloatingTextTouchStart}
-            onTouchMove={handleFloatingTextTouchMove}
-            onTouchEnd={handleFloatingTextTouchEnd}
-            onDoubleClick={(e) => { e.stopPropagation(); commitFloatingText() }}
-            style={{
-              position: 'absolute',
-              left: `${(floatingText.x / 1200) * 100}%`,
-              top: `${((floatingText.y - floatingText.fontSize * 0.3) / 700) * 100}%`,
-              fontFamily: "'Amiri', serif",
-              fontSize: `${(floatingText.fontSize / 1200) * 100}vmin`,
-              color: floatingText.color,
-              direction: 'rtl',
-              cursor: isDraggingText ? 'grabbing' : 'grab',
-              userSelect: 'none',
-              padding: '8px 12px',
-              background: isDraggingText ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.08)',
-              border: `2px dashed ${isDraggingText ? '#6366f1' : '#a5b4fc'}`,
-              borderRadius: 8,
-              boxShadow: isDraggingText ? '0 8px 24px rgba(99,102,241,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-              transition: isDraggingText ? 'none' : 'background 0.2s, box-shadow 0.2s',
-              zIndex: 10,
-              transform: 'translate(-50%, -50%)',
-              pointerEvents: 'auto',
-            }}
-            title="Déplacez le texte • Double-cliquez pour valider"
-          >
-            {floatingText.text}
-            <div style={{
-              position: 'absolute',
-              bottom: -28,
-              left: '50%',
-              transform: 'translateX(-50%)',
-              fontSize: 10,
-              color: '#6366f1',
-              background: 'white',
-              padding: '2px 8px',
-              borderRadius: 10,
-              border: '1px solid #c7d2fe',
-              whiteSpace: 'nowrap',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-            }}>
-              ✋ Déplacez • Double-clic pour valider
+        {floatingText && (() => {
+          const canvas = canvasRef.current
+          const scaleX = canvas ? canvas.offsetWidth / canvas.width : 1
+          const scaleY = canvas ? canvas.offsetHeight / canvas.height : 1
+          const pixelLeft = (canvas?.offsetLeft ?? 0) + floatingText.x * scaleX
+          const pixelTop = (canvas?.offsetTop ?? 0) + floatingText.y * scaleY   // ← plus de "- fontSize*0.3"
+          const pixelFontSize = floatingText.fontSize * scaleY
+
+          return (
+            <div
+              ref={floatingTextRef}
+              onMouseDown={handleFloatingTextMouseDown}
+              onMouseMove={handleFloatingTextMouseMove}
+              onMouseUp={handleFloatingTextMouseUp}
+              onTouchStart={handleFloatingTextTouchStart}
+              onTouchMove={handleFloatingTextTouchMove}
+              onTouchEnd={handleFloatingTextTouchEnd}
+              onDoubleClick={(e) => { e.stopPropagation(); commitFloatingText() }}
+              style={{
+                position: 'absolute',
+                left: `${pixelLeft}px`,
+                top: `${pixelTop}px`,
+                fontFamily: "'Amiri', serif",
+                fontSize: `${pixelFontSize}px`,
+                color: floatingText.color,
+                direction: 'rtl',
+                cursor: isDraggingText ? 'grabbing' : 'grab',
+                userSelect: 'none',
+                padding: '8px 12px',
+                background: isDraggingText ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.08)',
+                border: `2px dashed ${isDraggingText ? '#6366f1' : '#a5b4fc'}`,
+                borderRadius: 8,
+                boxShadow: isDraggingText ? '0 8px 24px rgba(99,102,241,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+                transition: isDraggingText ? 'none' : 'background 0.2s, box-shadow 0.2s',
+                zIndex: 10,
+                transform: 'translate(-50%, -50%)',
+                pointerEvents: 'auto',
+              }}
+              title="Déplacez le texte • Double-cliquez pour valider"
+            >
+              {floatingText.text}
+              <div style={{
+                position: 'absolute', bottom: -28, left: '50%', transform: 'translateX(-50%)',
+                fontSize: 10, color: '#6366f1', background: 'white', padding: '2px 8px',
+                borderRadius: 10, border: '1px solid #c7d2fe', whiteSpace: 'nowrap',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              }}>
+                ✋ Déplacez • Double-clic pour valider
+              </div>
             </div>
-          </div>
-        )}
+          )
+        })()}
         {remoteCursor && role === 'eleve' && <div style={{ position: 'absolute', left: remoteCursor.x, top: remoteCursor.y, pointerEvents: 'none', transform: 'translate(-50%,-50%)', width: 12, height: 12, borderRadius: '50%', background: 'rgba(99,102,241,.7)', boxShadow: '0 0 0 4px rgba(99,102,241,.2)' }} />}
       </div>
       {showArabicKeyboard && (
