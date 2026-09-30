@@ -142,7 +142,7 @@ export const apiSlice = createApi({
     'CatalogueCours', 'PresencesFacturables','SuiviPresences','FacturesEmises','FactureAdmin',
      'FactureEleve',  'ClasseLight', 'AbsenceEleve', 'PresenceProf', 'AbsencesProfs','Planning','Absence',
      'TachesDirection', 'AdminsAssignables','AnnoncesGroupe', 'MesAnnonces','FacturesEleve','DirectionDashboard',
-      'Diplomes', 'ElevesClasse','Diplome'
+      'Diplomes', 'ElevesClasse','Diplome','LivreClasse',
   ],
 
   endpoints: (builder) => ({
@@ -574,6 +574,38 @@ previewAdminFacture: builder.mutation<FacturePreview, {
     body,
   }),
 }),
+
+
+  // 🆕 Livres de classe
+  getLivresClasse: builder.query({
+    query: ({ classe_id }: { classe_id: string }) => `/livres-classe/?classe_id=${classe_id}`,
+    providesTags: (result) =>
+      result?.results
+        ? [
+            ...result.results.map((l: any) => ({ type: 'LivreClasse' as const, id: l.id })),
+            { type: 'LivreClasse', id: 'LIST' },
+          ]
+        : [{ type: 'LivreClasse', id: 'LIST' }],
+  }),
+
+  uploadLivreClasse: builder.mutation({
+    query: (formData: FormData) => ({
+      url: '/livres-classe/',
+      method: 'POST',
+      body: formData,
+    }),
+    invalidatesTags: [{ type: 'LivreClasse', id: 'LIST' }],
+  }),
+
+  deleteLivreClasse: builder.mutation({
+    query: (id: string) => ({
+      url: `/livres-classe/${id}/`,
+      method: 'DELETE',
+    }),
+    invalidatesTags: [{ type: 'LivreClasse', id: 'LIST' }],
+  }),
+
+    
 
     // ==================== SÉANCES ====================
  
@@ -1366,4 +1398,7 @@ export const {
   useGetMyDiplomesQuery,
   useGetAdminElevesAPayerQuery,
   useSaveExpoTokenMutation,
+  useGetLivresClasseQuery,
+  useUploadLivreClasseMutation,
+  useDeleteLivreClasseMutation,
 } = apiSlice
