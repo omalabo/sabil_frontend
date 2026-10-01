@@ -68,7 +68,7 @@ import DirectionChat from './pages/direction/DirectionChat'
 
 import ForgotPassword from './pages/auth/ForgotPassword'
 import ResetPassword from './pages/auth/ResetPassword'
-
+import { PartageProvider } from './context/PartageContext'
 /**
  * Composant racine de l'application
  * Gère le routing conditionnel selon :
