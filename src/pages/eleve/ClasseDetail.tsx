@@ -35,6 +35,11 @@ import { Class, Message, User, Facture, FacturePreview, FactureLigne, FactureEle
 import type { SeanceManquee, AbsenceSignaler, AnnonceEleve} from '../../types'
 import SubmitFactureModal from '../../components/shared/Submitfacturemodal'
 import { AnnonceEleveCard } from '../direction/Annonces'  // ajustez le chemin selon votre structure
+
+import { PartageProvider, usePartage } from '../../context/PartageContext'
+import EditeurClasse from '../../components/classroom/EditeurClasse'
+import LivresClasse from '../../components/classroom/LivresClasse'
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface ClasseDetailProps { role: 'eleve' | 'professeur' | 'admin' | 'direction' }
 interface LiveKitSession {
@@ -1215,6 +1220,37 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
     connect()
     return () => wsRef.current?.close()
   }, [classeId, seanceId])
+
+
+  const partage = usePartage() // 🆕
+  const shareStreamRef = useRef<MediaStream | null>(null) // 🆕
+
+  const sharingTableau = partage.state.channel === 'tableau' && partage.state.byUserId === partage.userId // 🆕
+
+  // 🆕 Démarre/arrête la publication du canvas quand le partage change
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas || !sharingTableau || role !== 'professeur') return
+
+    const stream = canvas.captureStream(10) // 10 images/seconde, suffisant pour l'écriture
+    shareStreamRef.current = stream
+    partage.publishStream(stream, 'tableau').then(ok => {
+      if (!ok) {
+        alert("⚠️ Rejoignez d'abord la salle vidéo pour partager le tableau.")
+        partage.stopShare()
+      }
+    })
+
+    return () => {
+      partage.unpublishStream('tableau')
+      shareStreamRef.current?.getTracks().forEach(t => t.stop())
+      shareStreamRef.current = null
+    }
+  }, [sharingTableau, role])
+
+  // 🆕 Marque l'onglet comme "vu" dès l'ouverture → arrête le clignotement bleu
+  useEffect(() => { partage.markAsSeen('tableau') }, [])
+  
   
   useEffect(() => { 
     const canvas = canvasRef.current; 
@@ -1430,6 +1466,12 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
   }
   return (
     <div className="flex flex-col h-full bg-neutral-50">
+      {/* 🆕 Bandeau pour les élèves quand le prof partage */}
+      {role !== 'professeur' && partage.isLive('tableau') && (
+        <div className="px-3 py-1.5 bg-indigo-50 border-b border-indigo-200 text-xs text-indigo-700 font-medium flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" /> Le professeur partage ce tableau en direct
+        </div>
+      )}
       <div className="flex items-center gap-2 px-3 py-2 bg-white border-b border-neutral-200 flex-wrap">
         <div className="flex items-center gap-1 bg-neutral-100 rounded-lg p-1">
           {(['pen', 'highlighter', 'eraser', 'cursor', 'text'] as const).map(t => (
@@ -1683,12 +1725,13 @@ fill="currentColor"
 
 // ─── Composant principal ──────────────────────────────────────────────────────
 export default function ClasseDetail({ role }: ClasseDetailProps) {
+  const partage = usePartage()
   const { id } = useParams<{ id: string }>()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const { user } = useAppSelector(selectAuth)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const [activeTab, setActiveTab] = useState<'salle' | 'chat' | 'tableau' | 'supports' | 'facture' | 'infos'| 'annonces'>((searchParams.get('tab') as any) || 'chat')
+  const [activeTab, setActiveTab] = useState<'salle' | 'chat' | 'tableau' | 'supports' | 'facture' | 'infos'| 'annonces' | 'editeur' | 'livres'>((searchParams.get('tab') as any) || 'chat')
   const [messageText, setMessageText] = useState('')
   const [messages, setMessages] = useState<Message[]>([])
   // État principal : classe active à droite & classes sélectionnées à gauche
@@ -2046,7 +2089,7 @@ const getMotivationImageUrl = (contenu: string | null | undefined): string => {
     const [leftPanelOpen, setLeftPanelOpen] = useState(true)
     // ✅ Seuil élargi à 1024px : tablette = mode mobile, cohérent partout (web, natif, tous navigateurs)
     const isMobileLayout = typeof window !== 'undefined' && window.innerWidth < 1025
-
+    const [livreAImporter, setLivreAImporter] = useState<any>(null) // 🆕
 
     
 
@@ -2538,7 +2581,10 @@ const getMotivationImageUrl = (contenu: string | null | undefined): string => {
   }
   const handleDownloadFile = (file: any) => { const l = document.createElement('a'); l.href = file.fichier_url || `/api/fichiers/${file.id}/download/`; l.download = file.nom_original; l.click() }
  
-
+  useEffect(() => {
+      partage.setActiveSession(activeClassId, defaultSeanceId, user?.id, user?.display_name)
+    }, [activeClassId, defaultSeanceId, user?.id])
+  
 
   // ═══════════════════════════════════════════════════════════════
   // 🆕 NOUVEAU : Gestion de l'enregistrement vocal
@@ -2652,6 +2698,8 @@ const handleSendMessage = async (e: React.FormEvent) => {
       { id: 'chat', icon: '💬', label: 'Chat' , hasAlert: unreadNotifs.some(n => n.classe === activeClassId && CHAT_BADGE_TYPES.includes(n.type))},
       { id: 'tableau', icon: '🖊️', label: 'Tableau' },
       { id: 'supports', icon: '📁', label: 'Supports' },
+      { id: 'editeur', icon: '📝', label: 'Éditeur', hasAlert: unreadNotifs.some(n => n.classe === activeClassId) && false },
+      { id: 'livres', icon: '📚', label: 'Livres' },
       { id: 'infos', icon: '💰', label: 'Infos', hasAlert: showFactureBlink || unreadNotifs.some(n => n.classe === activeClassId && (INFOS_BADGE_TYPES[role] || []).includes(n.type)) },
     ];
     if (role === 'direction') return base.filter(t => ['salle', 'chat', 'infos'].includes(t.id));
@@ -3224,6 +3272,8 @@ const classesFiltrees = classes.filter((cls: Class) =>
 
                 <div style={{ display: 'flex', gap: 4, position: 'relative', zIndex: 1, flexWrap: 'wrap' }}>
                   {availableTabs.map(tab => {
+                    const isPartageable = tab.id === 'tableau' || tab.id === 'editeur'
+                    const live = isPartageable && partage.isLive(tab.id as any) // 🆕
                     const isSalle = tab.id === 'salle'
                     const isActive = activeTab === tab.id
                     // Style spécifique pour le bouton Salle : fond blanc
@@ -3233,12 +3283,13 @@ const classesFiltrees = classes.filter((cls: Class) =>
                       color: isActive ? '#1a73e8' : '#1e293b',
                       boxShadow: '0 2px 8px rgba(255,255,255,.25)',
                     } : {
-                      border: isActive ? '1.5px solid rgba(139,92,246,.6)' : '1.5px solid rgba(255,255,255,.1)',
-                      background: isActive ? 'rgba(139,92,246,.3)' : 'rgba(255,255,255,.07)',
+                      border: live ? '1.5px solid #3b82f6' : (isActive ? '1.5px solid rgba(139,92,246,.6)' : '1.5px solid rgba(255,255,255,.1)'),
+                      background: live ? 'rgba(59,130,246,.25)' : (isActive ? 'rgba(139,92,246,.3)' : 'rgba(255,255,255,.07)'),
                       color: isActive ? '#c4b5fd' : 'rgba(255,255,255,.5)',
                     }
                     return (
                       <button key={tab.id} onClick={() => {setActiveTab(tab.id as any)
+                        if (isPartageable) partage.markAsSeen(tab.id as any) // 🆕
                         if (tab.id === 'infos' && showFactureBlink) dismissFactureBlink()
                         if (tab.id === 'chat') {
                           unreadNotifs
@@ -3887,7 +3938,24 @@ const classesFiltrees = classes.filter((cls: Class) =>
                     )}
                   </div>
                 )}
-
+                
+                {activeTab === 'editeur' && activeClassId && defaultSeanceId && (
+                  <EditeurClasse
+                    classeId={activeClassId}
+                    seanceId={defaultSeanceId}
+                    role={role}
+                    livreAImporter={livreAImporter}
+                    onLivreImporte={() => setLivreAImporter(null)}
+                  />
+                )}
+                {activeTab === 'livres' && activeClassId && (
+                  <LivresClasse
+                    classeId={activeClassId}
+                    role={role}
+                    onImportInEditeur={(l) => { setLivreAImporter(l); setActiveTab('editeur') }}
+                  />
+                )}
+                
                 {activeTab === 'facture' && role === 'eleve' && (<div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: 15 }}>💰 Section Facture (à développer)</div>)}
 
                 {activeTab === 'infos' && activeClass && (
