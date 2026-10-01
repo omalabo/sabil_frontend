@@ -16,6 +16,7 @@ import { Track, RoomEvent, VideoPresets, LocalParticipant } from 'livekit-client
 import { Class, Seance } from '../../types'
 import api from '../../config/axios'
 import { Message } from '../../types'
+import { usePartage } from '../../context/PartageContext'
 
 interface VideoRoomProps {
   classe: Class
@@ -551,26 +552,20 @@ interface ControlBarProps {
 }
 
 function ControlBar({
-  role,
-  onLeave,
-  isChatOpen,
-  onToggleChat,
-  unreadCount,
-  isRecording,
-  isRecordingLoading,
-  canRecord,
-  onToggleRecording,
+  role, onLeave, isChatOpen, onToggleChat, unreadCount,
+  isRecording, isRecordingLoading, canRecord, onToggleRecording,
 }: ControlBarProps) {
   const { localParticipant } = useLocalParticipant()
+  const partage = usePartage() // 🆕
 
   const [micEnabled, setMicEnabled] = useState(true)
-  //const [camEnabled, setCamEnabled] = useState(role === 'professeur')
   const [camEnabled, setCamEnabled] = useState(false)
   const [screenSharing, setScreenSharing] = useState(false)
+  const [showShareMenu, setShowShareMenu] = useState(false) // 🆕
 
   const canShareScreen = ['professeur', 'eleve'].includes(role)
+  const canShareCustom = role === 'professeur' // 🆕 seul le prof partage Tableau/Éditeur
 
-  // Toggle micro
   const toggleMic = useCallback(async () => {
     if (!localParticipant) return
     const next = !micEnabled
@@ -578,7 +573,6 @@ function ControlBar({
     setMicEnabled(next)
   }, [localParticipant, micEnabled])
 
-  // Toggle caméra
   const toggleCam = useCallback(async () => {
     if (!localParticipant) return
     const next = !camEnabled
@@ -586,11 +580,10 @@ function ControlBar({
     setCamEnabled(next)
   }, [localParticipant, camEnabled])
 
-  // Toggle partage d'écran
-  const toggleScreen = useCallback(async () => {
+  const toggleScreen = useCallback(async (forceOff = false) => {
     if (!localParticipant || !canShareScreen) return
     try {
-      const next = !screenSharing
+      const next = forceOff ? false : !screenSharing
       await localParticipant.setScreenShareEnabled(next)
       setScreenSharing(next)
     } catch (err) {
@@ -598,80 +591,106 @@ function ControlBar({
     }
   }, [localParticipant, screenSharing, canShareScreen])
 
+  // 🆕 Sélection Tableau ou Éditeur → coupe le partage natif si actif
+  const handleSelectCustomShare = (tab: 'tableau' | 'editeur') => {
+    setShowShareMenu(false)
+    if (screenSharing) toggleScreen(true)
+    if (partage.isSharedByMe(tab)) partage.stopShare()
+    else partage.startShare(tab)
+  }
+
+  // 🆕 Sélection partage natif → coupe Tableau/Éditeur si actif
+  const handleSelectNativeShare = () => {
+    setShowShareMenu(false)
+    if (partage.state.channel) partage.stopShare()
+    toggleScreen()
+  }
+
+  const isSharingAnything = screenSharing || !!partage.state.channel // 🆕
+
   return (
     <div className="absolute bottom-0 left-0 right-0 z-[9999] flex items-center justify-center pb-4 px-4">
-      {/* Fond flou style Meet */}
       <div className="flex items-center gap-2 bg-neutral-900/90 backdrop-blur-md border border-neutral-700/50 rounded-2xl px-4 py-2.5 shadow-2xl">
 
-        {/* ── MICRO ── */}
         <ControlButton
-          active={micEnabled}
-          onClick={toggleMic}
-          activeLabel="Micro activé"
-          inactiveLabel="Micro coupé"
-          activeColor="bg-neutral-700 hover:bg-neutral-600"
-          inactiveColor="bg-danger-600 hover:bg-danger-700"
-          activeIcon={<MicOnIcon />}
-          inactiveIcon={<MicOffIcon />}
+          active={micEnabled} onClick={toggleMic}
+          activeLabel="Micro activé" inactiveLabel="Micro coupé"
+          activeColor="bg-neutral-700 hover:bg-neutral-600" inactiveColor="bg-danger-600 hover:bg-danger-700"
+          activeIcon={<MicOnIcon />} inactiveIcon={<MicOffIcon />}
+        />
+        <ControlButton
+          active={camEnabled} onClick={toggleCam}
+          activeLabel="Caméra activée" inactiveLabel="Caméra désactivée"
+          activeColor="bg-neutral-700 hover:bg-neutral-600" inactiveColor="bg-danger-600 hover:bg-danger-700"
+          activeIcon={<CamOnIcon />} inactiveIcon={<CamOffIcon />}
         />
 
-        {/* ── CAMÉRA ── */}
-        <ControlButton
-          active={camEnabled}
-          onClick={toggleCam}
-          activeLabel="Caméra activée"
-          inactiveLabel="Caméra désactivée"
-          activeColor="bg-neutral-700 hover:bg-neutral-600"
-          inactiveColor="bg-danger-600 hover:bg-danger-700"
-          activeIcon={<CamOnIcon />}
-          inactiveIcon={<CamOffIcon />}
-        />
-
-        {/* ── PARTAGE ÉCRAN ── */}
-        {canShareScreen && (
-          <ControlButton
-            active={screenSharing}
-            onClick={toggleScreen}
-            activeLabel="Arrêter le partage"
-            inactiveLabel="Partager l'écran"
-            activeColor="bg-primary-600 hover:bg-primary-700"
-            inactiveColor="bg-neutral-700 hover:bg-neutral-600"
-            activeIcon={<ScreenOffIcon />}
-            inactiveIcon={<ScreenOnIcon />}
-          />
+        {/* ── PARTAGE (menu déroulant) ── 🆕 */}
+        {(canShareScreen || canShareCustom) && (
+          <div className="relative">
+            <ControlButton
+              active={isSharingAnything}
+              onClick={() => setShowShareMenu(v => !v)}
+              activeLabel="Gérer le partage"
+              inactiveLabel="Partager"
+              activeColor="bg-primary-600 hover:bg-primary-700"
+              inactiveColor="bg-neutral-700 hover:bg-neutral-600"
+              activeIcon={<ScreenOnIcon />}
+              inactiveIcon={<ScreenOnIcon />}
+            />
+            {showShareMenu && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowShareMenu(false)} />
+                <div className="absolute bottom-14 left-1/2 -translate-x-1/2 z-50 bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl p-1.5 min-w-[200px]">
+                  {canShareCustom && (
+                    <button
+                      onClick={() => handleSelectCustomShare('tableau')}
+                      className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left transition ${
+                        partage.isSharedByMe('tableau') ? 'bg-indigo-600 text-white' : 'text-neutral-200 hover:bg-neutral-800'
+                      }`}
+                    >🖊️ Tableau {partage.isSharedByMe('tableau') && '· en cours'}</button>
+                  )}
+                  {canShareCustom && (
+                    <button
+                      onClick={() => handleSelectCustomShare('editeur')}
+                      className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left transition ${
+                        partage.isSharedByMe('editeur') ? 'bg-indigo-600 text-white' : 'text-neutral-200 hover:bg-neutral-800'
+                      }`}
+                    >📝 Éditeur {partage.isSharedByMe('editeur') && '· en cours'}</button>
+                  )}
+                  {canShareScreen && (
+                    <button
+                      onClick={handleSelectNativeShare}
+                      className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left transition ${
+                        screenSharing ? 'bg-indigo-600 text-white' : 'text-neutral-200 hover:bg-neutral-800'
+                      }`}
+                    >🖥️ Autre application {screenSharing && '· en cours'}</button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
         )}
 
-        {/* ── SÉPARATEUR ── */}
         <div className="w-px h-8 bg-neutral-700 mx-1" />
 
-        {/* ── ENREGISTREMENT ── */}
         {canRecord && (
           <ControlButton
-            active={isRecording}
-            onClick={onToggleRecording}
-            disabled={isRecordingLoading}
-            activeLabel="Stop enregistrement"
-            inactiveLabel="Enregistrer"
-            activeColor="bg-danger-600 hover:bg-danger-700 animate-pulse"
-            inactiveColor="bg-neutral-700 hover:bg-neutral-600"
+            active={isRecording} onClick={onToggleRecording} disabled={isRecordingLoading}
+            activeLabel="Stop enregistrement" inactiveLabel="Enregistrer"
+            activeColor="bg-danger-600 hover:bg-danger-700 animate-pulse" inactiveColor="bg-neutral-700 hover:bg-neutral-600"
             activeIcon={isRecordingLoading ? <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <span className="text-sm font-bold">⏹</span>}
             inactiveIcon={isRecordingLoading ? <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <span className="w-3 h-3 rounded-full bg-red-500 block" />}
           />
         )}
 
-        {/* ── CHAT ── */}
         <div className="relative">
           <ControlButton
-            active={isChatOpen}
-            onClick={onToggleChat}
-            activeLabel="Fermer le chat"
-            inactiveLabel="Ouvrir le chat"
-            activeColor="bg-primary-600 hover:bg-primary-700"
-            inactiveColor="bg-neutral-700 hover:bg-neutral-600"
-            activeIcon={<ChatIcon />}
-            inactiveIcon={<ChatIcon />}
+            active={isChatOpen} onClick={onToggleChat}
+            activeLabel="Fermer le chat" inactiveLabel="Ouvrir le chat"
+            activeColor="bg-primary-600 hover:bg-primary-700" inactiveColor="bg-neutral-700 hover:bg-neutral-600"
+            activeIcon={<ChatIcon />} inactiveIcon={<ChatIcon />}
           />
-          {/* Badge messages non lus */}
           {unreadCount > 0 && !isChatOpen && (
             <span className="absolute -top-1 -right-1 w-4 h-4 bg-danger-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
               {unreadCount > 9 ? '9+' : unreadCount}
@@ -679,10 +698,8 @@ function ControlBar({
           )}
         </div>
 
-        {/* ── SÉPARATEUR ── */}
         <div className="w-px h-8 bg-neutral-700 mx-1" />
 
-        {/* ── QUITTER ── */}
         <button
           onClick={() => onLeave?.()}
           title="Quitter le cours"
@@ -732,7 +749,7 @@ function ControlButton({
 // ─────────────────────────────────────────────
 // COMPOSANT INTERNE (dans contexte LiveKitRoom)
 // ─────────────────────────────────────────────
-interface VideoRoomContentProps {
+interface Props {
   role: 'eleve' | 'professeur' | 'admin' | 'direction'
   classe: Class
   isModerator: boolean
@@ -754,10 +771,46 @@ function VideoRoomContent({
   const connectionState = useConnectionState()
   const room = useRoomContext()
   const { chatMessages } = useChat()
+  const partage = usePartage()
 
   const [isChatOpen, setIsChatOpen] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
   const prevMsgCount = useRef(0)
+
+  // 🆕 Enregistre les fonctions permettant à Tableau/Éditeur de publier leur flux
+  useEffect(() => {
+    if (!room) return
+
+    const getScreenPublications = () => {
+      const pubs = (room.localParticipant as any).trackPublications
+      if (pubs && typeof pubs.values === 'function') return Array.from(pubs.values())
+      if (typeof (room.localParticipant as any).getTrackPublications === 'function') {
+        return (room.localParticipant as any).getTrackPublications()
+      }
+      return []
+    }
+
+    const publish = async (stream: MediaStream, name: string) => {
+      const track = stream.getVideoTracks()[0]
+      if (!track) return
+      await room.localParticipant.publishTrack(track, {
+        name,
+        source: Track.Source.ScreenShare,
+      })
+    }
+
+    const unpublish = (name: string) => {
+      getScreenPublications().forEach((pub: any) => {
+        if (pub.source === Track.Source.ScreenShare && pub.trackName === name && pub.track) {
+          room.localParticipant.unpublishTrack(pub.track.mediaStreamTrack)
+        }
+      })
+    }
+
+    partage.registerPublisher({ publish, unpublish })
+    return () => partage.registerPublisher(null)
+  }, [room])
+  
 
   // Compteur messages non lus quand chat fermé
   useEffect(() => {
