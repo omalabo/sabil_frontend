@@ -26,36 +26,61 @@ interface PartageContextValue {
   publishStream: (stream: MediaStream, name: string) => Promise<boolean>
   unpublishStream: (name: string) => void
   hasPublisher: boolean
+  setActiveSession: (classeId: string | null, seanceId: string | null, userId?: string, userName?: string) => void
 }
 
 const PartageContext = createContext<PartageContextValue | null>(null)
 
-export function PartageProvider({
-  classeId, seanceId, userId, userName, children,
-}: {
-  classeId: string | null; seanceId: string | null
-  userId?: string; userName?: string; children: ReactNode
-}) {
+export function PartageProvider({ children }: { children: ReactNode }) {
+  // ── Session active (classe/séance/utilisateur courant) ──────────────
+  // Mise à jour dynamiquement par ClasseDetail via setActiveSession,
+  // car ce Provider vit au-dessus du routeur et ne connaît rien au départ.
+  const [session, setSession] = useState<{
+    classeId: string | null
+    seanceId: string | null
+    userId?: string
+    userName?: string
+  }>({ classeId: null, seanceId: null })
+
   const [state, setState] = useState<PartageState>({ channel: null, byUserId: null, byUserName: null })
   const vusRef = useRef<Set<TabPartageable>>(new Set())
   const publisherRef = useRef<Publisher | null>(null)
   const [hasPublisher, setHasPublisher] = useState(false)
   const [, forceRender] = useState(0)
 
-  const { send } = useBroadcastSocket('partage', classeId, seanceId, (data) => {
+  // ── Websocket 'partage' — reconnecte automatiquement dès que
+  // session.classeId / session.seanceId changent ──────────────────────
+  const { send } = useBroadcastSocket('partage', session.classeId, session.seanceId, (data) => {
     if (data.type === 'share_start') {
       setState({ channel: data.channel, byUserId: data.user_id, byUserName: data.user_name })
-      vusRef.current.delete(data.channel)
+      vusRef.current.delete(data.channel) // nouveau partage → redevient "non vu" pour tout le monde
       forceRender(n => n + 1)
     } else if (data.type === 'share_stop') {
       setState({ channel: null, byUserId: null, byUserName: null })
     }
   })
 
+  const setActiveSession = useCallback((
+    classeId: string | null,
+    seanceId: string | null,
+    userId?: string,
+    userName?: string
+  ) => {
+    setSession(prev => {
+      // Évite un re-render inutile si rien n'a changé
+      if (prev.classeId === classeId && prev.seanceId === seanceId && prev.userId === userId) return prev
+      return { classeId, seanceId, userId, userName }
+    })
+    // On change de classe → on réinitialise l'état de partage local, car il
+    // appartient à l'ancienne salle (le nouveau sera reçu via request_state)
+    setState({ channel: null, byUserId: null, byUserName: null })
+    vusRef.current = new Set()
+  }, [])
+
   const startShare = useCallback((tab: TabPartageable) => {
-    setState({ channel: tab, byUserId: userId ?? null, byUserName: userName ?? null })
-    send({ type: 'share_start', channel: tab, user_id: userId, user_name: userName })
-  }, [send, userId, userName])
+    setState({ channel: tab, byUserId: session.userId ?? null, byUserName: session.userName ?? null })
+    send({ type: 'share_start', channel: tab, user_id: session.userId, user_name: session.userName })
+  }, [send, session.userId, session.userName])
 
   const stopShare = useCallback(() => {
     setState({ channel: null, byUserId: null, byUserName: null })
@@ -68,9 +93,10 @@ export function PartageProvider({
   }, [])
 
   const isSharedByMe = useCallback(
-    (tab: TabPartageable) => state.channel === tab && state.byUserId === userId,
-    [state, userId]
+    (tab: TabPartageable) => state.channel === tab && state.byUserId === session.userId,
+    [state, session.userId]
   )
+
   const isLive = useCallback(
     (tab: TabPartageable) => state.channel === tab && !vusRef.current.has(tab),
     [state]
@@ -96,8 +122,18 @@ export function PartageProvider({
 
   return (
     <PartageContext.Provider value={{
-      state, userId, isSharedByMe, isLive, markAsSeen, startShare, stopShare,
-      registerPublisher, publishStream, unpublishStream, hasPublisher,
+      state,
+      userId: session.userId,
+      isSharedByMe,
+      isLive,
+      markAsSeen,
+      startShare,
+      stopShare,
+      registerPublisher,
+      publishStream,
+      unpublishStream,
+      hasPublisher,
+      setActiveSession,
     }}>
       {children}
     </PartageContext.Provider>
