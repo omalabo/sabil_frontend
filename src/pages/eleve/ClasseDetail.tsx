@@ -37,7 +37,7 @@ import SubmitFactureModal from '../../components/shared/Submitfacturemodal'
 import { AnnonceEleveCard } from '../direction/Annonces'  // ajustez le chemin selon votre structure
 
 import { PartageProvider, usePartage } from '../../context/PartageContext'
-import EditeurClasse from '../../components/classroom/EditeurClasse'
+import PresentationMode from '../../components/classroom/PresentationMode'
 import LivresClasse from '../../components/classroom/LivresClasse'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -2089,7 +2089,7 @@ const getMotivationImageUrl = (contenu: string | null | undefined): string => {
     const [leftPanelOpen, setLeftPanelOpen] = useState(true)
     // ✅ Seuil élargi à 1024px : tablette = mode mobile, cohérent partout (web, natif, tous navigateurs)
     const isMobileLayout = typeof window !== 'undefined' && window.innerWidth < 1025
-    const [livreAImporter, setLivreAImporter] = useState<any>(null) // 🆕
+   
 
     
 
@@ -2698,7 +2698,7 @@ const handleSendMessage = async (e: React.FormEvent) => {
       { id: 'chat', icon: '💬', label: 'Chat' , hasAlert: unreadNotifs.some(n => n.classe === activeClassId && CHAT_BADGE_TYPES.includes(n.type))},
       { id: 'tableau', icon: '🖊️', label: 'Tableau' },
       { id: 'supports', icon: '📁', label: 'Supports' },
-      { id: 'editeur', icon: '📝', label: 'Éditeur', hasAlert: unreadNotifs.some(n => n.classe === activeClassId) && false },
+      { id: 'editeur', icon: '🎬', label: 'Présentation', hasAlert: false },
       { id: 'livres', icon: '📚', label: 'Livres' },
       { id: 'infos', icon: '💰', label: 'Infos', hasAlert: showFactureBlink || unreadNotifs.some(n => n.classe === activeClassId && (INFOS_BADGE_TYPES[role] || []).includes(n.type)) },
     ];
@@ -3940,19 +3940,19 @@ const classesFiltrees = classes.filter((cls: Class) =>
                 )}
                 
                 {activeTab === 'editeur' && activeClassId && defaultSeanceId && (
-                  <EditeurClasse
+                  <PresentationMode
                     classeId={activeClassId}
                     seanceId={defaultSeanceId}
-                    role={role}
-                    livreAImporter={livreAImporter}
-                    onLivreImporte={() => setLivreAImporter(null)}
+                    role={role === 'admin' || role === 'direction' ? 'eleve' : role}
+                    userId={user?.id}
+                    userName={user?.display_name || user?.prenom}
                   />
                 )}
+                // ✅ APRÈS (plus de onImportInEditeur) :
                 {activeTab === 'livres' && activeClassId && (
                   <LivresClasse
                     classeId={activeClassId}
                     role={role}
-                    onImportInEditeur={(l) => { setLivreAImporter(l); setActiveTab('editeur') }}
                   />
                 )}
                 
