@@ -44,7 +44,7 @@ export default function LivresClasse({ classeId, role }: {
             <input
               ref={fileRef}
               type="file"
-              accept=".pdf,.docx,.doc,.pptx,.ppt,image/*"
+              accept=".pdf,.docx,.doc,image/*"
               className="hidden"
               onChange={e => e.target.files?.[0] && handleUpload(e.target.files[0])}
             />
@@ -68,8 +68,8 @@ export default function LivresClasse({ classeId, role }: {
           {livres.map((l: any) => (
             <div key={l.id} className="bg-white border border-neutral-200 rounded-xl p-3 flex flex-col gap-2 hover:shadow-md transition">
               <div className="text-2xl">
-                {l.type_fichier === 'pdf' ? '📕' : l.type_fichier === 'docx' ? '📄' :
-                 l.type_fichier === 'pptx' ? '📊' : '🖼️'}
+           
+                    {l.type_fichier === 'pdf' ? '📕' : l.type_fichier === 'docx' ? '📄' : '🖼️'}
               </div>
               <p className="text-xs font-medium text-neutral-800 truncate" title={l.titre}>
                 {l.titre}
