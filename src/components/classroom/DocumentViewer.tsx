@@ -2,10 +2,10 @@
 import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react'
 import * as pdfjsLib from 'pdfjs-dist'
 import mammoth from 'mammoth'
-// @ts-ignore
-import pptxjs from 'pptxjs'
 
-// Worker PDF.js via CDN (le plus simple)
+// ❌ SUPPRIMER : import pptxjs from 'pptxjs'
+
+// Worker PDF.js via CDN
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
 
 export interface DocumentViewerHandle {
@@ -16,7 +16,7 @@ export interface DocumentViewerHandle {
 
 interface Props {
   fichierUrl: string
-  typeFichier: 'pdf' | 'docx' | 'pptx' | 'image'
+  typeFichier: 'pdf' | 'docx' | 'image'  // 🆕 PPTX retiré
   onPageChange?: (page: number, total: number) => void
 }
 
@@ -31,7 +31,6 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
     const [docxHtml, setDocxHtml] = useState<string>('')
 
     const pdfDocRef = useRef<any>(null)
-    const pptxRef = useRef<any>(null)
     const renderingRef = useRef(false)
 
     useImperativeHandle(ref, () => ({
@@ -49,7 +48,6 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
       setLoading(true)
       setError(null)
       pdfDocRef.current = null
-      pptxRef.current = null
       setDocxHtml('')
 
       const load = async () => {
@@ -65,15 +63,6 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
             setTotalPages(pdf.numPages)
             setCurrentPage(1)
             onPageChange?.(1, pdf.numPages)
-          }
-          else if (typeFichier === 'pptx') {
-            const pptx = new pptxjs()
-            await pptx.init({ url: fichierUrl })
-            if (cancelled) return
-            pptxRef.current = pptx
-            setTotalPages(pptx.slides?.length || 1)
-            setCurrentPage(1)
-            onPageChange?.(1, pptx.slides?.length || 1)
           }
           else if (typeFichier === 'docx') {
             const resp = await fetch(fichierUrl)
@@ -137,21 +126,6 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
               viewport: scaledViewport,
             }).promise
           }
-          else if (typeFichier === 'pptx' && pptxRef.current) {
-            canvas.width = 1280
-            canvas.height = 720
-            ctx.fillStyle = '#fff'
-            ctx.fillRect(0, 0, canvas.width, canvas.height)
-            try {
-              await pptxRef.current.renderSlide(currentPage - 1, canvas)
-            } catch (e) {
-              console.warn('⚠️ Rendu PPTX limité:', e)
-              ctx.fillStyle = '#000'
-              ctx.font = '24px sans-serif'
-              ctx.textAlign = 'center'
-              ctx.fillText(`Slide ${currentPage}`, canvas.width / 2, canvas.height / 2)
-            }
-          }
         } catch (err: any) {
           console.error('❌ Erreur rendu:', err)
           setError(`Erreur de rendu : ${err.message}`)
@@ -210,7 +184,7 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
       )
     }
 
-    // ── PDF / PPTX : canvas ──
+    // ── PDF : canvas ──
     return (
       <div
         ref={containerRef}
