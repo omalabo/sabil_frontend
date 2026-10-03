@@ -6,7 +6,7 @@ import mammoth from 'mammoth'
 // ❌ SUPPRIMER : import pptxjs from 'pptxjs'
 
 // Worker PDF.js via CDN
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
 
 export interface DocumentViewerHandle {
   goToPage: (page: number) => void
