@@ -44,10 +44,10 @@ export default function PresentationMode({
   const currentPage = isPresenting ? state.page : localPage
   const totalPages = viewerRef.current?.totalPages ?? 1
 
-  const readyLivres = useMemo(
-    () => livres.filter(l => ['pdf', 'image', 'docx', 'pptx'].includes(l.type_fichier)),
-    [livres]
-  )
+const readyLivres = useMemo(
+  () => livres.filter(l => ['pdf', 'image', 'docx'].includes(l.type_fichier)),
+  [livres]
+)
 
   // ── Navigation clavier ──
   useEffect(() => {
@@ -118,8 +118,8 @@ export default function PresentationMode({
                   className="bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 hover:border-indigo-500 rounded-xl p-4 text-left transition group"
                 >
                   <div className="text-3xl mb-2">
-                    {l.type_fichier === 'pdf' ? '📕' : l.type_fichier === 'docx' ? '📄' :
-                     l.type_fichier === 'pptx' ? '📊' : '🖼️'}
+                    
+                      {l.type_fichier === 'pdf' ? '📕' : l.type_fichier === 'docx' ? '📄' : '🖼️'}
                   </div>
                   <p className="font-semibold text-sm truncate group-hover:text-indigo-300">{l.titre}</p>
                   <p className="text-xs text-neutral-400 mt-1">{l.type_fichier.toUpperCase()}</p>
