@@ -96,7 +96,7 @@ const readyLivres = useMemo(
     setLocalPage(page)
     viewerRef.current?.goToPage(page)
   }
-
+console.log('📚 Livre sélectionné:', livre)
   // ── Écran de sélection ──
   if (!livre) {
     return (
@@ -203,10 +203,10 @@ const readyLivres = useMemo(
         {/* Document en fond */}
         <DocumentViewer
           ref={viewerRef}
-          fichierUrl={livre.fichier_url || livre.fichier_local}
+          fichierUrl={livre.fichier_url}
           typeFichier={livre.type_fichier}
         />
-
+        
         {/* Overlay d'annotations — INDÉPENDANT du tableau blanc */}
         <AnnotationCanvas
           pageKey={`${livre.id}-${currentPage}`}
