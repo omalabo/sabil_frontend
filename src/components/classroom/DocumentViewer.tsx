@@ -3,8 +3,11 @@ import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 're
 import * as pdfjsLib from 'pdfjs-dist'
 import mammoth from 'mammoth'
 
-// ✅ Worker PDF.js stable
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
+// ✅ CORRECTION : Importer le worker correctement pour Vite
+import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
+
+// Configurer le worker avec l'URL importée
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
 
 export interface DocumentViewerHandle {
   goToPage: (page: number) => void
@@ -27,6 +30,7 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [docxHtml, setDocxHtml] = useState<string>('')
+    const [imageUrl, setImageUrl] = useState<string | null>(null)
 
     const pdfDocRef = useRef<any>(null)
     const renderingRef = useRef(false)
@@ -47,6 +51,7 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
       setError(null)
       pdfDocRef.current = null
       setDocxHtml('')
+      setImageUrl(null)
 
       const load = async () => {
         try {
@@ -81,24 +86,12 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
           }
           else if (typeFichier === 'image') {
             console.log('🖼️ Chargement image...')
-            // Tester si l'image charge
-            const img = new Image()
-            img.onload = () => {
-              if (cancelled) return
-              console.log('✅ Image chargée:', img.width, 'x', img.height)
-              setTotalPages(1)
-              setCurrentPage(1)
-              onPageChange?.(1, 1)
-              setLoading(false)
-            }
-            img.onerror = () => {
-              if (cancelled) return
-              console.error('❌ Erreur chargement image:', fichierUrl)
-              setError("Impossible de charger l'image")
-              setLoading(false)
-            }
-            img.src = fichierUrl
-            return // on sort car img.onload gère la fin
+            // Pour les images, on utilise directement l'URL
+            setImageUrl(fichierUrl)
+            setTotalPages(1)
+            setCurrentPage(1)
+            onPageChange?.(1, 1)
+            console.log('✅ Image prête:', fichierUrl)
           }
         } catch (err: any) {
           console.error('❌ Erreur chargement:', err)
@@ -181,7 +174,7 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
 
     // ── DOCX : HTML ──
     if (typeFichier === 'docx') {
-      console.log(' Rendu DOCX HTML')
+      console.log('📄 Rendu DOCX HTML')
       return (
         <div ref={containerRef} className="flex-1 overflow-auto bg-white">
           <div
@@ -192,21 +185,28 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
       )
     }
 
-    // ── Image ──
+    // ── Image ─
     if (typeFichier === 'image') {
-      console.log('🖼️ Rendu image')
+      console.log('🖼️ Rendu image:', imageUrl)
       return (
         <div ref={containerRef} className="flex-1 flex items-center justify-center bg-neutral-900 overflow-hidden">
-          <img
-            src={fichierUrl}
-            alt="Document"
-            className="max-w-full max-h-full object-contain"
-            draggable={false}
-            onError={(e) => {
-              console.error('❌ Erreur affichage image:', e)
-              setError("Image introuvable")
-            }}
-          />
+          {imageUrl ? (
+            <img
+              src={imageUrl}
+              alt="Document"
+              className="max-w-full max-h-full object-contain"
+              draggable={false}
+              onError={(e) => {
+                console.error('❌ Erreur affichage image:', e)
+                setError("Image introuvable")
+              }}
+              onLoad={() => {
+                console.log('✅ Image chargée avec succès')
+              }}
+            />
+          ) : (
+            <p className="text-neutral-400">Chargement de l'image...</p>
+          )}
         </div>
       )
     }
