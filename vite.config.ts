@@ -9,6 +9,10 @@ export default defineConfig({
       // Alias pour imports plus courts : '@/components' au lieu de '../../../components'
       '@': path.resolve(__dirname, './src'),
     },
+    optimizeDeps: {
+    // 🆕 Empêche Vite de casser l'import du worker PDF.js lors du pré-bundling
+    exclude: ['pdfjs-dist'],
+    },
   },
   server: {
     allowedHosts:true,
