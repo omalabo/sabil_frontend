@@ -3,11 +3,8 @@ import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 're
 import * as pdfjsLib from 'pdfjs-dist'
 import mammoth from 'mammoth'
 
-// ✅ CORRECTION : Importer le worker correctement pour Vite
-import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
-
-// Configurer le worker avec l'URL importée
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker
+// ✅ CORRECTION : Utiliser le worker depuis CDN (pas le fichier bundlé Vite)
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
 
 export interface DocumentViewerHandle {
   goToPage: (page: number) => void
@@ -35,6 +32,8 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
     const pdfDocRef = useRef<any>(null)
     const renderingRef = useRef(false)
 
+    console.log('📥 DocumentViewer props:', { fichierUrl, typeFichier })
+
     useImperativeHandle(ref, () => ({
       goToPage: (page: number) => {
         const p = Math.max(1, Math.min(totalPages, page))
@@ -57,7 +56,13 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
         try {
           console.log('📄 Chargement document:', { fichierUrl, typeFichier })
 
+          // ✅ Vérification que fichierUrl existe
+          if (!fichierUrl) {
+            throw new Error('URL du fichier manquante')
+          }
+
           if (typeFichier === 'pdf') {
+            console.log(' Chargement PDF...')
             const pdf = await pdfjsLib.getDocument({
               url: fichierUrl,
               cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
@@ -185,7 +190,7 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
       )
     }
 
-    // ── Image ─
+    // ── Image ──
     if (typeFichier === 'image') {
       console.log('🖼️ Rendu image:', imageUrl)
       return (
@@ -197,7 +202,7 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
               className="max-w-full max-h-full object-contain"
               draggable={false}
               onError={(e) => {
-                console.error('❌ Erreur affichage image:', e)
+                console.error(' Erreur affichage image:', e)
                 setError("Image introuvable")
               }}
               onLoad={() => {
