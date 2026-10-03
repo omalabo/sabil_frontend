@@ -3948,7 +3948,6 @@ const classesFiltrees = classes.filter((cls: Class) =>
                     userName={user?.display_name || user?.prenom}
                   />
                 )}
-                // ✅ APRÈS (plus de onImportInEditeur) :
                 {activeTab === 'livres' && activeClassId && (
                   <LivresClasse
                     classeId={activeClassId}
