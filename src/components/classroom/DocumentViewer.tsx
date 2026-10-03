@@ -3,9 +3,7 @@ import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 're
 import * as pdfjsLib from 'pdfjs-dist'
 import mammoth from 'mammoth'
 
-// ❌ SUPPRIMER : import pptxjs from 'pptxjs'
-
-// Worker PDF.js via CDN
+// ✅ Worker PDF.js stable
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
 
 export interface DocumentViewerHandle {
@@ -16,7 +14,7 @@ export interface DocumentViewerHandle {
 
 interface Props {
   fichierUrl: string
-  typeFichier: 'pdf' | 'docx' | 'image'  // 🆕 PPTX retiré
+  typeFichier: 'pdf' | 'docx' | 'image'
   onPageChange?: (page: number, total: number) => void
 }
 
@@ -52,10 +50,12 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
 
       const load = async () => {
         try {
+          console.log('📄 Chargement document:', { fichierUrl, typeFichier })
+
           if (typeFichier === 'pdf') {
             const pdf = await pdfjsLib.getDocument({
               url: fichierUrl,
-              cMapUrl: `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/cmaps/`,
+              cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
               cMapPacked: true,
             }).promise
             if (cancelled) return
@@ -63,21 +63,42 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
             setTotalPages(pdf.numPages)
             setCurrentPage(1)
             onPageChange?.(1, pdf.numPages)
+            console.log('✅ PDF chargé:', pdf.numPages, 'pages')
           }
           else if (typeFichier === 'docx') {
+            console.log('📄 Chargement DOCX...')
             const resp = await fetch(fichierUrl)
+            if (!resp.ok) throw new Error(`Erreur HTTP: ${resp.status}`)
             const buf = await resp.arrayBuffer()
+            console.log('📦 Buffer DOCX:', buf.byteLength, 'bytes')
             const result = await mammoth.convertToHtml({ arrayBuffer: buf })
             if (cancelled) return
+            console.log('✅ DOCX converti:', result.value.length, 'caractères')
             setDocxHtml(result.value)
             setTotalPages(1)
             setCurrentPage(1)
             onPageChange?.(1, 1)
           }
           else if (typeFichier === 'image') {
-            setTotalPages(1)
-            setCurrentPage(1)
-            onPageChange?.(1, 1)
+            console.log('🖼️ Chargement image...')
+            // Tester si l'image charge
+            const img = new Image()
+            img.onload = () => {
+              if (cancelled) return
+              console.log('✅ Image chargée:', img.width, 'x', img.height)
+              setTotalPages(1)
+              setCurrentPage(1)
+              onPageChange?.(1, 1)
+              setLoading(false)
+            }
+            img.onerror = () => {
+              if (cancelled) return
+              console.error('❌ Erreur chargement image:', fichierUrl)
+              setError("Impossible de charger l'image")
+              setLoading(false)
+            }
+            img.src = fichierUrl
+            return // on sort car img.onload gère la fin
           }
         } catch (err: any) {
           console.error('❌ Erreur chargement:', err)
@@ -91,10 +112,9 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
       return () => { cancelled = true }
     }, [fichierUrl, typeFichier])
 
-    // ── Rendu de la page courante ──
+    // ── Rendu de la page courante (PDF uniquement) ──
     useEffect(() => {
-      if (loading || error) return
-      if (typeFichier === 'docx' || typeFichier === 'image') return
+      if (loading || error || typeFichier !== 'pdf') return
 
       const canvas = canvasRef.current
       const container = containerRef.current
@@ -109,7 +129,7 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
           const containerWidth = container.clientWidth || 1200
           const containerHeight = container.clientHeight || 700
 
-          if (typeFichier === 'pdf' && pdfDocRef.current) {
+          if (pdfDocRef.current) {
             const page = await pdfDocRef.current.getPage(currentPage)
             const viewport = page.getViewport({ scale: 1 })
             const scale = Math.min(
@@ -125,9 +145,10 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
               canvasContext: ctx,
               viewport: scaledViewport,
             }).promise
+            console.log('✅ Page PDF rendue:', currentPage)
           }
         } catch (err: any) {
-          console.error('❌ Erreur rendu:', err)
+          console.error('❌ Erreur rendu PDF:', err)
           setError(`Erreur de rendu : ${err.message}`)
         } finally {
           renderingRef.current = false
@@ -160,10 +181,11 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
 
     // ── DOCX : HTML ──
     if (typeFichier === 'docx') {
+      console.log(' Rendu DOCX HTML')
       return (
         <div ref={containerRef} className="flex-1 overflow-auto bg-white">
           <div
-            className="p-8 max-w-4xl mx-auto"
+            className="p-8 max-w-4xl mx-auto prose"
             dangerouslySetInnerHTML={{ __html: docxHtml }}
           />
         </div>
@@ -172,6 +194,7 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
 
     // ── Image ──
     if (typeFichier === 'image') {
+      console.log('🖼️ Rendu image')
       return (
         <div ref={containerRef} className="flex-1 flex items-center justify-center bg-neutral-900 overflow-hidden">
           <img
@@ -179,6 +202,10 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
             alt="Document"
             className="max-w-full max-h-full object-contain"
             draggable={false}
+            onError={(e) => {
+              console.error('❌ Erreur affichage image:', e)
+              setError("Image introuvable")
+            }}
           />
         </div>
       )
