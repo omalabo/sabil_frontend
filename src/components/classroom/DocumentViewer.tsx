@@ -4,7 +4,8 @@ import * as pdfjsLib from 'pdfjs-dist'
 import mammoth from 'mammoth'
 
 // ✅ CORRECTION : Utiliser le worker depuis CDN (pas le fichier bundlé Vite)
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`
 
 export interface DocumentViewerHandle {
   goToPage: (page: number) => void
