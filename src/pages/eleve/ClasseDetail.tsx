@@ -3939,15 +3939,26 @@ const classesFiltrees = classes.filter((cls: Class) =>
                   </div>
                 )}
                 
-                {activeTab === 'editeur' && activeClassId && defaultSeanceId && (
-                  <PresentationMode
-                    classeId={activeClassId}
-                    seanceId={defaultSeanceId}
-                    role={role === 'admin' || role === 'direction' ? 'eleve' : role}
-                    userId={user?.id}
-                    userName={user?.display_name || user?.prenom}
-                  />
+                // ✅ APRÈS : Toujours monté, masqué/affiché via CSS (comme le tableau blanc)
+                {activeClassId && defaultSeanceId && (
+                  <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    zIndex: activeTab === 'editeur' ? 10 : 0,
+                    opacity: activeTab === 'editeur' ? 1 : 0,
+                    pointerEvents: activeTab === 'editeur' ? 'auto' : 'none',
+                    transition: 'opacity 0.3s ease'
+                  }}>
+                    <PresentationMode
+                      classeId={activeClassId}
+                      seanceId={defaultSeanceId}
+                      role={role === 'admin' || role === 'direction' ? 'eleve' : role}
+                      userId={user?.id}
+                      userName={user?.display_name || user?.prenom}
+                    />
+                  </div>
                 )}
+                
                 {activeTab === 'livres' && activeClassId && (
                   <LivresClasse
                     classeId={activeClassId}
