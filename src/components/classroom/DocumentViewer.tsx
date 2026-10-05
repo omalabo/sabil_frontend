@@ -26,11 +26,11 @@ interface Props {
   onPageChange?: (page: number, total: number) => void
 }
 
-const MIN_ZOOM = 0.5
-const MAX_ZOOM = 5
-const ZOOM_STEP = 0.25
+const MIN_ZOOM = 0.1 // 10%
+const MAX_ZOOM = 1.5 // 150%
+const ZOOM_FACTOR = 1.25
 const PAD = 16
-const MAX_CANVAS_PIXELS = 16_000_000 // limite mémoire du canvas
+const MAX_CANVAS_PIXELS = 16_000_000
 
 const clamp = (v: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, v))
 
@@ -41,33 +41,33 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
 
     const [currentPage, setCurrentPage] = useState(1)
     const [totalPages, setTotalPages] = useState(1)
-    const [loading, setLoading] = useState(true)
-    const [progress, setProgress] = useState({ done: 0, total: 0 })
-    const [ready, setReady] = useState(false) // 1er rendu PDF terminé
+    const [loading, setLoading] = useState(true) // true jusqu'à ce que la page 1 soit prête
+    const [ready, setReady] = useState(false) // 1er rendu terminé
     const [rendering, setRendering] = useState(false)
+    const [bgProgress, setBgProgress] = useState({ done: 0, total: 0 }) // préchargement des autres pages
     const [error, setError] = useState<string | null>(null)
     const [docxHtml, setDocxHtml] = useState('')
     const [imageUrl, setImageUrl] = useState<string | null>(null)
 
+    // zoom 1 = page ENTIÈRE visible (fit page)
     const [zoom, setZoom] = useState(1)
-    const [containerWidth, setContainerWidth] = useState(0)
-    const [pageSize, setPageSize] = useState<{ w: number; h: number; base: number } | null>(null)
+    const [box, setBox] = useState({ w: 0, h: 0 })
+    const [pageSize, setPageSize] = useState<{ n: number; w: number; h: number; base: number } | null>(null)
     const [dragging, setDragging] = useState(false)
 
     const pdfDocRef = useRef<any>(null)
-    const pagesRef = useRef<any[]>([])
     const zoomRef = useRef(1)
     const pendingScrollRef = useRef<{ left: number; top: number } | null>(null)
     const renderTaskRef = useRef<any>(null)
     const readyRef = useRef(false)
     const dragRef = useRef<{ x: number; y: number; l: number; t: number } | null>(null)
 
-    // ── Zoom (centré sur un point écran, par défaut le centre de la vue) ──
+    // ── Zoom centré sur un point écran (par défaut le centre de la vue) ──
     const applyZoom = useCallback((next: number, cx?: number, cy?: number) => {
       const el = scrollRef.current
       const old = zoomRef.current
       next = clamp(next)
-      if (!el || next === old) return
+      if (!el || Math.abs(next - old) < 0.0001) return
       const rect = el.getBoundingClientRect()
       const px = (cx ?? rect.left + rect.width / 2) - rect.left
       const py = (cy ?? rect.top + rect.height / 2) - rect.top
@@ -87,7 +87,6 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
       scrollRef.current?.scrollTo(0, 0)
     }, [])
 
-    // Applique le scroll APRÈS que le canvas ait sa nouvelle taille CSS
     useLayoutEffect(() => {
       const el = scrollRef.current
       const p = pendingScrollRef.current
@@ -104,16 +103,16 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
         goToPage: (page: number) => {
           const p = Math.max(1, Math.min(totalPages, page))
           if (p === currentPage) return
-          resetView()
+          // le zoom est conservé, on remonte juste en haut de la page
+          scrollRef.current?.scrollTo({ top: 0 })
           setCurrentPage(p)
         },
         currentPage,
         totalPages,
       }),
-      [currentPage, totalPages, resetView]
+      [currentPage, totalPages]
     )
 
-    // Notifie le parent à chaque changement de page
     useEffect(() => {
       if (!loading && !error) onPageChange?.(currentPage, totalPages)
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -128,9 +127,8 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
       readyRef.current = false
       setRendering(false)
       setPageSize(null)
-      setProgress({ done: 0, total: 0 })
+      setBgProgress({ done: 0, total: 0 })
       pdfDocRef.current = null
-      pagesRef.current = []
       setDocxHtml('')
       setImageUrl(null)
       setCurrentPage(1)
@@ -150,18 +148,22 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
             if (cancelled) return
             pdfDocRef.current = pdf
             setTotalPages(pdf.numPages)
-            setProgress({ done: 0, total: pdf.numPages })
 
-            // Précharge TOUTES les pages (données + ressources) avant d'afficher
-            const pages: any[] = []
-            for (let i = 1; i <= pdf.numPages; i++) {
+            // 1) Page 1 d'abord : c'est elle qui débloque l'affichage
+            const first = await pdf.getPage(1)
+            await first.getOperatorList()
+            if (cancelled) return
+            setLoading(false)
+
+            // 2) Les autres pages en arrière-plan (2e loader)
+            setBgProgress({ done: 1, total: pdf.numPages })
+            for (let i = 2; i <= pdf.numPages; i++) {
               const page = await pdf.getPage(i)
-              await page.getOperatorList() // charge polices/images en cache (retire si PDF énorme)
+              await page.getOperatorList() // retire cette ligne si PDF énorme
               if (cancelled) return
-              pages.push(page)
-              setProgress({ done: i, total: pdf.numPages })
+              setBgProgress({ done: i, total: pdf.numPages })
             }
-            pagesRef.current = pages
+            return
           } else if (typeFichier === 'docx') {
             const resp = await fetch(fichierUrl)
             if (!resp.ok) throw new Error(`Erreur HTTP: ${resp.status}`)
@@ -174,12 +176,12 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
             setImageUrl(fichierUrl)
             setTotalPages(1)
           }
+          if (!cancelled) setLoading(false)
         } catch (err: any) {
           if (cancelled) return
           console.error('❌ Erreur chargement:', err)
           setError(`Impossible de charger : ${err.message || 'erreur inconnue'}`)
-        } finally {
-          if (!cancelled) setLoading(false)
+          setLoading(false)
         }
       }
 
@@ -189,40 +191,55 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
       }
     }, [fichierUrl, typeFichier])
 
-    // ── Largeur du conteneur (ResizeObserver) ──
+    // ── Taille du conteneur (largeur + hauteur) ──
     useEffect(() => {
       const el = scrollRef.current
       if (!el) return
-      const update = () => setContainerWidth(el.clientWidth)
+      const update = () => setBox({ w: el.clientWidth, h: el.clientHeight })
       update()
       const ro = new ResizeObserver(update)
       ro.observe(el)
       return () => ro.disconnect()
-    }, [typeFichier, !!error])
+    }, [typeFichier, !!error, loading])
 
-    // ── Taille de base de la page (fit largeur) ──
+    // ── Taille de base = PAGE ENTIÈRE visible (min largeur / hauteur) ──
     useEffect(() => {
-      if (typeFichier !== 'pdf' || loading || !containerWidth) return
-      const page = pagesRef.current[currentPage - 1]
-      if (!page) return
-      const vp = page.getViewport({ scale: 1 })
-      const base = Math.max(0.1, (containerWidth - PAD * 2) / vp.width)
-      setPageSize({ w: vp.width * base, h: vp.height * base, base })
-    }, [typeFichier, loading, containerWidth, currentPage])
+      if (typeFichier !== 'pdf' || loading || !box.w || !box.h || !pdfDocRef.current) return
+      let cancelled = false
+      ;(async () => {
+        try {
+          const page = await pdfDocRef.current.getPage(currentPage)
+          if (cancelled) return
+          const vp = page.getViewport({ scale: 1 })
+          const base = Math.max(
+            0.05,
+            Math.min((box.w - PAD * 2) / vp.width, (box.h - PAD * 2) / vp.height)
+          )
+          setPageSize({ n: currentPage, w: vp.width * base, h: vp.height * base, base })
+        } catch (e) {
+          /* ignore */
+        }
+      })()
+      return () => {
+        cancelled = true
+      }
+    }, [typeFichier, loading, box.w, box.h, currentPage])
 
-    // ── Rendu net (debounced, annulable, via canvas hors-écran => pas de flash) ──
+    // ── Rendu net (debounced, annulable, canvas hors-écran => pas de flash) ──
     useEffect(() => {
       if (typeFichier !== 'pdf' || loading || error || !pageSize) return
-      const page = pagesRef.current[currentPage - 1]
-      if (!page) return
+      if (pageSize.n !== currentPage) return // taille de la page précédente, on attend
+      let cancelled = false
 
       setRendering(true)
       const timer = setTimeout(async () => {
-        const canvas = canvasRef.current
-        if (!canvas) return
-        renderTaskRef.current?.cancel()
-
         try {
+          const page = await pdfDocRef.current.getPage(currentPage)
+          if (cancelled) return
+          const canvas = canvasRef.current
+          if (!canvas) return
+          renderTaskRef.current?.cancel()
+
           const dpr = window.devicePixelRatio || 1
           const vp1 = page.getViewport({ scale: 1 })
           let scale = pageSize.base * zoom * dpr
@@ -231,11 +248,12 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
           const vp = page.getViewport({ scale })
 
           const off = document.createElement('canvas')
-          off.width = Math.floor(vp.width)
-          off.height = Math.floor(vp.height)
+          off.width = Math.max(1, Math.floor(vp.width))
+          off.height = Math.max(1, Math.floor(vp.height))
           const task = page.render({ canvasContext: off.getContext('2d')!, viewport: vp })
           renderTaskRef.current = task
           await task.promise
+          if (cancelled) return
 
           canvas.width = off.width
           canvas.height = off.height
@@ -245,6 +263,7 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
           setRendering(false)
         } catch (err: any) {
           if (err?.name === 'RenderingCancelledException') return
+          if (cancelled) return
           console.error('❌ Erreur rendu PDF:', err)
           setError(`Erreur de rendu : ${err.message}`)
           setRendering(false)
@@ -252,18 +271,19 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
       }, readyRef.current ? 120 : 0)
 
       return () => {
+        cancelled = true
         clearTimeout(timer)
         renderTaskRef.current?.cancel()
       }
     }, [typeFichier, loading, error, pageSize, zoom, currentPage])
 
-    // ── Molette (Ctrl/pinch trackpad) + pinch tactile ──
+    // ── Ctrl+molette / pinch trackpad + pinch tactile ──
     useEffect(() => {
       const el = scrollRef.current
       if (!el || typeFichier !== 'pdf') return
 
       const onWheel = (e: WheelEvent) => {
-        if (!e.ctrlKey && !e.metaKey) return // molette simple = scroll normal
+        if (!e.ctrlKey && !e.metaKey) return
         e.preventDefault()
         applyZoom(zoomRef.current * Math.exp(-e.deltaY * 0.01), e.clientX, e.clientY)
       }
@@ -301,7 +321,7 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
         el.removeEventListener('touchmove', onTouchMove)
         el.removeEventListener('touchend', onTouchEnd)
       }
-    }, [typeFichier, applyZoom, !!error])
+    }, [typeFichier, applyZoom, !!error, loading])
 
     // ── Glisser pour déplacer (souris) ──
     const onMouseDown = (e: React.MouseEvent) => {
@@ -363,15 +383,16 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
 
     // ── PDF ──
     const showOverlay = loading || !ready
-    const pct = progress.total ? Math.round((progress.done / progress.total) * 100) : 0
+    const bgLoading = !loading && bgProgress.total > 1 && bgProgress.done < bgProgress.total
+    const bgPct = bgProgress.total ? Math.round((bgProgress.done / bgProgress.total) * 100) : 0
 
     return (
       <div className="relative flex-1 min-h-0 min-w-0 w-full h-full flex flex-col bg-neutral-900">
-        {/* Barre de zoom FIXE (hors de la zone qui scrolle) */}
-        <div className="shrink-0 z-20 flex items-center justify-center gap-3 py-2 bg-neutral-800 border-b border-neutral-700">
+        {/* Barre de zoom FIXE */}
+        <div className="relative shrink-0 z-20 flex items-center justify-center gap-3 py-2 bg-neutral-800 border-b border-neutral-700">
           <button
-            onClick={() => applyZoom(zoomRef.current - ZOOM_STEP)}
-            disabled={zoom <= MIN_ZOOM}
+            onClick={() => applyZoom(zoomRef.current / ZOOM_FACTOR)}
+            disabled={zoom <= MIN_ZOOM + 0.001}
             className="w-8 h-8 rounded-full bg-neutral-700 hover:bg-neutral-600 disabled:opacity-40 text-white flex items-center justify-center text-lg transition"
             title="Dézoomer"
           >
@@ -379,8 +400,8 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
           </button>
           <span className="text-white text-sm font-mono w-16 text-center">{Math.round(zoom * 100)}%</span>
           <button
-            onClick={() => applyZoom(zoomRef.current + ZOOM_STEP)}
-            disabled={zoom >= MAX_ZOOM}
+            onClick={() => applyZoom(zoomRef.current * ZOOM_FACTOR)}
+            disabled={zoom >= MAX_ZOOM - 0.001}
             className="w-8 h-8 rounded-full bg-neutral-700 hover:bg-neutral-600 disabled:opacity-40 text-white flex items-center justify-center text-lg transition"
             title="Zoomer"
           >
@@ -389,10 +410,26 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
           <button
             onClick={resetView}
             className="px-3 h-8 rounded-full bg-neutral-700 hover:bg-neutral-600 text-white text-xs font-medium transition"
-            title="Taille d'origine"
+            title="Page entière"
           >
             Reset
           </button>
+
+          {/* 2e loader : pages restantes en arrière-plan */}
+          {bgLoading && (
+            <div
+              className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2 px-3 py-1 rounded-full bg-neutral-700/80 text-neutral-200 text-xs"
+              title="Chargement des autres pages en cours"
+            >
+              <div className="w-3.5 h-3.5 border-2 border-neutral-500 border-t-indigo-400 rounded-full animate-spin" />
+              <span className="whitespace-nowrap">
+                Pages {bgProgress.done}/{bgProgress.total}
+              </span>
+              <div className="hidden sm:block w-14 h-1 bg-neutral-600 rounded-full overflow-hidden">
+                <div className="h-full bg-indigo-400 transition-all" style={{ width: `${bgPct}%` }} />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Zone scrollable */}
@@ -400,8 +437,7 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
           ref={scrollRef}
           className="flex-1 min-h-0 overflow-auto flex"
           style={{
-            scrollbarGutter: 'stable',
-            cursor: dragging ? 'grabbing' : zoom > 1 ? 'grab' : 'default',
+            cursor: dragging ? 'grabbing' : 'grab',
             touchAction: 'pan-x pan-y',
           }}
           onMouseDown={onMouseDown}
@@ -422,24 +458,17 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
           </div>
         </div>
 
-        {/* Petit spinner discret pendant un re-rendu (zoom / changement de page) */}
+        {/* Mini spinner pendant un re-rendu (zoom / changement de page) */}
         {!showOverlay && rendering && (
           <div className="absolute top-14 right-4 z-10 w-6 h-6 border-2 border-neutral-600 border-t-indigo-500 rounded-full animate-spin" />
         )}
 
-        {/* Loader plein écran tant que tout n'est pas chargé */}
+        {/* Loader plein écran : seulement jusqu'à l'affichage de la 1re page */}
         {showOverlay && (
           <div className="absolute inset-0 z-30 flex items-center justify-center bg-neutral-900">
-            <div className="text-center w-64">
+            <div className="text-center">
               <div className="w-10 h-10 border-4 border-neutral-700 border-t-indigo-500 rounded-full animate-spin mx-auto mb-3" />
-              <p className="text-neutral-400 text-sm mb-2">
-                {progress.total
-                  ? `Chargement des pages… ${progress.done}/${progress.total}`
-                  : 'Chargement du document…'}
-              </p>
-              <div className="h-1.5 bg-neutral-800 rounded-full overflow-hidden">
-                <div className="h-full bg-indigo-500 transition-all" style={{ width: `${pct}%` }} />
-              </div>
+              <p className="text-neutral-400 text-sm">Chargement du document…</p>
             </div>
           </div>
         )}
