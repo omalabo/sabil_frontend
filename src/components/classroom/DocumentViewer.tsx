@@ -79,6 +79,10 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
     const readyRef = useRef(false)
     const dragRef = useRef<{ x: number; y: number; l: number; t: number } | null>(null)
 
+    const onPageChangeRef = useRef(onPageChange)
+    onPageChangeRef.current = onPageChange
+    const scrollLockRef = useRef(0) // évite que le scroll écrase une page demandée par le bas
+
     boxRef.current = box
     dimsRef.current = dims
     currentRef.current = currentPage
@@ -109,6 +113,18 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
       setZoom(next)
     }, [])
 
+    const scrollToPage = (page: number) => {
+      const el = scrollRef.current
+      const w = wrapperRefs.current[page - 1]
+      if (!el || !w) return
+      const er = el.getBoundingClientRect()
+      const wr = w.getBoundingClientRect()
+      el.scrollTo({
+        top: el.scrollTop + (wr.top - er.top) - PAD,
+        left: el.scrollLeft + (wr.left - er.left) - (er.width - wr.width) / 2,
+      })
+    }
+
     const resetView = useCallback(() => {
       zoomRef.current = 1
       setZoom(1)
@@ -126,20 +142,12 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
       }
     }, [zoom])
 
-    const scrollToPage = (page: number) => {
-      const el = scrollRef.current
-      const w = wrapperRefs.current[page - 1]
-      if (!el || !w) return
-      const er = el.getBoundingClientRect()
-      const wr = w.getBoundingClientRect()
-      el.scrollTo({ top: el.scrollTop + (wr.top - er.top) - PAD, left: el.scrollLeft + (wr.left - er.left) - (er.width - wr.width) / 2 })
-    }
-
     useImperativeHandle(
       ref,
       () => ({
         goToPage: (page: number) => {
           const p = Math.max(1, Math.min(totalPages, page))
+          scrollLockRef.current = Date.now() + 400
           scrollToPage(p)
           setCurrentPage(p)
         },
@@ -149,10 +157,11 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
       [currentPage, totalPages]
     )
 
+    // Notifie le parent dès que le total est connu, puis à chaque changement de page
     useEffect(() => {
-      if (!loading && !error) onPageChange?.(currentPage, totalPages)
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentPage, totalPages, loading, error])
+      if (error) return
+      onPageChangeRef.current?.(currentPage, totalPages)
+    }, [currentPage, totalPages, error])
 
     // ── Chargement du document ──
     useEffect(() => {
@@ -189,13 +198,13 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
               cMapPacked: true,
             }).promise
             if (cancelled) return
+            setTotalPages(pdf.numPages) // le parent affiche tout de suite « 1/17 »
 
             const pages = await Promise.all(
               Array.from({ length: pdf.numPages }, (_, k) => pdf.getPage(k + 1))
             )
             if (cancelled) return
             pagesRef.current = pages
-            setTotalPages(pdf.numPages)
             setBgProgress({ done: 0, total: pdf.numPages })
             setDims(
               pages.map((p) => {
@@ -265,6 +274,7 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
 
     // ── Page courante selon le scroll ──
     const updateCurrent = useCallback(() => {
+      if (Date.now() < scrollLockRef.current) return
       const el = scrollRef.current
       if (!el) return
       const er = el.getBoundingClientRect()
@@ -542,12 +552,6 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
           >
             Reset
           </button>
-
-          {totalPages > 1 && (
-            <span className="text-neutral-400 text-xs font-mono">
-              {currentPage}/{totalPages}
-            </span>
-          )}
 
           {showBg && (
             <div
