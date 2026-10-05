@@ -27,12 +27,15 @@ interface Props {
 }
 
 const MIN_ZOOM = 0.1 // 10%
-const MAX_ZOOM = 1.5 // 150%
+const MAX_ZOOM = 5 // 500%
 const ZOOM_FACTOR = 1.25
 const PAD = 16
 const MAX_CANVAS_PIXELS = 16_000_000
+const BG_MIN_VISIBLE_MS = 1000 // durée minimale d'affichage du 2e loader
+const BG_DONE_VISIBLE_MS = 1500 // durée d'affichage de "Toutes les pages prêtes"
 
 const clamp = (v: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, v))
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 
 const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
   ({ fichierUrl, typeFichier, onPageChange }, ref) => {
@@ -44,7 +47,12 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
     const [loading, setLoading] = useState(true) // true jusqu'à ce que la page 1 soit prête
     const [ready, setReady] = useState(false) // 1er rendu terminé
     const [rendering, setRendering] = useState(false)
-    const [bgProgress, setBgProgress] = useState({ done: 0, total: 0 }) // préchargement des autres pages
+
+    // 2e loader : préchargement des pages restantes
+    const [bgProgress, setBgProgress] = useState({ done: 0, total: 0 })
+    const [bgVisible, setBgVisible] = useState(false)
+    const [bgDone, setBgDone] = useState(false)
+
     const [error, setError] = useState<string | null>(null)
     const [docxHtml, setDocxHtml] = useState('')
     const [imageUrl, setImageUrl] = useState<string | null>(null)
@@ -128,6 +136,8 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
       setRendering(false)
       setPageSize(null)
       setBgProgress({ done: 0, total: 0 })
+      setBgVisible(false)
+      setBgDone(false)
       pdfDocRef.current = null
       setDocxHtml('')
       setImageUrl(null)
@@ -156,12 +166,27 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
             setLoading(false)
 
             // 2) Les autres pages en arrière-plan (2e loader)
-            setBgProgress({ done: 1, total: pdf.numPages })
-            for (let i = 2; i <= pdf.numPages; i++) {
-              const page = await pdf.getPage(i)
-              await page.getOperatorList() // retire cette ligne si PDF énorme
+            if (pdf.numPages > 1) {
+              const t0 = Date.now()
+              setBgProgress({ done: 1, total: pdf.numPages })
+              setBgVisible(true)
+
+              for (let i = 2; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i)
+                await page.getOperatorList() // retire cette ligne si PDF énorme
+                if (cancelled) return
+                setBgProgress({ done: i, total: pdf.numPages })
+              }
+
+              // Garde le loader visible un minimum de temps (sinon invisible sur petits PDF)
+              const remaining = BG_MIN_VISIBLE_MS - (Date.now() - t0)
+              if (remaining > 0) await sleep(remaining)
               if (cancelled) return
-              setBgProgress({ done: i, total: pdf.numPages })
+
+              setBgDone(true)
+              await sleep(BG_DONE_VISIBLE_MS)
+              if (cancelled) return
+              setBgVisible(false)
             }
             return
           } else if (typeFichier === 'docx') {
@@ -383,13 +408,12 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
 
     // ── PDF ──
     const showOverlay = loading || !ready
-    const bgLoading = !loading && bgProgress.total > 1 && bgProgress.done < bgProgress.total
     const bgPct = bgProgress.total ? Math.round((bgProgress.done / bgProgress.total) * 100) : 0
 
     return (
       <div className="relative flex-1 min-h-0 min-w-0 w-full h-full flex flex-col bg-neutral-900">
-        {/* Barre de zoom FIXE */}
-        <div className="relative shrink-0 z-20 flex items-center justify-center gap-3 py-2 bg-neutral-800 border-b border-neutral-700">
+        {/* Barre de zoom FIXE (le 2e loader est DANS la barre, à côté de Reset) */}
+        <div className="shrink-0 z-20 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 px-3 py-2 bg-neutral-800 border-b border-neutral-700">
           <button
             onClick={() => applyZoom(zoomRef.current / ZOOM_FACTOR)}
             disabled={zoom <= MIN_ZOOM + 0.001}
@@ -416,18 +440,31 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
           </button>
 
           {/* 2e loader : pages restantes en arrière-plan */}
-          {bgLoading && (
+          {bgVisible && !showOverlay && (
             <div
-              className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2 px-3 py-1 rounded-full bg-neutral-700/80 text-neutral-200 text-xs"
-              title="Chargement des autres pages en cours"
+              className={`flex items-center gap-2 px-3 h-8 rounded-full text-xs border transition-colors ${
+                bgDone
+                  ? 'bg-emerald-900/40 border-emerald-700 text-emerald-300'
+                  : 'bg-indigo-900/40 border-indigo-700 text-indigo-200'
+              }`}
+              title={bgDone ? 'Toutes les pages sont chargées' : 'Chargement des autres pages en cours'}
             >
-              <div className="w-3.5 h-3.5 border-2 border-neutral-500 border-t-indigo-400 rounded-full animate-spin" />
-              <span className="whitespace-nowrap">
-                Pages {bgProgress.done}/{bgProgress.total}
-              </span>
-              <div className="hidden sm:block w-14 h-1 bg-neutral-600 rounded-full overflow-hidden">
-                <div className="h-full bg-indigo-400 transition-all" style={{ width: `${bgPct}%` }} />
-              </div>
+              {bgDone ? (
+                <>
+                  <span className="text-sm leading-none">✓</span>
+                  <span className="whitespace-nowrap">Toutes les pages prêtes</span>
+                </>
+              ) : (
+                <>
+                  <div className="w-3.5 h-3.5 border-2 border-indigo-700 border-t-indigo-300 rounded-full animate-spin" />
+                  <span className="whitespace-nowrap">
+                    Chargement des pages {bgProgress.done}/{bgProgress.total}
+                  </span>
+                  <div className="w-14 h-1.5 bg-indigo-950 rounded-full overflow-hidden">
+                    <div className="h-full bg-indigo-400 transition-all" style={{ width: `${bgPct}%` }} />
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -460,7 +497,7 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
 
         {/* Mini spinner pendant un re-rendu (zoom / changement de page) */}
         {!showOverlay && rendering && (
-          <div className="absolute top-14 right-4 z-10 w-6 h-6 border-2 border-neutral-600 border-t-indigo-500 rounded-full animate-spin" />
+          <div className="absolute bottom-4 left-4 z-10 w-6 h-6 border-2 border-neutral-600 border-t-indigo-500 rounded-full animate-spin" />
         )}
 
         {/* Loader plein écran : seulement jusqu'à l'affichage de la 1re page */}
