@@ -41,8 +41,8 @@ export default function PresentationMode({
   )
 
   const [localPage, setLocalPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)   // ← état, alimenté par le viewer
   const currentPage = isPresenting ? state.page : localPage
-  const totalPages = viewerRef.current?.totalPages ?? 1
 
 const readyLivres = useMemo(
   () => livres.filter(l => ['pdf', 'image', 'docx'].includes(l.type_fichier)),
@@ -81,6 +81,19 @@ const readyLivres = useMemo(
 
   useEffect(() => { partage.markAsSeen('editeur') }, [])
 
+  const syncedRef = useRef(false)
+    useEffect(() => { syncedRef.current = false }, [livre?.id])
+    
+    const handleViewerPageChange = (page: number, total: number) => {
+      setTotalPages(total)
+      setLocalPage(page)
+    
+      // Le prof qui défile pendant la présentation entraîne la classe avec lui.
+      // On ignore la 1re notification complète (chargement) pour ne pas écraser la page en cours.
+      if (total > 1 && !syncedRef.current) { syncedRef.current = true; return }
+      if (isPresenter && isPresenting && total > 1 && page !== state.page) goToPage(page)
+    }
+  
   const handleStartPresenting = () => {
     if (!livre || !userId) return
     startPresentation(livre.id, totalPages, userId, userName)
@@ -205,6 +218,7 @@ console.log('📚 Livre sélectionné:', livre)
           ref={viewerRef}
           fichierUrl={livre.fichier_url}
           typeFichier={livre.type_fichier}
+          onPageChange={handleViewerPageChange}
         />
         
         {/* Overlay d'annotations — INDÉPENDANT du tableau blanc */}
