@@ -126,39 +126,26 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
 
         try {
           const ctx = canvas.getContext('2d')!
-          // 🆕 Utilise la taille du conteneur ou de la fenêtre avec une marge
-          const containerWidth = container.clientWidth || window.innerWidth * 0.9
-          const containerHeight = container.clientHeight || window.innerHeight * 0.7
+          const containerWidth = container.clientWidth || 1200
+          const containerHeight = container.clientHeight || 700
 
           if (pdfDocRef.current) {
             const page = await pdfDocRef.current.getPage(currentPage)
             const viewport = page.getViewport({ scale: 1 })
-            
-            // 🆕 Calcul du scale pour remplir l'écran (agrandi)
             const scale = Math.min(
               containerWidth / viewport.width,
               containerHeight / viewport.height
-            ) * 0.95  // ← Facteur d'agrandissement (1.5 à 2.0 selon ton écran)
-            
+            ) * 0.95
             const scaledViewport = page.getViewport({ scale })
 
             canvas.width = scaledViewport.width
             canvas.height = scaledViewport.height
-            canvas.style.width = '100%'
-            canvas.style.height = 'auto'
-            
             ctx.clearRect(0, 0, canvas.width, canvas.height)
             await page.render({
               canvasContext: ctx,
               viewport: scaledViewport,
             }).promise
-            
-            console.log('✅ PDF rendu:', { 
-              pageWidth: viewport.width, 
-              scale, 
-              canvasWidth: canvas.width,
-              canvasHeight: canvas.height 
-            })
+            console.log('✅ Page PDF rendue:', currentPage)
           }
         } catch (err: any) {
           console.error('❌ Erreur rendu PDF:', err)
@@ -170,6 +157,7 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
 
       render()
     }, [currentPage, loading, error, typeFichier])
+
     
 
     if (loading) {
