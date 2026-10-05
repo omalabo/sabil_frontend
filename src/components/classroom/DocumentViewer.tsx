@@ -138,7 +138,7 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
             const scale = Math.min(
               containerWidth / viewport.width,
               containerHeight / viewport.height
-            ) * 1.2  // ← Facteur d'agrandissement (1.5 à 2.0 selon ton écran)
+            ) * 0.95  // ← Facteur d'agrandissement (1.5 à 2.0 selon ton écran)
             
             const scaledViewport = page.getViewport({ scale })
 
