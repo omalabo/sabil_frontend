@@ -3938,8 +3938,7 @@ const classesFiltrees = classes.filter((cls: Class) =>
                     )}
                   </div>
                 )}
-                
-                // ✅ APRÈS : Toujours monté, masqué/affiché via CSS (comme le tableau blanc)
+
                 {activeClassId && defaultSeanceId && (
                   <div style={{
                     position: 'absolute',
