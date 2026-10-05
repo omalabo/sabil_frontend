@@ -1,10 +1,18 @@
 // components/classroom/DocumentViewer.tsx
-import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react'
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  forwardRef,
+  useImperativeHandle,
+  useCallback,
+} from 'react'
 import * as pdfjsLib from 'pdfjs-dist'
 import mammoth from 'mammoth'
 
-// ✅ Worker PDF.js stable (v3.11.174)
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
 
 export interface DocumentViewerHandle {
   goToPage: (page: number) => void
@@ -18,42 +26,116 @@ interface Props {
   onPageChange?: (page: number, total: number) => void
 }
 
+const MIN_ZOOM = 0.5
+const MAX_ZOOM = 5
+const ZOOM_STEP = 0.25
+const PAD = 16
+const MAX_CANVAS_PIXELS = 16_000_000 // limite mémoire du canvas
+
+const clamp = (v: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, v))
+
 const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
   ({ fichierUrl, typeFichier, onPageChange }, ref) => {
-    const containerRef = useRef<HTMLDivElement>(null)
+    const scrollRef = useRef<HTMLDivElement>(null)
     const canvasRef = useRef<HTMLCanvasElement>(null)
+
     const [currentPage, setCurrentPage] = useState(1)
     const [totalPages, setTotalPages] = useState(1)
     const [loading, setLoading] = useState(true)
-    const [isRendering, setIsRendering] = useState(false) // 🆕 État de rendu canvas
+    const [progress, setProgress] = useState({ done: 0, total: 0 })
+    const [ready, setReady] = useState(false) // 1er rendu PDF terminé
+    const [rendering, setRendering] = useState(false)
     const [error, setError] = useState<string | null>(null)
-    const [docxHtml, setDocxHtml] = useState<string>('')
+    const [docxHtml, setDocxHtml] = useState('')
     const [imageUrl, setImageUrl] = useState<string | null>(null)
-    
-    // 🆕 Zoom par défaut à 1.5 (150%) pour que ce ne soit pas "trop petit"
-    const [zoom, setZoom] = useState(1.5)
+
+    const [zoom, setZoom] = useState(1)
+    const [containerWidth, setContainerWidth] = useState(0)
+    const [pageSize, setPageSize] = useState<{ w: number; h: number; base: number } | null>(null)
+    const [dragging, setDragging] = useState(false)
 
     const pdfDocRef = useRef<any>(null)
-    const renderingRef = useRef(false)
+    const pagesRef = useRef<any[]>([])
+    const zoomRef = useRef(1)
+    const pendingScrollRef = useRef<{ left: number; top: number } | null>(null)
+    const renderTaskRef = useRef<any>(null)
+    const readyRef = useRef(false)
+    const dragRef = useRef<{ x: number; y: number; l: number; t: number } | null>(null)
 
-    useImperativeHandle(ref, () => ({
-      goToPage: (page: number) => {
-        const p = Math.max(1, Math.min(totalPages, page))
-        setCurrentPage(p)
-        // 🆕 CORRECTION : On NE réinitialise PAS le zoom quand on change de page
-      },
-      currentPage,
-      totalPages,
-    }))
+    // ── Zoom (centré sur un point écran, par défaut le centre de la vue) ──
+    const applyZoom = useCallback((next: number, cx?: number, cy?: number) => {
+      const el = scrollRef.current
+      const old = zoomRef.current
+      next = clamp(next)
+      if (!el || next === old) return
+      const rect = el.getBoundingClientRect()
+      const px = (cx ?? rect.left + rect.width / 2) - rect.left
+      const py = (cy ?? rect.top + rect.height / 2) - rect.top
+      const ratio = next / old
+      pendingScrollRef.current = {
+        left: (el.scrollLeft + px) * ratio - px,
+        top: (el.scrollTop + py) * ratio - py,
+      }
+      zoomRef.current = next
+      setZoom(next)
+    }, [])
+
+    const resetView = useCallback(() => {
+      zoomRef.current = 1
+      pendingScrollRef.current = { left: 0, top: 0 }
+      setZoom(1)
+      scrollRef.current?.scrollTo(0, 0)
+    }, [])
+
+    // Applique le scroll APRÈS que le canvas ait sa nouvelle taille CSS
+    useLayoutEffect(() => {
+      const el = scrollRef.current
+      const p = pendingScrollRef.current
+      if (el && p) {
+        el.scrollLeft = p.left
+        el.scrollTop = p.top
+        pendingScrollRef.current = null
+      }
+    }, [zoom])
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        goToPage: (page: number) => {
+          const p = Math.max(1, Math.min(totalPages, page))
+          if (p === currentPage) return
+          resetView()
+          setCurrentPage(p)
+        },
+        currentPage,
+        totalPages,
+      }),
+      [currentPage, totalPages, resetView]
+    )
+
+    // Notifie le parent à chaque changement de page
+    useEffect(() => {
+      if (!loading && !error) onPageChange?.(currentPage, totalPages)
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentPage, totalPages, loading, error])
 
     // ── Chargement du document ──
     useEffect(() => {
       let cancelled = false
       setLoading(true)
       setError(null)
+      setReady(false)
+      readyRef.current = false
+      setRendering(false)
+      setPageSize(null)
+      setProgress({ done: 0, total: 0 })
       pdfDocRef.current = null
+      pagesRef.current = []
       setDocxHtml('')
       setImageUrl(null)
+      setCurrentPage(1)
+      zoomRef.current = 1
+      setZoom(1)
 
       const load = async () => {
         try {
@@ -68,10 +150,19 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
             if (cancelled) return
             pdfDocRef.current = pdf
             setTotalPages(pdf.numPages)
-            setCurrentPage(1)
-            onPageChange?.(1, pdf.numPages)
-          }
-          else if (typeFichier === 'docx') {
+            setProgress({ done: 0, total: pdf.numPages })
+
+            // Précharge TOUTES les pages (données + ressources) avant d'afficher
+            const pages: any[] = []
+            for (let i = 1; i <= pdf.numPages; i++) {
+              const page = await pdf.getPage(i)
+              await page.getOperatorList() // charge polices/images en cache (retire si PDF énorme)
+              if (cancelled) return
+              pages.push(page)
+              setProgress({ done: i, total: pdf.numPages })
+            }
+            pagesRef.current = pages
+          } else if (typeFichier === 'docx') {
             const resp = await fetch(fichierUrl)
             if (!resp.ok) throw new Error(`Erreur HTTP: ${resp.status}`)
             const buf = await resp.arrayBuffer()
@@ -79,16 +170,12 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
             if (cancelled) return
             setDocxHtml(result.value)
             setTotalPages(1)
-            setCurrentPage(1)
-            onPageChange?.(1, 1)
-          }
-          else if (typeFichier === 'image') {
+          } else if (typeFichier === 'image') {
             setImageUrl(fichierUrl)
             setTotalPages(1)
-            setCurrentPage(1)
-            onPageChange?.(1, 1)
           }
         } catch (err: any) {
+          if (cancelled) return
           console.error('❌ Erreur chargement:', err)
           setError(`Impossible de charger : ${err.message || 'erreur inconnue'}`)
         } finally {
@@ -97,87 +184,145 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
       }
 
       load()
-      return () => { cancelled = true }
+      return () => {
+        cancelled = true
+      }
     }, [fichierUrl, typeFichier])
 
-    // ── Rendu de la page courante (PDF uniquement) ──
+    // ── Largeur du conteneur (ResizeObserver) ──
     useEffect(() => {
-      if (loading || error || typeFichier !== 'pdf') return
+      const el = scrollRef.current
+      if (!el) return
+      const update = () => setContainerWidth(el.clientWidth)
+      update()
+      const ro = new ResizeObserver(update)
+      ro.observe(el)
+      return () => ro.disconnect()
+    }, [typeFichier, !!error])
 
-      const canvas = canvasRef.current
-      const container = containerRef.current
-      if (!canvas || !container) return
+    // ── Taille de base de la page (fit largeur) ──
+    useEffect(() => {
+      if (typeFichier !== 'pdf' || loading || !containerWidth) return
+      const page = pagesRef.current[currentPage - 1]
+      if (!page) return
+      const vp = page.getViewport({ scale: 1 })
+      const base = Math.max(0.1, (containerWidth - PAD * 2) / vp.width)
+      setPageSize({ w: vp.width * base, h: vp.height * base, base })
+    }, [typeFichier, loading, containerWidth, currentPage])
 
-      const render = async () => {
-        if (renderingRef.current) return
-        renderingRef.current = true
-        setIsRendering(true) // 🆕 Déclenche le loader de rendu
+    // ── Rendu net (debounced, annulable, via canvas hors-écran => pas de flash) ──
+    useEffect(() => {
+      if (typeFichier !== 'pdf' || loading || error || !pageSize) return
+      const page = pagesRef.current[currentPage - 1]
+      if (!page) return
+
+      setRendering(true)
+      const timer = setTimeout(async () => {
+        const canvas = canvasRef.current
+        if (!canvas) return
+        renderTaskRef.current?.cancel()
 
         try {
-          const page = await pdfDocRef.current.getPage(currentPage)
-          const viewport = page.getViewport({ scale: 1 })
-          
-          // 🆕 Calcul : on s'adapte à la largeur du conteneur, puis on applique le zoom utilisateur
-          const containerWidth = container.clientWidth || 800
-          const baseScale = containerWidth / viewport.width
-          const finalScale = baseScale * zoom
-          
-          const scaledViewport = page.getViewport({ scale: finalScale })
+          const dpr = window.devicePixelRatio || 1
+          const vp1 = page.getViewport({ scale: 1 })
+          let scale = pageSize.base * zoom * dpr
+          const px = vp1.width * vp1.height * scale * scale
+          if (px > MAX_CANVAS_PIXELS) scale *= Math.sqrt(MAX_CANVAS_PIXELS / px)
+          const vp = page.getViewport({ scale })
 
-          // 🆕 Gestion High-DPI (Retina) pour une netteté parfaite
-          const pixelRatio = window.devicePixelRatio || 1
-          canvas.width = scaledViewport.width * pixelRatio
-          canvas.height = scaledViewport.height * pixelRatio
-          
-          // On force la taille CSS pour qu'elle corresponde à la taille logique (évite les débordements)
-          canvas.style.width = `${scaledViewport.width}px`
-          canvas.style.height = `${scaledViewport.height}px`
+          const off = document.createElement('canvas')
+          off.width = Math.floor(vp.width)
+          off.height = Math.floor(vp.height)
+          const task = page.render({ canvasContext: off.getContext('2d')!, viewport: vp })
+          renderTaskRef.current = task
+          await task.promise
 
-          const ctx = canvas.getContext('2d')!
-          ctx.scale(pixelRatio, pixelRatio)
-
-          ctx.clearRect(0, 0, canvas.width, canvas.height)
-          await page.render({
-            canvasContext: ctx,
-            viewport: scaledViewport,
-          }).promise
-          
+          canvas.width = off.width
+          canvas.height = off.height
+          canvas.getContext('2d')!.drawImage(off, 0, 0)
+          readyRef.current = true
+          setReady(true)
+          setRendering(false)
         } catch (err: any) {
+          if (err?.name === 'RenderingCancelledException') return
           console.error('❌ Erreur rendu PDF:', err)
           setError(`Erreur de rendu : ${err.message}`)
-        } finally {
-          renderingRef.current = false
-          setIsRendering(false) // 🆕 Cache le loader une fois fini
+          setRendering(false)
+        }
+      }, readyRef.current ? 120 : 0)
+
+      return () => {
+        clearTimeout(timer)
+        renderTaskRef.current?.cancel()
+      }
+    }, [typeFichier, loading, error, pageSize, zoom, currentPage])
+
+    // ── Molette (Ctrl/pinch trackpad) + pinch tactile ──
+    useEffect(() => {
+      const el = scrollRef.current
+      if (!el || typeFichier !== 'pdf') return
+
+      const onWheel = (e: WheelEvent) => {
+        if (!e.ctrlKey && !e.metaKey) return // molette simple = scroll normal
+        e.preventDefault()
+        applyZoom(zoomRef.current * Math.exp(-e.deltaY * 0.01), e.clientX, e.clientY)
+      }
+
+      let startDist = 0
+      let startZoom = 1
+      const dist = (t: TouchList) =>
+        Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY)
+
+      const onTouchStart = (e: TouchEvent) => {
+        if (e.touches.length === 2) {
+          startDist = dist(e.touches)
+          startZoom = zoomRef.current
         }
       }
-
-      render()
-    }, [currentPage, loading, error, typeFichier, zoom]) // 🆕 'zoom' est dans les dépendances
-
-    // ── Gestion de la molette pour zoomer (Ctrl + Molette) ──
-    const handleWheel = (e: React.WheelEvent) => {
-      if (e.ctrlKey || e.metaKey) {
-        e.preventDefault()
-        const delta = e.deltaY > 0 ? -0.1 : 0.1
-        setZoom(z => {
-          const newZoom = Number((z + delta).toFixed(1))
-          return Math.max(0.5, Math.min(4.0, newZoom)) // Limité entre 50% et 400%
-        })
+      const onTouchMove = (e: TouchEvent) => {
+        if (e.touches.length === 2 && startDist > 0) {
+          e.preventDefault()
+          const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2
+          const my = (e.touches[0].clientY + e.touches[1].clientY) / 2
+          applyZoom(startZoom * (dist(e.touches) / startDist), mx, my)
+        }
       }
+      const onTouchEnd = () => {
+        startDist = 0
+      }
+
+      el.addEventListener('wheel', onWheel, { passive: false })
+      el.addEventListener('touchstart', onTouchStart, { passive: true })
+      el.addEventListener('touchmove', onTouchMove, { passive: false })
+      el.addEventListener('touchend', onTouchEnd)
+      return () => {
+        el.removeEventListener('wheel', onWheel)
+        el.removeEventListener('touchstart', onTouchStart)
+        el.removeEventListener('touchmove', onTouchMove)
+        el.removeEventListener('touchend', onTouchEnd)
+      }
+    }, [typeFichier, applyZoom, !!error])
+
+    // ── Glisser pour déplacer (souris) ──
+    const onMouseDown = (e: React.MouseEvent) => {
+      const el = scrollRef.current
+      if (!el || e.button !== 0) return
+      dragRef.current = { x: e.clientX, y: e.clientY, l: el.scrollLeft, t: el.scrollTop }
+      setDragging(true)
+    }
+    const onMouseMove = (e: React.MouseEvent) => {
+      const el = scrollRef.current
+      const d = dragRef.current
+      if (!el || !d) return
+      el.scrollLeft = d.l - (e.clientX - d.x)
+      el.scrollTop = d.t - (e.clientY - d.y)
+    }
+    const endDrag = () => {
+      dragRef.current = null
+      setDragging(false)
     }
 
-    // ── Affichage : Chargement initial ou Rendu en cours ──
-    if (loading) {
-      return (
-        <div className="flex-1 flex items-center justify-center bg-neutral-900">
-          <div className="text-center">
-            <div className="w-12 h-12 border-4 border-neutral-700 border-t-indigo-500 rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-neutral-300 font-medium">Chargement du document…</p>
-          </div>
-        </div>
-      )
-    }
-
+    // ── Erreur ──
     if (error) {
       return (
         <div className="flex-1 flex items-center justify-center bg-neutral-900 p-8">
@@ -188,89 +333,131 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
       )
     }
 
-    // ── Affichage : DOCX ──
+    // ── DOCX ──
     if (typeFichier === 'docx') {
+      if (loading) return <Loader label="Chargement du document…" />
       return (
-        <div ref={containerRef} className="flex-1 overflow-auto bg-white">
+        <div className="flex-1 min-h-0 overflow-auto bg-white">
           <div className="p-8 max-w-4xl mx-auto prose" dangerouslySetInnerHTML={{ __html: docxHtml }} />
         </div>
       )
     }
 
-    // ── Affichage : Image ──
+    // ── Image ──
     if (typeFichier === 'image') {
+      if (loading) return <Loader label="Chargement de l'image…" />
       return (
-        <div ref={containerRef} className="flex-1 flex items-center justify-center bg-neutral-900 overflow-auto">
+        <div className="flex-1 min-h-0 flex items-center justify-center bg-neutral-900 overflow-auto">
           {imageUrl && (
             <img
               src={imageUrl}
               alt="Document"
               className="max-w-full max-h-full object-contain"
               draggable={false}
-              onError={() => setError("Image introuvable")}
+              onError={() => setError('Image introuvable')}
             />
           )}
         </div>
       )
     }
 
-    // ── Affichage : PDF (avec contrôles fixes et loader overlay) ──
+    // ── PDF ──
+    const showOverlay = loading || !ready
+    const pct = progress.total ? Math.round((progress.done / progress.total) * 100) : 0
+
     return (
-      <div
-        ref={containerRef}
-        className="flex-1 flex flex-col bg-neutral-900 relative"
-        onWheel={handleWheel} // 🆕 Capture la molette
-      >
-        {/* 🆕 Barre de zoom FIXE (ne bouge pas, toujours visible) */}
-        <div className="absolute top-4 right-4 z-30 flex items-center gap-2 bg-neutral-800/90 backdrop-blur rounded-lg p-1.5 shadow-xl border border-neutral-700">
-          <button 
-            onClick={() => setZoom(z => Math.max(0.5, Number((z - 0.1).toFixed(1))))}
-            className="w-8 h-8 rounded-md bg-neutral-700 hover:bg-neutral-600 text-white flex items-center justify-center text-lg transition"
-            title="Dézoomer (Ctrl + Molette)"
-          >−</button>
-          
-          <span className="text-white text-sm font-mono w-14 text-center select-none">
-            {Math.round(zoom * 100)}%
-          </span>
-          
-          <button 
-            onClick={() => setZoom(z => Math.min(4.0, Number((z + 0.1).toFixed(1))))}
-            className="w-8 h-8 rounded-md bg-neutral-700 hover:bg-neutral-600 text-white flex items-center justify-center text-lg transition"
-            title="Zoomer (Ctrl + Molette)"
-          >+</button>
-
-          <div className="w-px h-5 bg-neutral-600 mx-1" />
-
-          <button 
-            onClick={() => setZoom(1.5)} // 🆕 Reset à 150% (taille confortable)
-            className="px-3 h-8 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium transition"
-            title="Taille par défaut"
-          >Reset</button>
+      <div className="relative flex-1 min-h-0 min-w-0 w-full h-full flex flex-col bg-neutral-900">
+        {/* Barre de zoom FIXE (hors de la zone qui scrolle) */}
+        <div className="shrink-0 z-20 flex items-center justify-center gap-3 py-2 bg-neutral-800 border-b border-neutral-700">
+          <button
+            onClick={() => applyZoom(zoomRef.current - ZOOM_STEP)}
+            disabled={zoom <= MIN_ZOOM}
+            className="w-8 h-8 rounded-full bg-neutral-700 hover:bg-neutral-600 disabled:opacity-40 text-white flex items-center justify-center text-lg transition"
+            title="Dézoomer"
+          >
+            −
+          </button>
+          <span className="text-white text-sm font-mono w-16 text-center">{Math.round(zoom * 100)}%</span>
+          <button
+            onClick={() => applyZoom(zoomRef.current + ZOOM_STEP)}
+            disabled={zoom >= MAX_ZOOM}
+            className="w-8 h-8 rounded-full bg-neutral-700 hover:bg-neutral-600 disabled:opacity-40 text-white flex items-center justify-center text-lg transition"
+            title="Zoomer"
+          >
+            +
+          </button>
+          <button
+            onClick={resetView}
+            className="px-3 h-8 rounded-full bg-neutral-700 hover:bg-neutral-600 text-white text-xs font-medium transition"
+            title="Taille d'origine"
+          >
+            Reset
+          </button>
         </div>
 
-        {/* Zone de scroll et de rendu */}
-        <div className="flex-1 overflow-auto flex items-center justify-center p-6 relative">
-          
-          {/* 🆕 Overlay de chargement (couvre tout le canvas pendant le rendu) */}
-          {isRendering && (
-            <div className="absolute inset-0 flex items-center justify-center bg-neutral-900/80 backdrop-blur-sm z-20 rounded-lg">
-              <div className="text-center">
-                <div className="w-10 h-10 border-3 border-neutral-600 border-t-indigo-500 rounded-full animate-spin mx-auto mb-3" />
-                <p className="text-neutral-300 text-sm font-medium">Rendu de la page {currentPage}…</p>
+        {/* Zone scrollable */}
+        <div
+          ref={scrollRef}
+          className="flex-1 min-h-0 overflow-auto flex"
+          style={{
+            scrollbarGutter: 'stable',
+            cursor: dragging ? 'grabbing' : zoom > 1 ? 'grab' : 'default',
+            touchAction: 'pan-x pan-y',
+          }}
+          onMouseDown={onMouseDown}
+          onMouseMove={onMouseMove}
+          onMouseUp={endDrag}
+          onMouseLeave={endDrag}
+        >
+          {/* m-auto = centré sans jamais couper le contenu quand ça déborde */}
+          <div className="m-auto shrink-0" style={{ padding: PAD }}>
+            <canvas
+              ref={canvasRef}
+              className="shadow-2xl bg-white block select-none"
+              style={{
+                width: pageSize ? pageSize.w * zoom : 0,
+                height: pageSize ? pageSize.h * zoom : 0,
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Petit spinner discret pendant un re-rendu (zoom / changement de page) */}
+        {!showOverlay && rendering && (
+          <div className="absolute top-14 right-4 z-10 w-6 h-6 border-2 border-neutral-600 border-t-indigo-500 rounded-full animate-spin" />
+        )}
+
+        {/* Loader plein écran tant que tout n'est pas chargé */}
+        {showOverlay && (
+          <div className="absolute inset-0 z-30 flex items-center justify-center bg-neutral-900">
+            <div className="text-center w-64">
+              <div className="w-10 h-10 border-4 border-neutral-700 border-t-indigo-500 rounded-full animate-spin mx-auto mb-3" />
+              <p className="text-neutral-400 text-sm mb-2">
+                {progress.total
+                  ? `Chargement des pages… ${progress.done}/${progress.total}`
+                  : 'Chargement du document…'}
+              </p>
+              <div className="h-1.5 bg-neutral-800 rounded-full overflow-hidden">
+                <div className="h-full bg-indigo-500 transition-all" style={{ width: `${pct}%` }} />
               </div>
             </div>
-          )}
-
-          <canvas
-            ref={canvasRef}
-            className="shadow-2xl transition-all duration-200"
-            style={{ imageRendering: 'auto' }}
-          />
-        </div>
+          </div>
+        )}
       </div>
     )
   }
 )
+
+function Loader({ label }: { label: string }) {
+  return (
+    <div className="flex-1 flex items-center justify-center bg-neutral-900">
+      <div className="text-center">
+        <div className="w-10 h-10 border-4 border-neutral-700 border-t-indigo-500 rounded-full animate-spin mx-auto mb-3" />
+        <p className="text-neutral-400 text-sm">{label}</p>
+      </div>
+    </div>
+  )
+}
 
 DocumentViewer.displayName = 'DocumentViewer'
 export default DocumentViewer
