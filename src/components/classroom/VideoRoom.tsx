@@ -582,12 +582,58 @@ function ControlBar({
 
   const toggleScreen = useCallback(async (forceOff = false) => {
     if (!localParticipant || !canShareScreen) return
+    
+    // Si on veut arrêter → on arrête simplement
+    if (forceOff || screenSharing) {
+      await localParticipant.setScreenShareEnabled(false)
+      setScreenSharing(false)
+      return
+    }
+    
+    // 🆕 Détection mobile WebView → avertissement avant partage
+    const isWebView = typeof window !== 'undefined' && !!(window as any).ReactNativeWebView
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+    const isAndroid = /Android/.test(navigator.userAgent)
+    
+    if (isWebView && isIOS) {
+      alert(
+        "📱 Partage d'écran indisponible\n\n" +
+        "Le partage d'écran n'est pas supporté dans l'application iOS pour des raisons de sécurité Apple.\n\n" +
+        "💡 Solution : Utilisez un ordinateur (PC/Mac) ou ouvrez ce cours dans Safari."
+      )
+      return
+    }
+    
+    if (isWebView && isAndroid) {
+      const ok = window.confirm(
+        "⚠️ Attention à l'effet miroir\n\n" +
+        "Ne sélectionnez PAS cette application dans la liste, sinon l'image se multipliera à l'infini.\n\n" +
+        "👉 Choisissez plutôt :\n" +
+        "• \"Autre onglet\" (pour partager un PDF/PPTX ouvert dans Chrome)\n" +
+        "• \"Écran entier\" (pour partager une autre app)\n\n" +
+        "Continuer quand même ?"
+      )
+      if (!ok) return
+    }
+    
     try {
-      const next = forceOff ? false : !screenSharing
-      await localParticipant.setScreenShareEnabled(next)
-      setScreenSharing(next)
-    } catch (err) {
-      console.error('Partage écran annulé', err)
+      // ️ selfBrowserSurface: 'exclude' masque l'onglet actuel du sélecteur
+      // → impossible de sélectionner l'app elle-même sur Desktop
+      await localParticipant.setScreenShareEnabled(true, {
+        video: {
+          // @ts-ignore - selfBrowserSurface est supporté par Chrome/Edge
+          selfBrowserSurface: 'exclude',
+        },
+      })
+      setScreenSharing(true)
+    } catch (err: any) {
+      // L'utilisateur a annulé la fenêtre de sélection → pas une vraie erreur
+      if (err?.name === 'NotAllowedError' || err?.message?.includes('Permission')) {
+        console.log('Partage d\'écran annulé par l\'utilisateur')
+        return
+      }
+      console.error('Erreur partage écran:', err)
+      alert("❌ Impossible de démarrer le partage d'écran. Vérifiez vos permissions.")
     }
   }, [localParticipant, screenSharing, canShareScreen])
 
@@ -660,11 +706,19 @@ function ControlBar({
                   )}
                   {canShareScreen && (
                     <button
-                      onClick={handleSelectNativeShare}
+                      onClick={() => {
+                        setShowShareMenu(false)
+                        //  Coupe Tableau/Éditeur si actif avant de lancer le partage natif
+                        if (partage.state.channel) partage.stopShare()
+                        toggleScreen()
+                      }}
                       className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-left transition ${
                         screenSharing ? 'bg-indigo-600 text-white' : 'text-neutral-200 hover:bg-neutral-800'
                       }`}
-                    >🖥️ Autre application {screenSharing && '· en cours'}</button>
+                    >
+                      🖥️ Autre application
+                      {screenSharing && <span className="ml-auto text-xs opacity-70">· en cours</span>}
+                    </button>
                   )}
                 </div>
               </>
