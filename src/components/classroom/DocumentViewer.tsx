@@ -16,6 +16,8 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
 
 export interface DocumentViewerHandle {
   goToPage: (page: number) => void
+  scrollBy: (dx: number, dy: number) => void
+  zoomBy: (factor: number, cx?: number, cy?: number) => void
   currentPage: number
   totalPages: number
 }
@@ -151,6 +153,8 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
           scrollToPage(p)
           setCurrentPage(p)
         },
+        scrollBy: (dx: number, dy: number) => scrollRef.current?.scrollBy(dx, dy),
+        zoomBy: (factor: number, cx?: number, cy?: number) => applyZoom(zoomRef.current * factor, cx, cy),
         currentPage,
         totalPages,
       }),
