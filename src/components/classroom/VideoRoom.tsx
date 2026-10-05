@@ -581,61 +581,65 @@ function ControlBar({
   }, [localParticipant, camEnabled])
 
   const toggleScreen = useCallback(async (forceOff = false) => {
-    if (!localParticipant || !canShareScreen) return
+  if (!localParticipant || !canShareScreen) return
+  
+  // 1. Si on veut arrêter → on arrête simplement
+  if (forceOff || screenSharing) {
+    await localParticipant.setScreenShareEnabled(false)
+    setScreenSharing(false)
+    return
+  }
+  
+  // 2. Détection mobile pour avertissement spécifique
+  const isWebView = typeof window !== 'undefined' && !!(window as any).ReactNativeWebView
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+  
+  if (isWebView && isIOS) {
+    alert("📱 Partage d'écran indisponible sur l'app iOS.\nUtilisez un ordinateur ou ouvrez le lien dans Safari.")
+    return
+  }
+
+  if (isWebView) {
+    const ok = window.confirm(
+      "⚠️ Attention à l'effet miroir sur mobile !\n\n" +
+      "Ne sélectionnez PAS cette application dans la liste.\n" +
+      "👉 Choisissez plutôt 'Autre onglet' ou l'écran d'une AUTRE application.\n\n" +
+      "Continuer ?"
+    )
+    if (!ok) return
+  }
+  
+  // 3. Lancement du partage avec l'option anti-miroir FORCÉE
+  try {
+    // 🛡️ L'option 'exclude' retire l'onglet actuel de la liste des onglets partageables.
+    // On utilise 'as any' pour s'assurer que LiveKit ne l'ignore pas à cause du typage.
+    const captureOptions: any = {
+      audio: true,
+      selfBrowserSurface: 'exclude', 
+    }
     
-    // Si on veut arrêter → on arrête simplement
-    if (forceOff || screenSharing) {
-      await localParticipant.setScreenShareEnabled(false)
-      setScreenSharing(false)
+    await localParticipant.setScreenShareEnabled(true, captureOptions)
+    setScreenSharing(true)
+    
+  } catch (err: any) {
+    // L'utilisateur a annulé la fenêtre de sélection → ce n'est pas une erreur
+    if (err?.name === 'NotAllowedError' || err?.message?.includes('Permission') || err?.message?.includes('cancelled')) {
+      console.log('Partage d\'écran annulé par l\'utilisateur')
       return
     }
     
-    // 🆕 Détection mobile WebView → avertissement avant partage
-    const isWebView = typeof window !== 'undefined' && !!(window as any).ReactNativeWebView
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
-    const isAndroid = /Android/.test(navigator.userAgent)
+    console.error('Erreur partage écran:', err)
     
-    if (isWebView && isIOS) {
-      alert(
-        "📱 Partage d'écran indisponible\n\n" +
-        "Le partage d'écran n'est pas supporté dans l'application iOS pour des raisons de sécurité Apple.\n\n" +
-        "💡 Solution : Utilisez un ordinateur (PC/Mac) ou ouvrez ce cours dans Safari."
-      )
-      return
-    }
-    
-    if (isWebView && isAndroid) {
-      const ok = window.confirm(
-        "⚠️ Attention à l'effet miroir\n\n" +
-        "Ne sélectionnez PAS cette application dans la liste, sinon l'image se multipliera à l'infini.\n\n" +
-        "👉 Choisissez plutôt :\n" +
-        "• \"Autre onglet\" (pour partager un PDF/PPTX ouvert dans Chrome)\n" +
-        "• \"Écran entier\" (pour partager une autre app)\n\n" +
-        "Continuer quand même ?"
-      )
-      if (!ok) return
-    }
-    
-    try {
-      // ️ selfBrowserSurface: 'exclude' masque l'onglet actuel du sélecteur
-      // → impossible de sélectionner l'app elle-même sur Desktop
-      await localParticipant.setScreenShareEnabled(true, {
-        video: {
-          // @ts-ignore - selfBrowserSurface est supporté par Chrome/Edge
-          selfBrowserSurface: 'exclude',
-        },
-      })
-      setScreenSharing(true)
-    } catch (err: any) {
-      // L'utilisateur a annulé la fenêtre de sélection → pas une vraie erreur
-      if (err?.name === 'NotAllowedError' || err?.message?.includes('Permission')) {
-        console.log('Partage d\'écran annulé par l\'utilisateur')
-        return
-      }
-      console.error('Erreur partage écran:', err)
-      alert("❌ Impossible de démarrer le partage d'écran. Vérifiez vos permissions.")
-    }
-  }, [localParticipant, screenSharing, canShareScreen])
+    // 🚨 Alert explicite pour éduquer l'utilisateur sur le bon choix à faire
+    alert(
+      "❌ Impossible de démarrer le partage.\n\n" +
+      "💡 ASTUCE CRUCIAL POUR ÉVITER L'EFFET MIROIR : \n" +
+      "Dans la fenêtre de partage de votre navigateur, choisissez STRICTEMENT l'onglet : \n" +
+      "✅ 'Onglet Chrome' (ou 'Onglet Edge')\n\n" +
+      "🚫 NE choisissez PAS 'Écran entier' ni 'Fenêtre d'application', car cela capturera aussi cette fenêtre et créera l'effet miroir infini."
+    )
+  }
+}, [localParticipant, screenSharing, canShareScreen])
 
   // 🆕 Sélection Tableau ou Éditeur → coupe le partage natif si actif
   const handleSelectCustomShare = (tab: 'tableau' | 'editeur') => {
