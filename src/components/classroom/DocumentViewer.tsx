@@ -112,7 +112,7 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
       return () => { cancelled = true }
     }, [fichierUrl, typeFichier])
 
-    // ── Rendu de la page courante (PDF uniquement) ──
+        // ── Rendu de la page courante (PDF uniquement) ──
     useEffect(() => {
       if (loading || error || typeFichier !== 'pdf') return
 
@@ -126,26 +126,39 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
 
         try {
           const ctx = canvas.getContext('2d')!
-          const containerWidth = container.clientWidth || 1200
-          const containerHeight = container.clientHeight || 700
+          // 🆕 Utilise la taille du conteneur ou de la fenêtre avec une marge
+          const containerWidth = container.clientWidth || window.innerWidth * 0.9
+          const containerHeight = container.clientHeight || window.innerHeight * 0.7
 
           if (pdfDocRef.current) {
             const page = await pdfDocRef.current.getPage(currentPage)
             const viewport = page.getViewport({ scale: 1 })
+            
+            // 🆕 Calcul du scale pour remplir l'écran (agrandi)
             const scale = Math.min(
               containerWidth / viewport.width,
               containerHeight / viewport.height
-            ) * 0.95
+            ) * 1.8  // ← Facteur d'agrandissement (1.5 à 2.0 selon ton écran)
+            
             const scaledViewport = page.getViewport({ scale })
 
             canvas.width = scaledViewport.width
             canvas.height = scaledViewport.height
+            canvas.style.width = '100%'
+            canvas.style.height = 'auto'
+            
             ctx.clearRect(0, 0, canvas.width, canvas.height)
             await page.render({
               canvasContext: ctx,
               viewport: scaledViewport,
             }).promise
-            console.log('✅ Page PDF rendue:', currentPage)
+            
+            console.log('✅ PDF rendu:', { 
+              pageWidth: viewport.width, 
+              scale, 
+              canvasWidth: canvas.width,
+              canvasHeight: canvas.height 
+            })
           }
         } catch (err: any) {
           console.error('❌ Erreur rendu PDF:', err)
@@ -157,6 +170,7 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
 
       render()
     }, [currentPage, loading, error, typeFichier])
+    
 
     if (loading) {
       return (
