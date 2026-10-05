@@ -30,6 +30,7 @@ export default function PresentationMode({
   )
   const partage = usePartage()
   const viewerRef = useRef<DocumentViewerHandle>(null)
+  const overlayRef = useRef<HTMLDivElement>(null)
 
   const isPresenter = role === 'professeur'
   const isPresenting = !!state.livreId
@@ -78,6 +79,22 @@ const readyLivres = useMemo(
       viewerRef.current.goToPage(state.page)
     }
   }, [state.page, isPresenting])
+
+  // ── La molette traverse le calque d'annotation et agit sur le document ──
+  useEffect(() => {
+    const el = overlayRef.current
+    if (!el) return
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      if (e.ctrlKey || e.metaKey) {
+        viewerRef.current?.zoomBy(Math.exp(-e.deltaY * 0.01), e.clientX, e.clientY)
+      } else {
+        viewerRef.current?.scrollBy(e.deltaX, e.deltaY)
+      }
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [livre?.id])
 
   useEffect(() => { partage.markAsSeen('editeur') }, [])
 
@@ -222,6 +239,7 @@ console.log('📚 Livre sélectionné:', livre)
         />
         
         {/* Overlay d'annotations — INDÉPENDANT du tableau blanc */}
+        <div ref={overlayRef} className="absolute inset-0 pointer-events-none">
         <AnnotationCanvas
           pageKey={`${livre.id}-${currentPage}`}
           isPresenter={isPresenter}
@@ -229,6 +247,7 @@ console.log('📚 Livre sélectionné:', livre)
           remoteEvents={annoEvents}
           onEventConsumed={clearAnnoEvents}
         />
+        </div>
       </div>
 
       {/* Barre de navigation */}
