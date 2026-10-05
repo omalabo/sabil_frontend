@@ -144,7 +144,7 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
 
             canvas.width = scaledViewport.width
             canvas.height = scaledViewport.height
-            canvas.style.width = '100%'
+            canvas.style.width = '60%'
             canvas.style.height = 'auto'
             
             ctx.clearRect(0, 0, canvas.width, canvas.height)
