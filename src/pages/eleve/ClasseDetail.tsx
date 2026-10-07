@@ -1222,7 +1222,12 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
   }, [classeId, seanceId])
 
 
-  const partage = usePartage() // 🆕
+  const {
+    syncedTab,
+    clearSyncedTab,
+    requestTabSync,
+    setActiveSession
+  } = usePartage()
   const shareStreamRef = useRef<MediaStream | null>(null) // 🆕
 
   const sharingTableau = partage.state.channel === 'tableau' && partage.state.byUserId === partage.userId // 🆕
