@@ -2632,6 +2632,24 @@ const stopRecording = () => {
   // ═══════════════════════════════════════════════════════════════
 
 
+  // 🆕 ÉCOUTEUR : Si le prof demande un changement d'onglet, on le suit
+  useEffect(() => {
+    if (syncedTab) {
+      // On force le changement d'onglet local
+      setActiveTab(syncedTab as any)
+      // On acquitte la réception pour éviter les boucles infinies
+      clearSyncedTab()
+    }
+  }, [syncedTab, clearSyncedTab])
+
+  // 🆕 ÉMETTEUR : Le prof synchronise son onglet avec la classe, MAIS SEULEMENT s'il a démarré le cours
+  useEffect(() => {
+    if (role === 'professeur' && liveKitSession) {
+      // Le prof a démarré le cours. Chaque fois qu'il change d'onglet, on envoie l'ordre à la classe.
+      requestTabSync(activeTab)
+    }
+  }, [activeTab, role, liveKitSession, requestTabSync])
+
 // ═══════════════════════════════════════════════════════════════
 // 🆕 MODIFIÉ : Gestion de l'envoi avec FormData (Texte, Fichier, Vocal)
 // ═══════════════════════════════════════════════════════════════
