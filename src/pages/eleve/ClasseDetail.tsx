@@ -1730,7 +1730,14 @@ fill="currentColor"
 
 // ─── Composant principal ──────────────────────────────────────────────────────
 export default function ClasseDetail({ role }: ClasseDetailProps) {
-  const partage = usePartage()
+  const { 
+    syncedTab, 
+    clearSyncedTab, 
+    requestTabSync,
+    markAsSeen,
+    isLive,
+    setActiveSession
+  } = usePartage()
   const { id } = useParams<{ id: string }>()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
@@ -2587,8 +2594,8 @@ const getMotivationImageUrl = (contenu: string | null | undefined): string => {
   const handleDownloadFile = (file: any) => { const l = document.createElement('a'); l.href = file.fichier_url || `/api/fichiers/${file.id}/download/`; l.download = file.nom_original; l.click() }
  
   useEffect(() => {
-      partage.setActiveSession(activeClassId, defaultSeanceId, user?.id, user?.display_name)
-    }, [activeClassId, defaultSeanceId, user?.id])
+    partage.setActiveSession(activeClassId, defaultSeanceId, user?.id, user?.display_name)
+  }, [activeClassId, defaultSeanceId, user?.id])
   
 
   // ═══════════════════════════════════════════════════════════════
