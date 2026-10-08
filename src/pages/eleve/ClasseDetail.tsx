@@ -1730,14 +1730,9 @@ fill="currentColor"
 
 // ─── Composant principal ──────────────────────────────────────────────────────
 export default function ClasseDetail({ role }: ClasseDetailProps) {
-  const { 
-    syncedTab, 
-    clearSyncedTab, 
-    requestTabSync,
-    markAsSeen,
-    isLive,
-    setActiveSession
-  } = usePartage()
+
+  const partage = usePartage()
+  const { syncedTab, clearSyncedTab, requestTabSync } = partage
   const { id } = useParams<{ id: string }>()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
@@ -2596,6 +2591,23 @@ const getMotivationImageUrl = (contenu: string | null | undefined): string => {
   useEffect(() => {
     partage.setActiveSession(activeClassId, defaultSeanceId, user?.id, user?.display_name)
   }, [activeClassId, defaultSeanceId, user?.id])
+
+    // 🆕 ÉCOUTEUR : Si le prof demande un changement d'onglet, tout le monde le suit
+  useEffect(() => {
+    if (syncedTab) {
+      setActiveTab(syncedTab as any)
+      clearSyncedTab()
+    }
+  }, [syncedTab, clearSyncedTab])
+
+  // 🆕 ÉMETTEUR : Le prof synchronise son onglet, MAIS SEULEMENT s'il a démarré le cours
+  useEffect(() => {
+    if (role === 'professeur' && liveKitSession) {
+      requestTabSync(activeTab)
+    }
+  }, [activeTab, role, liveKitSession, requestTabSync])
+
+  
   
 
   // ═══════════════════════════════════════════════════════════════
@@ -2639,23 +2651,6 @@ const stopRecording = () => {
   // ═══════════════════════════════════════════════════════════════
 
 
-  // 🆕 ÉCOUTEUR : Si le prof demande un changement d'onglet, on le suit
-  useEffect(() => {
-    if (syncedTab) {
-      // On force le changement d'onglet local
-      setActiveTab(syncedTab as any)
-      // On acquitte la réception pour éviter les boucles infinies
-      clearSyncedTab()
-    }
-  }, [syncedTab, clearSyncedTab])
-
-  // 🆕 ÉMETTEUR : Le prof synchronise son onglet avec la classe, MAIS SEULEMENT s'il a démarré le cours
-  useEffect(() => {
-    if (role === 'professeur' && liveKitSession) {
-      // Le prof a démarré le cours. Chaque fois qu'il change d'onglet, on envoie l'ordre à la classe.
-      requestTabSync(activeTab)
-    }
-  }, [activeTab, role, liveKitSession, requestTabSync])
 
 // ═══════════════════════════════════════════════════════════════
 // 🆕 MODIFIÉ : Gestion de l'envoi avec FormData (Texte, Fichier, Vocal)
