@@ -1186,6 +1186,13 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
   const COLORS = [{ label: 'Noir', value: '#1a1a2e' }, { label: 'Rouge', value: '#e63946' }, { label: 'Bleu', value: '#1d6fa4' }, { label: 'Vert', value: '#2d9e6b' }, { label: 'Orange', value: '#f4a261' }, { label: 'Violet', value: '#7b2d8b' }, { label: 'Blanc', value: '#ffffff' }]
   const ARABIC_CHARS = ['ا', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ', 'د', 'ذ', 'ر', 'ز', 'س', 'ش', 'ص', 'ض', 'ط', 'ظ', 'ع', 'غ', 'ف', 'ق', 'ك', 'ل', 'م', 'ن', 'ه', 'و', 'ي', 'ة', 'ى', 'لا', 'أ', 'إ', 'آ', 'ئ', 'ؤ', ' ', '،', '.']
 
+
+  const partage = usePartage() // 🆕
+  const shareStreamRef = useRef<MediaStream | null>(null) // 🆕
+
+  const sharingTableau = partage.state.channel === 'tableau' && partage.state.byUserId === partage.userId // 🆕
+
+  
   useEffect(() => {
     const token = localStorage.getItem('sabil_token')
     if (!token) { setWsStatus('disconnected'); return }
