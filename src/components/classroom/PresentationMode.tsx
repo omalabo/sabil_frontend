@@ -180,7 +180,7 @@ console.log('📚 Livre sélectionné:', livre)
 
   // ── Écran de présentation ──
   return (
-    <div className="flex-1 flex flex-col bg-neutral-950 relative overflow-hidden">
+    <div className="flex-1 min-h-0 h-full flex flex-col bg-neutral-950 relative overflow-hidden">
       {/* Bandeau info */}
       <div className="bg-neutral-900 border-b border-neutral-800 px-4 py-2 flex items-center justify-between flex-shrink-0 z-20">
         <div className="flex items-center gap-3 min-w-0">
@@ -229,14 +229,16 @@ console.log('📚 Livre sélectionné:', livre)
       </div>
 
       {/* Zone de projection */}
-      <div className="flex-1 relative flex items-center justify-center overflow-hidden bg-black">
+      <div className="absolute inset-0 overflow-hidden flex items-center justify-center">
         {/* Document en fond */}
-        <DocumentViewer
-          ref={viewerRef}
-          fichierUrl={livre.fichier_url}
-          typeFichier={livre.type_fichier}
-          onPageChange={handleViewerPageChange}
-        />
+        <div className="absolute inset-0 overflow-hidden flex items-center justify-center">
+          <DocumentViewer
+            ref={viewerRef}
+            fichierUrl={livre.fichier_url}
+            typeFichier={livre.type_fichier}
+            onPageChange={handleViewerPageChange}
+          />
+        </div>
         
         {/* Overlay d'annotations — INDÉPENDANT du tableau blanc */}
         <div ref={overlayRef} className="absolute inset-0 pointer-events-none">
