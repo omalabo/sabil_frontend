@@ -1223,14 +1223,6 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
     return () => wsRef.current?.close()
   }, [classeId, seanceId])
 
-
-  const {
-    syncedTab,
-    clearSyncedTab,
-    requestTabSync,
-    setActiveSession
-  } = usePartage()
-
   
   const partage = usePartage()
   const shareStreamRef = useRef<MediaStream | null>(null)
