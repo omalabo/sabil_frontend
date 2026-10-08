@@ -1224,9 +1224,6 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
   }, [classeId, seanceId])
 
   
-  const partage = usePartage()
-  const shareStreamRef = useRef<MediaStream | null>(null)
-  const sharingTableau = partage.state.channel === 'tableau' && partage.state.byUserId === partage.userId
 
   // 🆕 Démarre/arrête la publication du canvas quand le partage change
   useEffect(() => {
