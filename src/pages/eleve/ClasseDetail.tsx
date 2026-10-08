@@ -2588,20 +2588,7 @@ const getMotivationImageUrl = (contenu: string | null | undefined): string => {
     partage.setActiveSession(activeClassId, defaultSeanceId, user?.id, user?.display_name)
   }, [activeClassId, defaultSeanceId, user?.id])
 
-    // 🆕 ÉCOUTEUR : Si le prof demande un changement d'onglet, tout le monde le suit
-  useEffect(() => {
-    if (syncedTab) {
-      setActiveTab(syncedTab as any)
-      clearSyncedTab()
-    }
-  }, [syncedTab, clearSyncedTab])
-
-  // 🆕 ÉMETTEUR : Le prof synchronise son onglet, MAIS SEULEMENT s'il a démarré le cours
-  useEffect(() => {
-    if (role === 'professeur' && liveKitSession) {
-      requestTabSync(activeTab)
-    }
-  }, [activeTab, role, liveKitSession, requestTabSync])
+   
 
   
   
