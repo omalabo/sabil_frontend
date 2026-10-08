@@ -1735,7 +1735,12 @@ fill="currentColor"
 export default function ClasseDetail({ role }: ClasseDetailProps) {
 
   const partage = usePartage()
-  const { syncedTab, clearSyncedTab, requestTabSync } = partage
+  const { 
+  syncedTab, 
+  clearSyncedTab, 
+  requestTabSync,
+  setActiveSession 
+} = partage
   const { id } = useParams<{ id: string }>()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
