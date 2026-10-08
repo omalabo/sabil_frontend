@@ -28,7 +28,7 @@ interface PartageContextValue {
   hasPublisher: boolean
   setActiveSession: (classeId: string | null, seanceId: string | null, userId?: string, userName?: string) => void
   
-  // 🆕 NOUVEAU : Synchronisation des onglets
+  // 🆕 Synchronisation des onglets
   syncedTab: string | null
   clearSyncedTab: () => void
   requestTabSync: (tab: string) => void
@@ -61,7 +61,7 @@ export function PartageProvider({ children }: { children: ReactNode }) {
       forceRender(n => n + 1)
     } else if (data.type === 'share_stop') {
       setState({ channel: null, byUserId: null, byUserName: null })
-    } 
+    }
     // 🆕 Écouter l'ordre de changement d'onglet
     else if (data.type === 'tab_sync') {
       setSyncedTab(data.tab)
