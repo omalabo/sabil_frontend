@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useCallback, useRef, ReactNode } from 'react'
 import { useBroadcastSocket } from '../hooks/useBroadcastSocket'
 
-export type TabPartageable = 'tableau' | 'editeur'
+export type TabPartageable = 'tableau' | 'editeur' | 'salle' | 'chat' | 'supports' | 'infos' | 'annonces' | 'livres'
 
 interface PartageState {
   channel: TabPartageable | null
@@ -27,14 +27,16 @@ interface PartageContextValue {
   unpublishStream: (name: string) => void
   hasPublisher: boolean
   setActiveSession: (classeId: string | null, seanceId: string | null, userId?: string, userName?: string) => void
+  
+  // 🆕 Synchronisation des onglets
+  syncedTab: string | null
+  clearSyncedTab: () => void
+  requestTabSync: (tab: string) => void
 }
 
 const PartageContext = createContext<PartageContextValue | null>(null)
 
 export function PartageProvider({ children }: { children: ReactNode }) {
-  // ── Session active (classe/séance/utilisateur courant) ──────────────
-  // Mise à jour dynamiquement par ClasseDetail via setActiveSession,
-  // car ce Provider vit au-dessus du routeur et ne connaît rien au départ.
   const [session, setSession] = useState<{
     classeId: string | null
     seanceId: string | null
@@ -43,20 +45,26 @@ export function PartageProvider({ children }: { children: ReactNode }) {
   }>({ classeId: null, seanceId: null })
 
   const [state, setState] = useState<PartageState>({ channel: null, byUserId: null, byUserName: null })
+  
+  // 🆕 État pour la synchronisation des onglets
+  const [syncedTab, setSyncedTab] = useState<string | null>(null)
+  
   const vusRef = useRef<Set<TabPartageable>>(new Set())
   const publisherRef = useRef<Publisher | null>(null)
   const [hasPublisher, setHasPublisher] = useState(false)
   const [, forceRender] = useState(0)
 
-  // ── Websocket 'partage' — reconnecte automatiquement dès que
-  // session.classeId / session.seanceId changent ──────────────────────
   const { send } = useBroadcastSocket('partage', session.classeId, session.seanceId, (data) => {
     if (data.type === 'share_start') {
       setState({ channel: data.channel, byUserId: data.user_id, byUserName: data.user_name })
-      vusRef.current.delete(data.channel) // nouveau partage → redevient "non vu" pour tout le monde
+      vusRef.current.delete(data.channel)
       forceRender(n => n + 1)
     } else if (data.type === 'share_stop') {
       setState({ channel: null, byUserId: null, byUserName: null })
+    }
+    // 🆕 Écouter l'ordre de changement d'onglet
+    else if (data.type === 'tab_sync') {
+      setSyncedTab(data.tab)
     }
   })
 
@@ -67,14 +75,12 @@ export function PartageProvider({ children }: { children: ReactNode }) {
     userName?: string
   ) => {
     setSession(prev => {
-      // Évite un re-render inutile si rien n'a changé
       if (prev.classeId === classeId && prev.seanceId === seanceId && prev.userId === userId) return prev
       return { classeId, seanceId, userId, userName }
     })
-    // On change de classe → on réinitialise l'état de partage local, car il
-    // appartient à l'ancienne salle (le nouveau sera reçu via request_state)
     setState({ channel: null, byUserId: null, byUserName: null })
     vusRef.current = new Set()
+    setSyncedTab(null) // 🆕 Reset au changement de classe
   }, [])
 
   const startShare = useCallback((tab: TabPartageable) => {
@@ -108,16 +114,22 @@ export function PartageProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const publishStream = useCallback(async (stream: MediaStream, name: string) => {
-    if (!publisherRef.current) {
-      console.warn('Aucune salle vidéo connectée — impossible de partager.')
-      return false
-    }
+    if (!publisherRef.current) return false
     await publisherRef.current.publish(stream, name)
     return true
   }, [])
 
   const unpublishStream = useCallback((name: string) => {
     publisherRef.current?.unpublish(name)
+  }, [])
+
+  // 🆕 Fonctions de synchronisation des onglets
+  const requestTabSync = useCallback((tab: string) => {
+    send({ type: 'tab_sync', tab })
+  }, [send])
+
+  const clearSyncedTab = useCallback(() => {
+    setSyncedTab(null)
   }, [])
 
   return (
@@ -134,6 +146,10 @@ export function PartageProvider({ children }: { children: ReactNode }) {
       unpublishStream,
       hasPublisher,
       setActiveSession,
+      // 🆕 Exposer les nouvelles fonctions
+      syncedTab,
+      clearSyncedTab,
+      requestTabSync,
     }}>
       {children}
     </PartageContext.Provider>
