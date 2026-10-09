@@ -107,8 +107,8 @@ const readyLivres = useMemo(
     
       // Le prof qui défile pendant la présentation entraîne la classe avec lui.
       // On ignore la 1re notification complète (chargement) pour ne pas écraser la page en cours.
-      if (total > 1 && !syncedRef.current) { syncedRef.current = true; return }
-      if (isPresenter && isPresenting && total > 1 && page !== state.page) goToPage(page)
+      //if (total > 1 && !syncedRef.current) { syncedRef.current = true; return }
+      //if (isPresenter && isPresenting && total > 1 && page !== state.page) goToPage(page)
     }
   
   const handleStartPresenting = () => {
@@ -245,27 +245,35 @@ console.log('📚 Livre sélectionné:', livre)
       </div>
 
       {/* Zone de projection */}
-     <div className="flex-1 min-h-0 relative overflow-hidden bg-black" style={{ contain: 'layout paint' }}>
-      {/* Document en fond : sorti du flux, il ne peut plus pousser les barres */}
-      <div className="absolute inset-0 overflow-hidden flex items-center justify-center">
-        {/* Document en fond */}
-        <DocumentViewer
-          ref={viewerRef}
-          fichierUrl={livre.fichier_url}
-          typeFichier={livre.type_fichier}
-          onPageChange={handleViewerPageChange}
-        />
-      </div>
+      <div className="flex-1 min-h-0 relative overflow-hidden bg-black" style={{ contain: 'layout paint' }}>
         
+        {/* 🆕 CORRECTION : Verrouille totalement la vue pour les élèves (pas de scroll, pas de zoom, pas de clic) */}
+        <div 
+          className="absolute inset-0 flex items-center justify-center"
+          style={{
+            // Si c'est le prof : il peut interagir (scroll/zoom si besoin).
+            // Si c'est un élève/admin/direction : TOUT est bloqué. Il ne voit que ce que le prof lui montre.
+            pointerEvents: isPresenter ? 'auto' : 'none',
+            overflow: isPresenter ? 'auto' : 'hidden',
+          }}
+        >
+          <DocumentViewer
+            ref={viewerRef}
+            fichierUrl={livre.fichier_url}
+            typeFichier={livre.type_fichier}
+            onPageChange={handleViewerPageChange}
+          />
+        </div>
+          
         {/* Overlay d'annotations — INDÉPENDANT du tableau blanc */}
         <div ref={overlayRef} className="absolute inset-0 pointer-events-none">
-        <AnnotationCanvas
-          pageKey={`${livre.id}-${currentPage}`}
-          isPresenter={isPresenter}
-          send={send}
-          remoteEvents={annoEvents}
-          onEventConsumed={clearAnnoEvents}
-        />
+          <AnnotationCanvas
+            pageKey={`${livre.id}-${currentPage}`}
+            isPresenter={isPresenter}
+            send={send}
+            remoteEvents={annoEvents}
+            onEventConsumed={clearAnnoEvents}
+          />
         </div>
       </div>
 
