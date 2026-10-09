@@ -127,10 +127,6 @@ const readyLivres = useMemo(
     viewerRef.current?.goToPage(page)
   }
 
-    const handleLocalPageChange = (page: number) => {
-    setLocalPage(page)
-    viewerRef.current?.goToPage(page)
-  }
 
   // 🆕 NOUVEAU : Sélectionne le livre ET démarre le partage automatiquement pour le prof
   const handleSelectLivre = (livreId: string) => {
