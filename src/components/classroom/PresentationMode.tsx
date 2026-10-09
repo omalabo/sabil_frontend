@@ -126,6 +126,28 @@ const readyLivres = useMemo(
     setLocalPage(page)
     viewerRef.current?.goToPage(page)
   }
+
+    const handleLocalPageChange = (page: number) => {
+    setLocalPage(page)
+    viewerRef.current?.goToPage(page)
+  }
+
+  // 🆕 NOUVEAU : Sélectionne le livre ET démarre le partage automatiquement pour le prof
+  const handleSelectLivre = (livreId: string) => {
+    setSelectedLivreId(livreId)
+    setLocalPage(1)
+    
+    if (isPresenter && userId) {
+      // On lance le partage avec 1 page par défaut. 
+      // Le vrai nombre de pages sera synchronisé automatiquement par handleViewerPageChange
+      startPresentation(livreId, 1, userId, userName)
+    }
+  }
+
+  const handleStopPresenting = () => {
+    stopPresentation()
+    setSelectedLivreId(null) // 🆕 On désélectionne pour revenir à la grille de choix
+  }
 console.log('📚 Livre sélectionné:', livre)
   // ── Écran de sélection ──
   if (!livre) {
@@ -144,7 +166,7 @@ console.log('📚 Livre sélectionné:', livre)
               {readyLivres.map((l: any) => (
                 <button
                   key={l.id}
-                  onClick={() => setSelectedLivreId(l.id)}
+                  onClick={() => handleSelectLivre(l.id)}
                   className="bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 hover:border-indigo-500 rounded-xl p-4 text-left transition group"
                 >
                   <div className="text-3xl mb-2">
