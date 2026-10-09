@@ -279,73 +279,54 @@ console.log('📚 Livre sélectionné:', livre)
         </div>
       </div>
 
-      {/* Barre de navigation — Réservée au professeur */}
-      <div className="bg-neutral-900 border-t border-neutral-800 px-4 py-3 flex items-center justify-center gap-4 flex-shrink-0 z-20">
-        {isPresenter ? (
-          <>
-            {/* Bouton Page précédente */}
-            <button
-              onClick={() => {
-                const p = Math.max(1, currentPage - 1)
-                if (isPresenting) goToPage(p)
-                else handleLocalPageChange(p)
-              }}
-              disabled={currentPage <= 1}
-              className="w-10 h-10 rounded-full bg-neutral-800 hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed text-white text-lg transition flex items-center justify-center"
-            >
-              ◀
-            </button>
+      {/* Barre de navigation — masquée pour les élèves */}
+      {isPresenter && (
+        <div className="bg-neutral-900 border-t border-neutral-800 px-4 py-3 flex items-center justify-center gap-4 flex-shrink-0 z-20">
+          <button
+            onClick={() => {
+              const p = Math.max(1, currentPage - 1)
+              if (isPresenting) goToPage(p)
+              else handleLocalPageChange(p)
+            }}
+            disabled={currentPage <= 1}
+            className="w-10 h-10 rounded-full bg-neutral-800 hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed text-white text-lg transition flex items-center justify-center"
+          >
+            ◀
+          </button>
       
-            {/* Input numéro de page (éditable par le prof) */}
-            <div className="flex items-center gap-2 text-white">
-              <input
-                type="number"
-                min={1}
-                max={totalPages}
-                value={currentPage}
-                onChange={(e) => {
-                  const p = Math.max(1, Math.min(totalPages, parseInt(e.target.value) || 1))
-                  if (isPresenting) goToPage(p)
-                  else handleLocalPageChange(p)
-                }}
-                className="w-14 text-center bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-sm"
-              />
-              <span className="text-neutral-400 text-sm">/ {totalPages}</span>
-            </div>
-      
-            {/* Bouton Page suivante */}
-            <button
-              onClick={() => {
-                const p = Math.min(totalPages, currentPage + 1)
-                if (isPresenting) goToPage(p)
-                else handleLocalPageChange(p)
-              }}
-              disabled={currentPage >= totalPages}
-              className="w-10 h-10 rounded-full bg-neutral-800 hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed text-white text-lg transition flex items-center justify-center"
-            >
-              ▶
-            </button>
-      
-            {/* Indication clavier (prof uniquement) */}
-            <div className="ml-4 text-xs text-neutral-500 hidden md:block">
-              ⌨️ Utilisez ← → pour naviguer
-            </div>
-          </>
-        ) : (
-          /* 👁️ Vue élève/admin/direction : juste un indicateur de page, non interactif */
           <div className="flex items-center gap-2 text-white">
-            <span className="text-sm text-neutral-400">Page</span>
-            <span className="text-lg font-bold text-white">{currentPage}</span>
+            <input
+              type="number"
+              min={1}
+              max={totalPages}
+              value={currentPage}
+              onChange={(e) => {
+                const p = Math.max(1, Math.min(totalPages, parseInt(e.target.value) || 1))
+                if (isPresenting) goToPage(p)
+                else handleLocalPageChange(p)
+              }}
+              className="w-14 text-center bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-sm"
+            />
             <span className="text-neutral-400 text-sm">/ {totalPages}</span>
-            {isPresenting && (
-              <span className="ml-3 text-xs text-emerald-400 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                En direct
-              </span>
-            )}
           </div>
-        )}
-      </div>
+      
+          <button
+            onClick={() => {
+              const p = Math.min(totalPages, currentPage + 1)
+              if (isPresenting) goToPage(p)
+              else handleLocalPageChange(p)
+            }}
+            disabled={currentPage >= totalPages}
+            className="w-10 h-10 rounded-full bg-neutral-800 hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed text-white text-lg transition flex items-center justify-center"
+          >
+            ▶
+          </button>
+      
+          <div className="ml-4 text-xs text-neutral-500 hidden md:block">
+            ⌨️ Utilisez ← → pour naviguer
+          </div>
+        </div>
+      )}
     </div>
   )
 }
