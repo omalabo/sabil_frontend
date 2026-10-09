@@ -47,24 +47,23 @@ export function usePresentation(
         ws.send(JSON.stringify({ type: 'request_state' }))
       }
 
+      // Dans usePresentation.ts, à l'intérieur du useEffect du WebSocket :
       ws.onmessage = (e) => {
         try {
           const data = JSON.parse(e.data)
-
-          // ── Gestion page ──
+      
           if (data.type === 'presentation_start' || data.type === 'presentation_page') {
-            setState({
-              livreId: data.livre_id,
-              page: data.page,
-              total: data.total,
-              byUserId: data.user_id ?? null,
-              byUserName: data.user_name ?? null,
-            })
+            // 🆕 CORRECTION : On fusionne avec l'état précédent pour ne pas perdre livreId
+            setState(prev => ({
+              livreId: data.livre_id ?? prev.livreId,
+              page: data.page ?? prev.page,
+              total: data.total ?? prev.total,
+              byUserId: data.user_id ?? prev.byUserId,
+              byUserName: data.user_name ?? prev.byUserName,
+            }))
           } else if (data.type === 'presentation_stop' || data.type === 'share_stop') {
             setState(INITIAL_STATE)
-          }
-          // ── Gestion annotations (forwarded vers le composant) ──
-          else if (
+          } else if (
             data.type === 'anno_draw' ||
             data.type === 'anno_clear' ||
             data.type === 'anno_state' ||
