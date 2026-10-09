@@ -279,54 +279,53 @@ console.log('📚 Livre sélectionné:', livre)
         </div>
       </div>
 
-      {/* Barre de navigation — masquée pour les élèves */}
-      {isPresenter && (
-        <div className="bg-neutral-900 border-t border-neutral-800 px-4 py-3 flex items-center justify-center gap-4 flex-shrink-0 z-20">
-          <button
-            onClick={() => {
-              const p = Math.max(1, currentPage - 1)
+      {/* Barre de navigation */}
+      <div className="relative z-30 bg-neutral-900 border-t border-neutral-800 px-4 py-3 flex items-center justify-center gap-4 flex-shrink-0"
+        style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
+        <button
+          onClick={() => {
+            const p = Math.max(1, currentPage - 1)
+            if (isPresenting) goToPage(p)
+            else handleLocalPageChange(p)
+          }}
+          disabled={currentPage <= 1}
+          className="w-10 h-10 rounded-full bg-neutral-800 hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed text-white text-lg transition flex items-center justify-center"
+        >
+          ◀
+        </button>
+
+        <div className="flex items-center gap-2 text-white">
+          <input
+            type="number"
+            min={1}
+            max={totalPages}
+            value={currentPage}
+            onChange={(e) => {
+              const p = Math.max(1, Math.min(totalPages, parseInt(e.target.value) || 1))
               if (isPresenting) goToPage(p)
               else handleLocalPageChange(p)
             }}
-            disabled={currentPage <= 1}
-            className="w-10 h-10 rounded-full bg-neutral-800 hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed text-white text-lg transition flex items-center justify-center"
-          >
-            ◀
-          </button>
-      
-          <div className="flex items-center gap-2 text-white">
-            <input
-              type="number"
-              min={1}
-              max={totalPages}
-              value={currentPage}
-              onChange={(e) => {
-                const p = Math.max(1, Math.min(totalPages, parseInt(e.target.value) || 1))
-                if (isPresenting) goToPage(p)
-                else handleLocalPageChange(p)
-              }}
-              className="w-14 text-center bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-sm"
-            />
-            <span className="text-neutral-400 text-sm">/ {totalPages}</span>
-          </div>
-      
-          <button
-            onClick={() => {
-              const p = Math.min(totalPages, currentPage + 1)
-              if (isPresenting) goToPage(p)
-              else handleLocalPageChange(p)
-            }}
-            disabled={currentPage >= totalPages}
-            className="w-10 h-10 rounded-full bg-neutral-800 hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed text-white text-lg transition flex items-center justify-center"
-          >
-            ▶
-          </button>
-      
-          <div className="ml-4 text-xs text-neutral-500 hidden md:block">
-            ⌨️ Utilisez ← → pour naviguer
-          </div>
+            className="w-14 text-center bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-sm"
+          />
+          <span className="text-neutral-400 text-sm">/ {totalPages}</span>
         </div>
-      )}
+
+        <button
+          onClick={() => {
+            const p = Math.min(totalPages, currentPage + 1)
+            if (isPresenting) goToPage(p)
+            else handleLocalPageChange(p)
+          }}
+          disabled={currentPage >= totalPages}
+          className="w-10 h-10 rounded-full bg-neutral-800 hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed text-white text-lg transition flex items-center justify-center"
+        >
+          ▶
+        </button>
+
+        <div className="ml-4 text-xs text-neutral-500 hidden md:block">
+          ⌨️ Utilisez ← → pour naviguer
+        </div>
+      </div>
     </div>
   )
 }
