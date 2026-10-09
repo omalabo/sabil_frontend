@@ -118,9 +118,7 @@ const readyLivres = useMemo(
     viewerRef.current?.goToPage(1)
   }
 
-  const handleStopPresenting = () => {
-    stopPresentation()
-  }
+
 
   const handleLocalPageChange = (page: number) => {
     setLocalPage(page)
