@@ -490,26 +490,47 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
       )
     }
 
-    // ── RENDU : DOCX (Zoom CSS natif pour netteté parfaite) ──
+  
+    // ── RENDU : DOCX paginé (comme le PDF) ──
     if (typeFichier === 'docx') {
       if (loading) return <Loader label="Conversion du document Word…" />
+      
+      // Hauteur d'une "page" en pixels (simule A4 à l'écran)
+      const PAGE_HEIGHT = 900
+      const docxTotalPages = Math.max(1, Math.ceil((docxHtml.length / 3000))) // estimation
+      const currentDocxPage = currentPage - 1 // 0-indexed
+      const yOffset = currentDocxPage * PAGE_HEIGHT
+      
       return (
         <div className="relative flex-1 min-h-0 w-full h-full flex flex-col bg-neutral-900">
+          {/* Barre de zoom */}
           <ZoomControls zoom={zoom} applyZoom={applyZoom} resetView={resetView} />
+          
+          {/* Conteneur "page" avec overflow hidden */}
           <div
-            ref={scrollRef}
-            className="flex-1 min-h-0 overflow-auto flex"
-            style={{ cursor: dragging ? 'grabbing' : 'grab', touchAction: 'pan-x pan-y' }}
-            onMouseDown={onMouseDown}
-            onMouseMove={onMouseMove}
-            onMouseUp={endDrag}
-            onMouseLeave={endDrag}
+            className="flex-1 min-h-0 flex items-center justify-center overflow-hidden"
+            style={{ touchAction: 'pan-x pan-y' }}
           >
-            <div className="m-auto shrink-0 transition-transform duration-200 ease-out origin-top"
-                 style={{ transform: `scale(${zoom})`, padding: PAD, width: '800px' }}>
-              <div ref={docxContainerRef} className="bg-white shadow-2xl p-12 min-h-[1000px] prose max-w-none">
-                <div dangerouslySetInnerHTML={{ __html: docxHtml }} />
-              </div>
+            <div
+              className="relative bg-white shadow-2xl"
+              style={{
+                width: 800 * zoom,
+                height: PAGE_HEIGHT * zoom,
+                overflow: 'hidden',
+                transition: 'width 0.2s, height 0.2s',
+              }}
+            >
+              {/* Contenu HTML décalé verticalement selon la page */}
+              <div
+                className="prose max-w-none p-12"
+                style={{
+                  width: 800,
+                  transform: `translateY(${-yOffset}px) scale(${zoom})`,
+                  transformOrigin: 'top left',
+                  transition: 'transform 0.3s ease',
+                }}
+                dangerouslySetInnerHTML={{ __html: docxHtml }}
+              />
             </div>
           </div>
         </div>
