@@ -131,6 +131,11 @@ console.log('📚 Livre sélectionné:', livre)
   if (!livre) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center bg-neutral-900 text-white p-8 overflow-y-auto">
+
+      <div
+          className="relative z-30 bg-neutral-900 border-t border-neutral-800 px-4 py-3 flex items-center justify-center gap-4 flex-shrink-0"
+          style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
+        >
         <div className="max-w-3xl w-full">
           <h2 className="text-2xl font-bold mb-2 text-center">🎬 Mode Présentation</h2>
           <p className="text-neutral-400 text-center mb-8">
