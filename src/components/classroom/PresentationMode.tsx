@@ -130,10 +130,7 @@ console.log('📚 Livre sélectionné:', livre)
   // ── Écran de sélection ──
   if (!livre) {
     return (
-      <div
-          className="relative z-30 bg-neutral-900 border-t border-neutral-800 px-4 py-3 flex items-center justify-center gap-4 flex-shrink-0"
-          style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
-        >
+      <div className="flex-1 flex flex-col items-center justify-center bg-neutral-900 text-white p-8 overflow-y-auto">
         <div className="max-w-3xl w-full">
           <h2 className="text-2xl font-bold mb-2 text-center">🎬 Mode Présentation</h2>
           <p className="text-neutral-400 text-center mb-8">
@@ -183,7 +180,7 @@ console.log('📚 Livre sélectionné:', livre)
 
   // ── Écran de présentation ──
   return (
-    <div className="flex-1 min-h-0 h-full flex flex-col bg-neutral-950 relative overflow-hidden">
+    <div className="flex-1 flex flex-col bg-neutral-950 relative overflow-hidden">
       {/* Bandeau info */}
       <div className="bg-neutral-900 border-b border-neutral-800 px-4 py-2 flex items-center justify-between flex-shrink-0 z-20">
         <div className="flex items-center gap-3 min-w-0">
@@ -232,16 +229,14 @@ console.log('📚 Livre sélectionné:', livre)
       </div>
 
       {/* Zone de projection */}
-      <div className="absolute inset-0 overflow-hidden flex items-center justify-center">
+      <div className="flex-1 relative flex items-center justify-center overflow-hidden bg-black">
         {/* Document en fond */}
-        <div className="absolute inset-0 overflow-hidden flex items-center justify-center">
-          <DocumentViewer
-            ref={viewerRef}
-            fichierUrl={livre.fichier_url}
-            typeFichier={livre.type_fichier}
-            onPageChange={handleViewerPageChange}
-          />
-        </div>
+        <DocumentViewer
+          ref={viewerRef}
+          fichierUrl={livre.fichier_url}
+          typeFichier={livre.type_fichier}
+          onPageChange={handleViewerPageChange}
+        />
         
         {/* Overlay d'annotations — INDÉPENDANT du tableau blanc */}
         <div ref={overlayRef} className="absolute inset-0 pointer-events-none">
