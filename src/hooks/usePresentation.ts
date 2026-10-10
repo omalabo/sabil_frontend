@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useCallback, useState } from 'react'
 
 export interface PresentationState {
@@ -9,6 +8,14 @@ export interface PresentationState {
   byUserName: string | null
 }
 
+// Position du prof en ratios (0..1), indépendante de la taille d'écran
+export interface ScrollView {
+  x: number
+  y: number
+  zoom: number
+  page: number
+}
+
 const INITIAL_STATE: PresentationState = {
   livreId: null, page: 1, total: 0, byUserId: null, byUserName: null
 }
@@ -16,12 +23,16 @@ const INITIAL_STATE: PresentationState = {
 export function usePresentation(
   classeId: string | null,
   seanceId: string | null,
-  onAnnotationEvent?: (data: any) => void
+  onAnnotationEvent?: (data: any) => void,
+  onScrollEvent?: (v: ScrollView) => void,
 ) {
   const wsRef = useRef<WebSocket | null>(null)
   const [state, setState] = useState<PresentationState>(INITIAL_STATE)
+
   const onAnnotationRef = useRef(onAnnotationEvent)
   onAnnotationRef.current = onAnnotationEvent
+  const onScrollRef = useRef(onScrollEvent)
+  onScrollRef.current = onScrollEvent
 
   const send = useCallback((data: any) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -34,7 +45,6 @@ export function usePresentation(
     const token = localStorage.getItem('sabil_token')
     if (!token) return
 
-    // On réutilise le channel 'partage' existant
     const wsUrl = `wss://api.sabil-al-ilm.org/ws/session/partage/${classeId}/${seanceId}/?token=${token}`
     let ws: WebSocket
     let stopped = false
@@ -47,13 +57,11 @@ export function usePresentation(
         ws.send(JSON.stringify({ type: 'request_state' }))
       }
 
-      // Dans usePresentation.ts, à l'intérieur du useEffect du WebSocket :
       ws.onmessage = (e) => {
         try {
           const data = JSON.parse(e.data)
-      
+
           if (data.type === 'presentation_start' || data.type === 'presentation_page') {
-            // 🆕 CORRECTION : On fusionne avec l'état précédent pour ne pas perdre livreId
             setState(prev => ({
               livreId: data.livre_id ?? prev.livreId,
               page: data.page ?? prev.page,
@@ -61,6 +69,13 @@ export function usePresentation(
               byUserId: data.user_id ?? prev.byUserId,
               byUserName: data.user_name ?? prev.byUserName,
             }))
+          } else if (data.type === 'presentation_scroll') {
+            onScrollRef.current?.({
+              x: Number(data.x) || 0,
+              y: Number(data.y) || 0,
+              zoom: Number(data.zoom) || 1,
+              page: Number(data.page) || 1,
+            })
           } else if (data.type === 'presentation_stop' || data.type === 'share_stop') {
             setState(INITIAL_STATE)
           } else if (
@@ -93,7 +108,6 @@ export function usePresentation(
         livre_id: livreId, page: 1, total,
         user_id: userId, user_name: userName,
       })
-      // Reset des annotations au démarrage
       send({ type: 'anno_clear', page: 1 })
     },
     [send]
@@ -102,9 +116,13 @@ export function usePresentation(
   const goToPage = useCallback((page: number) => {
     setState(prev => ({ ...prev, page }))
     send({ type: 'presentation_page', page })
-    // Reset des annotations à chaque page
     send({ type: 'anno_page_change', page })
   }, [send])
+
+  const sendScroll = useCallback(
+    (v: ScrollView) => send({ type: 'presentation_scroll', ...v }),
+    [send]
+  )
 
   const stopPresentation = useCallback(() => {
     setState(INITIAL_STATE)
@@ -112,5 +130,5 @@ export function usePresentation(
     send({ type: 'anno_clear', page: 0 })
   }, [send])
 
-  return { state, send, startPresentation, goToPage, stopPresentation }
+  return { state, send, startPresentation, goToPage, stopPresentation, sendScroll }
 }
