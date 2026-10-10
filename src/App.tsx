@@ -31,6 +31,7 @@ import ProfFactures from './pages/professeur/Factures'
 import Devoirs from './pages/professeur/Devoir'
 import DevoirEleves  from './pages/professeur/DevoirEleves'
 import GenerateurDiplome  from './pages/professeur/GenerateurDiplome'
+import GestionDiplomes  from './pages/professeur/GestionDiplomes'
 
 
 
@@ -150,6 +151,7 @@ function App() {
           <Route path="/professeur/devoirs/:devoirId/eleves"  element={<DevoirEleves />} />
           <Route path="/professeur/cours" element={<ClasseDetail role="professeur" />} />
           <Route path="/professeur/diplome" element={<GenerateurDiplome role="professeur" />} />
+          <Route path="/professeur/diplomes" element={<GestionDiplomes role="professeur"/>} />
         </Route>
 
         {/* ⚙️ Espace Admin */}
