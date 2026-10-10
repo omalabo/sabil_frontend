@@ -157,23 +157,16 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
         },
         scrollBy: (dx: number, dy: number) => scrollRef.current?.scrollBy(dx, dy),
         zoomBy: (factor: number, cx?: number, cy?: number) => applyZoom(zoomRef.current * factor, cx, cy),
-        
-        // 🆕 NOUVEAU : Scroll vers une position précise
-        scrollTo: (x: number, y: number) => {
-          scrollRef.current?.scrollTo({ left: x, top: y, behavior: 'smooth' })
-        },
-        
-        // 🆕 NOUVEAU : Récupérer la position de scroll actuelle
-        getScrollPosition: () => ({
-          x: scrollRef.current?.scrollLeft ?? 0,
-          y: scrollRef.current?.scrollTop ?? 0,
-        }),
-        
         currentPage,
         totalPages,
       }),
       [currentPage, totalPages, applyZoom]
     )
+
+    useEffect(() => {
+      if (error) return
+      onPageChange?.(currentPage, totalPages)
+    }, [currentPage, totalPages, error, onPageChange])
 
     // ── Chargement du document ──
     useEffect(() => {
