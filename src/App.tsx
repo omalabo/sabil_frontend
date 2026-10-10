@@ -151,7 +151,7 @@ function App() {
           <Route path="/professeur/devoirs/:devoirId/eleves"  element={<DevoirEleves />} />
           <Route path="/professeur/cours" element={<ClasseDetail role="professeur" />} />
           <Route path="/professeur/diplome" element={<GenerateurDiplome role="professeur" />} />
-          <Route path="/professeur/diplomes" element={<GestionDiplomes role="professeur"/>} />
+          <Route path="/professeur/Gestiondiplome" element={<GestionDiplomes role="professeur"/>} />
         </Route>
 
         {/* ⚙️ Espace Admin */}
