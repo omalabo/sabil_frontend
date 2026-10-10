@@ -142,7 +142,7 @@ export const apiSlice = createApi({
     'CatalogueCours', 'PresencesFacturables','SuiviPresences','FacturesEmises','FactureAdmin',
      'FactureEleve',  'ClasseLight', 'AbsenceEleve', 'PresenceProf', 'AbsencesProfs','Planning','Absence',
      'TachesDirection', 'AdminsAssignables','AnnoncesGroupe', 'MesAnnonces','FacturesEleve','DirectionDashboard',
-      'Diplomes', 'ElevesClasse','Diplome','LivreClasse',
+      'Diplomes', 'ElevesClasse','Diplome','LivreClasse','MesDiplomes', 'MesEmissions'
   ],
 
   endpoints: (builder) => ({
@@ -893,6 +893,83 @@ previewAdminFacture: builder.mutation<FacturePreview, {
       transformResponse: (response: { count: number; results: Diplome[] }) => response.results,
     }),
 
+    // ✅ Liste des diplômes émis par le prof connecté (pour la page GestionDiplomes)
+    getMyEmittedDiplomes: builder.query<Diplome[], {
+      statut?: 'active' | 'cancelled' | ''
+      classe_id?: string
+      search?: string
+    }>({
+      query: (params) => {
+        const searchParams = new URLSearchParams()
+        if (params.statut) searchParams.append('statut', params.statut)
+        if (params.classe_id) searchParams.append('classe_id', params.classe_id)
+        if (params.search) searchParams.append('search', params.search)
+        return `/api/diplomes/?${searchParams.toString()}`
+      },
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.map(({ id }) => ({ type: 'MesEmissions' as const, id })),
+              { type: 'MesEmissions', id: 'LIST' },
+            ]
+          : [{ type: 'MesEmissions', id: 'LIST' }],
+    }),
+
+    // ✅ Annuler un diplôme
+    cancelDiplome: builder.mutation<Diplome, { id: string; motif?: string }>({
+      query: ({ id, motif }) => ({
+        url: `/api/diplomes/${id}/annuler/`,
+        method: 'PATCH',
+        body: { motif: motif || '' },
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'MesEmissions', id },
+        { type: 'MesEmissions', id: 'LIST' },
+        { type: 'MesDiplomes', id: 'LIST' }, // l'élève ne le verra plus
+      ],
+    }),
+
+    // ✅ Réactiver un diplôme annulé
+    reactivateDiplome: builder.mutation<Diplome, { id: string }>({
+      query: ({ id }) => ({
+        url: `/api/diplomes/${id}/reactiver/`,
+        method: 'PATCH',
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'MesEmissions', id },
+        { type: 'MesEmissions', id: 'LIST' },
+        { type: 'MesDiplomes', id: 'LIST' }, // l'élève le reverra
+      ],
+    }),
+
+    // ✅ Modifier un diplôme (avec nouvelle image)
+    updateDiplome: builder.mutation<Diplome, { id: string; formData: FormData }>({
+      query: ({ id, formData }) => ({
+        url: `/api/diplomes/${id}/`,
+        method: 'PUT',
+        body: formData,
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'MesEmissions', id },
+        { type: 'MesEmissions', id: 'LIST' },
+        { type: 'MesDiplomes', id: 'LIST' },
+      ],
+    }),
+
+    // ✅ Supprimer définitivement un diplôme (doit être annulé)
+    deleteDiplome: builder.mutation<void, { id: string }>({
+      query: ({ id }) => ({
+        url: `/api/diplomes/${id}/`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'MesEmissions', id },
+        { type: 'MesEmissions', id: 'LIST' },
+      ],
+    }),
+
+    
+
     // GET /api/factures-eleve/classes-list/
     getClassesList: builder.query<ClasseLight[], void>({
       query: () => 'factures-eleve/classes-list/',
@@ -1401,4 +1478,9 @@ export const {
   useGetLivresClasseQuery,
   useUploadLivreClasseMutation,
   useDeleteLivreClasseMutation,
+  useGetMyEmittedDiplomesQuery,
+  useCancelDiplomeMutation,
+  useReactivateDiplomeMutation,
+  useUpdateDiplomeMutation,
+  useDeleteDiplomeMutation,
 } = apiSlice
