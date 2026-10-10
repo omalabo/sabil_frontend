@@ -61,6 +61,9 @@ export interface Diplome {
   appreciation: string
   delivre_at: string      // YYYY-MM-DD
   created_at: string
+  statut: 'active' | 'cancelled'
+  annule_at: string | null
+  motif_annulation: string | null
 }
 
 export interface CreateDiplomePayload {
