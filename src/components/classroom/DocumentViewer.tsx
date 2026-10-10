@@ -1,3 +1,4 @@
+// components/classroom/DocumentViewer.tsx
 import {
   useEffect,
   useLayoutEffect,
@@ -10,21 +11,31 @@ import {
 import * as pdfjsLib from 'pdfjs-dist'
 import mammoth from 'mammoth'
 
-// Worker PDF stable
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
+
+export interface ViewState {
+  x: number
+  y: number
+  zoom: number
+  page: number
+}
 
 export interface DocumentViewerHandle {
   goToPage: (page: number) => void
   scrollBy: (dx: number, dy: number) => void
   zoomBy: (factor: number, cx?: number, cy?: number) => void
+  applyRemoteView: (v: ViewState) => void
   currentPage: number
   totalPages: number
 }
 
 interface Props {
   fichierUrl: string
-  typeFichier: 'pdf' | 'docx' | 'pptx' | 'image'
+  typeFichier: 'pdf' | 'docx' | 'image'
   onPageChange?: (page: number, total: number) => void
+  /** Si fourni (prof qui présente), la position de scroll/zoom est émise en continu */
+  onScrollSync?: (v: ViewState) => void
 }
 
 const MIN_ZOOM = 0.1
@@ -33,28 +44,23 @@ const ZOOM_FACTOR = 1.25
 const PAD = 16
 const PAGE_GAP = 16
 const MAX_CANVAS_PIXELS = 16_000_000
+const SCROLL_SYNC_MS = 100
 
 const clamp = (v: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, v))
 type Dim = { w: number; h: number }
 
-// ── Chargeur de script dynamique (pour PPTXjs sans casser Vite) ──
-const loadScript = (src: string): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    if (document.querySelector(`script[src="${src}"]`)) return resolve()
-    const script = document.createElement('script')
-    script.src = src
-    script.onload = () => resolve()
-    script.onerror = reject
-    document.head.appendChild(script)
-      })
-    }
+const scrollToRatio = (el: HTMLElement, x: number, y: number, smooth = false) =>
+  el.scrollTo({
+    left: x * Math.max(0, el.scrollWidth - el.clientWidth),
+    top: y * Math.max(0, el.scrollHeight - el.clientHeight),
+    behavior: smooth ? 'smooth' : 'auto',
+  })
 
 const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
-  ({ fichierUrl, typeFichier, onPageChange }, ref) => {
+  ({ fichierUrl, typeFichier, onPageChange, onScrollSync }, ref) => {
     const scrollRef = useRef<HTMLDivElement>(null)
     const wrapperRefs = useRef<(HTMLDivElement | null)[]>([])
     const canvasRefs = useRef<(HTMLCanvasElement | null)[]>([])
-    const docxContainerRef = useRef<HTMLDivElement>(null)
 
     const [currentPage, setCurrentPage] = useState(1)
     const [totalPages, setTotalPages] = useState(1)
@@ -65,15 +71,14 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
     const [bgDone, setBgDone] = useState(false)
     const [bgHidden, setBgHidden] = useState(false)
     const [error, setError] = useState<string | null>(null)
-    
+
     const [docxHtml, setDocxHtml] = useState('')
     const [imageUrl, setImageUrl] = useState<string | null>(null)
-    const [pptxCanvases, setPptxCanvases] = useState<HTMLCanvasElement[]>([])
 
     const [zoom, setZoom] = useState(1)
     const [box, setBox] = useState({ w: 0, h: 0 })
     const [dims, setDims] = useState<Dim[]>([])
-    const [visible, setVisible] = useState<number[]>(6)
+    const [visible, setVisible] = useState<number[]>([])
     const [dragging, setDragging] = useState(false)
 
     const pagesRef = useRef<any[]>([])
@@ -82,6 +87,7 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
     const zoomRef = useRef(1)
     const currentRef = useRef(1)
     const pendingScrollRef = useRef<{ left: number; top: number } | null>(null)
+    const pendingRatioRef = useRef<{ x: number; y: number } | null>(null)
     const renderedRef = useRef<(number | undefined)[]>([])
     const inflightRef = useRef<({ target: number; task: any; promise?: Promise<void> } | undefined)[]>([])
     const doneSetRef = useRef<Set<number>>(new Set())
@@ -89,6 +95,15 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
     const readyRef = useRef(false)
     const dragRef = useRef<{ x: number; y: number; l: number; t: number } | null>(null)
     const scrollLockRef = useRef(0)
+
+    // synchro prof → élèves
+    const onPageChangeRef = useRef(onPageChange)
+    onPageChangeRef.current = onPageChange
+    const onScrollSyncRef = useRef(onScrollSync)
+    onScrollSyncRef.current = onScrollSync
+    const syncOn = !!onScrollSync
+    const lastRemoteRef = useRef<ViewState | null>(null)
+    const emitViewRef = useRef<(() => void) | null>(null)
 
     boxRef.current = box
     dimsRef.current = dims
@@ -101,6 +116,7 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
       return Math.max(0.05, Math.min((b.w - PAD * 2) / d.w, (b.h - PAD * 2) / d.h))
     }
 
+    // ── Zoom centré sur un point écran ──
     const applyZoom = useCallback((next: number, cx?: number, cy?: number) => {
       const el = scrollRef.current
       const old = zoomRef.current
@@ -118,7 +134,21 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
       setZoom(next)
     }, [])
 
-    const scrollToPage = (page: number) => {
+    // ── Vue distante (élève) : zoom + position en ratios ──
+    const applyView = useCallback((v: ViewState, smooth: boolean) => {
+      const el = scrollRef.current
+      if (!el) return
+      const z = clamp(v.zoom)
+      if (Math.abs(z - zoomRef.current) > 0.001) {
+        zoomRef.current = z
+        pendingRatioRef.current = { x: v.x, y: v.y } // appliqué après le changement de taille
+        setZoom(z)
+      } else {
+        scrollToRatio(el, v.x, v.y, smooth)
+      }
+    }, [])
+
+    const scrollToPage = useCallback((page: number) => {
       const el = scrollRef.current
       const w = wrapperRefs.current[page - 1]
       if (!el || !w) return
@@ -128,21 +158,30 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
         top: el.scrollTop + (wr.top - er.top) - PAD,
         left: el.scrollLeft + (wr.left - er.left) - (er.width - wr.width) / 2,
       })
-    }
+    }, [])
 
     const resetView = useCallback(() => {
       zoomRef.current = 1
       setZoom(1)
-      requestAnimationFrame(() => scrollToPage(currentRef.current))
-    }, [])
+      requestAnimationFrame(() => {
+        if (typeFichier === 'pdf') scrollToPage(currentRef.current)
+        else scrollRef.current?.scrollTo(0, 0)
+      })
+    }, [typeFichier, scrollToPage])
 
     useLayoutEffect(() => {
       const el = scrollRef.current
+      if (!el) return
       const p = pendingScrollRef.current
-      if (el && p) {
+      if (p) {
         el.scrollLeft = p.left
         el.scrollTop = p.top
         pendingScrollRef.current = null
+      }
+      const r = pendingRatioRef.current
+      if (r) {
+        scrollToRatio(el, r.x, r.y)
+        pendingRatioRef.current = null
       }
     }, [zoom])
 
@@ -156,17 +195,22 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
           setCurrentPage(p)
         },
         scrollBy: (dx: number, dy: number) => scrollRef.current?.scrollBy(dx, dy),
-        zoomBy: (factor: number, cx?: number, cy?: number) => applyZoom(zoomRef.current * factor, cx, cy),
+        zoomBy: (factor: number, cx?: number, cy?: number) =>
+          applyZoom(zoomRef.current * factor, cx, cy),
+        applyRemoteView: (v: ViewState) => {
+          lastRemoteRef.current = v
+          applyView(v, true)
+        },
         currentPage,
         totalPages,
       }),
-      [currentPage, totalPages, applyZoom]
+      [currentPage, totalPages, applyZoom, applyView, scrollToPage]
     )
 
     useEffect(() => {
       if (error) return
-      onPageChange?.(currentPage, totalPages)
-    }, [currentPage, totalPages, error, onPageChange])
+      onPageChangeRef.current?.(currentPage, totalPages)
+    }, [currentPage, totalPages, error])
 
     // ── Chargement du document ──
     useEffect(() => {
@@ -186,9 +230,9 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
       inflightRef.current = []
       doneSetRef.current = new Set()
       boxKeyRef.current = ''
+      lastRemoteRef.current = null
       setDocxHtml('')
       setImageUrl(null)
-      setPptxCanvases([])
       setCurrentPage(1)
       zoomRef.current = 1
       setZoom(1)
@@ -204,55 +248,33 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
               cMapPacked: true,
             }).promise
             if (cancelled) return
-            setTotalPages(pdf.numPages)
-            const pages = await Promise.all(Array.from({ length: pdf.numPages }, (_, k) => pdf.getPage(k + 1)))
+            setTotalPages(pdf.numPages) // le parent affiche tout de suite « 1 / N »
+            const pages = await Promise.all(
+              Array.from({ length: pdf.numPages }, (_, k) => pdf.getPage(k + 1))
+            )
             if (cancelled) return
             pagesRef.current = pages
             setBgProgress({ done: 0, total: pdf.numPages })
-            setDims(pages.map((p) => {
-              const v = p.getViewport({ scale: 1 })
-              return { w: v.width, h: v.height }
-            }))
+            setDims(
+              pages.map((p) => {
+                const v = p.getViewport({ scale: 1 })
+                return { w: v.width, h: v.height }
+              })
+            )
             setLoading(false)
-            return
-          } 
-          else if (typeFichier === 'docx') {
+          } else if (typeFichier === 'docx') {
             const resp = await fetch(fichierUrl)
             if (!resp.ok) throw new Error(`Erreur HTTP: ${resp.status}`)
             const buf = await resp.arrayBuffer()
             const result = await mammoth.convertToHtml({ arrayBuffer: buf })
             if (cancelled) return
             setDocxHtml(result.value)
-            setTotalPages(1) // DOCX est traité comme 1 page continue pour le zoom
+            setTotalPages(1)
             setLoading(false)
-            return
-          }
-          else if (typeFichier === 'pptx') {
-            // Chargement dynamique de pptxjs pour éviter les erreurs Vite
-            await loadScript('https://cdn.jsdelivr.net/npm/pptxjs@1.21.0/js/pptxjs.min.js')
-            await loadScript('https://cdn.jsdelivr.net/npm/pptxjs@1.21.0/js/divs2slides.min.js') // Note: divs2slides est souvent inclus, mais on charge au cas où
-            
-            // @ts-ignore
-            const pptx = new window.pptxjs({ url: fichierUrl })
-            // On attend que le parsing soit fini (pptxjs est un peu old-school, on utilise un timeout ou une promesse simulée)
-            await new Promise(r => setTimeout(r, 1500)) 
-            
-            if (cancelled) return
-            // pptxjs crée des divs, on va les convertir en canvases pour uniformiser avec le PDF
-            const slideCount = pptx.slides?.length || 1
-            setTotalPages(slideCount)
-            
-            // On simule des dimensions de slide (format 16:9 standard)
-            const mockDims = Array.from({ length: slideCount }, () => ({ w: 1280, h: 720 }))
-            setDims(mockDims)
-            setLoading(false)
-            return
-          }
-          else if (typeFichier === 'image') {
+          } else if (typeFichier === 'image') {
             setImageUrl(fichierUrl)
             setTotalPages(1)
             setLoading(false)
-            return
           }
         } catch (err: any) {
           if (cancelled) return
@@ -263,7 +285,9 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
       }
 
       load()
-      return () => { cancelled = true }
+      return () => {
+        cancelled = true
+      }
     }, [fichierUrl, typeFichier])
 
     // ── Taille du conteneur ──
@@ -277,7 +301,7 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
       return () => ro.disconnect()
     }, [typeFichier, !!error, loading])
 
-    // ── Pages visibles (IntersectionObserver) ──
+    // ── Pages visibles (PDF) ──
     useEffect(() => {
       const root = scrollRef.current
       if (!root || typeFichier !== 'pdf' || !dims.length) return
@@ -297,7 +321,7 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
       return () => io.disconnect()
     }, [typeFichier, dims.length])
 
-    // ── Page courante selon le scroll ──
+    // ── Page courante selon le scroll (PDF) ──
     const updateCurrent = useCallback(() => {
       if (Date.now() < scrollLockRef.current) return
       const el = scrollRef.current
@@ -327,59 +351,62 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
     }, [typeFichier, updateCurrent, loading, !!error])
 
     // ── Rendu d'UNE page PDF ──
-    const renderPage = useCallback((i: number, target: number): Promise<void> => {
-      if (typeFichier !== 'pdf') return Promise.resolve()
-      const page = pagesRef.current[i]
-      const canvas = canvasRefs.current[i]
-      if (!page || !canvas) return Promise.resolve()
+    const renderPage = useCallback(
+      (i: number, target: number): Promise<void> => {
+        if (typeFichier !== 'pdf') return Promise.resolve()
+        const page = pagesRef.current[i]
+        const canvas = canvasRefs.current[i]
+        if (!page || !canvas) return Promise.resolve()
 
-      const cur = inflightRef.current[i]
-      if (cur && Math.abs(cur.target - target) < 0.001 && cur.promise) return cur.promise
-      cur?.task?.cancel()
+        const cur = inflightRef.current[i]
+        if (cur && Math.abs(cur.target - target) < 0.001 && cur.promise) return cur.promise
+        cur?.task?.cancel()
 
-      const entry: { target: number; task: any; promise?: Promise<void> } = { target, task: null }
-      entry.promise = (async () => {
-        try {
-          const dpr = window.devicePixelRatio || 1
-          const vp1 = page.getViewport({ scale: 1 })
-          let scale = fitBase(i) * target * dpr
-          const px = vp1.width * vp1.height * scale * scale
-          if (px > MAX_CANVAS_PIXELS) scale *= Math.sqrt(MAX_CANVAS_PIXELS / px)
-          const vp = page.getViewport({ scale })
+        const entry: { target: number; task: any; promise?: Promise<void> } = { target, task: null }
+        entry.promise = (async () => {
+          try {
+            const dpr = window.devicePixelRatio || 1
+            const vp1 = page.getViewport({ scale: 1 })
+            let scale = fitBase(i) * target * dpr
+            const px = vp1.width * vp1.height * scale * scale
+            if (px > MAX_CANVAS_PIXELS) scale *= Math.sqrt(MAX_CANVAS_PIXELS / px)
+            const vp = page.getViewport({ scale })
 
-          const off = document.createElement('canvas')
-          off.width = Math.max(1, Math.floor(vp.width))
-          off.height = Math.max(1, Math.floor(vp.height))
-          const task = page.render({ canvasContext: off.getContext('2d')!, viewport: vp })
-          entry.task = task
-          await task.promise
-          if (inflightRef.current[i] !== entry) return
+            const off = document.createElement('canvas')
+            off.width = Math.max(1, Math.floor(vp.width))
+            off.height = Math.max(1, Math.floor(vp.height))
+            const task = page.render({ canvasContext: off.getContext('2d')!, viewport: vp })
+            entry.task = task
+            await task.promise
+            if (inflightRef.current[i] !== entry) return
 
-          canvas.width = off.width
-          canvas.height = off.height
-          canvas.getContext('2d')!.drawImage(off, 0, 0)
-          renderedRef.current[i] = target
+            canvas.width = off.width
+            canvas.height = off.height
+            canvas.getContext('2d')!.drawImage(off, 0, 0)
+            renderedRef.current[i] = target
 
-          if (!doneSetRef.current.has(i)) {
-            doneSetRef.current.add(i)
-            setBgProgress((p) => ({ ...p, done: doneSetRef.current.size }))
+            if (!doneSetRef.current.has(i)) {
+              doneSetRef.current.add(i)
+              setBgProgress((p) => ({ ...p, done: doneSetRef.current.size }))
+            }
+            if (i === 0 && !readyRef.current) {
+              readyRef.current = true
+              setReady(true)
+            }
+          } catch (err: any) {
+            if (err?.name === 'RenderingCancelledException') return
+            throw err
+          } finally {
+            if (inflightRef.current[i] === entry) inflightRef.current[i] = undefined
           }
-          if (i === 0 && !readyRef.current) {
-            readyRef.current = true
-            setReady(true)
-          }
-        } catch (err: any) {
-          if (err?.name === 'RenderingCancelledException') return
-          throw err
-        } finally {
-          if (inflightRef.current[i] === entry) inflightRef.current[i] = undefined
-        }
-      })()
-      inflightRef.current[i] = entry
-      return entry.promise
-    }, [typeFichier])
+        })()
+        inflightRef.current[i] = entry
+        return entry.promise
+      },
+      [typeFichier]
+    )
 
-    // ── Orchestration rendu PDF ──
+    // ── Orchestration du rendu PDF ──
     useEffect(() => {
       if (typeFichier !== 'pdf' || loading || error || !dims.length || !box.w || !box.h) return
       const boxKey = `${box.w}x${box.h}`
@@ -389,31 +416,40 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
       }
       let cancelled = false
       setRendering(true)
-      const timer = setTimeout(async () => {
-        try {
-          const vis = visible.length ? visible : [0]
-          const visSet = new Set(vis)
-          for (const i of vis) {
+      const timer = setTimeout(
+        async () => {
+          try {
+            const vis = visible.length ? visible : [0]
+            const visSet = new Set(vis)
+            for (const i of vis) {
+              if (cancelled) return
+              const r = renderedRef.current[i]
+              if (r === undefined || Math.abs(r - zoom) > 0.001) await renderPage(i, zoom)
+            }
             if (cancelled) return
-            const r = renderedRef.current[i]
-            if (r === undefined || Math.abs(r - zoom) > 0.001) await renderPage(i, zoom)
-          }
-          if (cancelled) return
-          setRendering(false)
-          const cur = currentRef.current - 1
-          const others = dims.map((_, i) => i).filter((i) => !visSet.has(i)).sort((a, b) => Math.abs(a - cur) - Math.abs(b - cur))
-          for (const i of others) {
+            setRendering(false)
+            const cur = currentRef.current - 1
+            const others = dims
+              .map((_, i) => i)
+              .filter((i) => !visSet.has(i))
+              .sort((a, b) => Math.abs(a - cur) - Math.abs(b - cur))
+            for (const i of others) {
+              if (cancelled) return
+              if (renderedRef.current[i] === undefined) await renderPage(i, Math.min(zoom, 1))
+            }
+          } catch (err: any) {
             if (cancelled) return
-            if (renderedRef.current[i] === undefined) await renderPage(i, Math.min(zoom, 1))
+            console.error('❌ Erreur rendu PDF:', err)
+            setError(`Erreur de rendu : ${err.message}`)
+            setRendering(false)
           }
-        } catch (err: any) {
-          if (cancelled) return
-          console.error('❌ Erreur rendu PDF:', err)
-          setError(`Erreur de rendu : ${err.message}`)
-          setRendering(false)
-        }
-      }, readyRef.current ? 120 : 0)
-      return () => { cancelled = true; clearTimeout(timer) }
+        },
+        readyRef.current ? 120 : 0
+      )
+      return () => {
+        cancelled = true
+        clearTimeout(timer)
+      }
     }, [typeFichier, loading, error, dims, box.w, box.h, zoom, visible, renderPage])
 
     useEffect(() => {
@@ -424,10 +460,64 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
       }
     }, [bgProgress.done, bgProgress.total])
 
-    // ── Contrôles Zoom/Pan (Souris + Tactile) ──
+    // ── Élève : réapplique la dernière vue du prof quand le document est prêt ──
+    useEffect(() => {
+      const v = lastRemoteRef.current
+      if (!v || loading || error) return
+      applyView(v, false)
+    }, [loading, error, dims.length, box.w, box.h, applyView])
+
+    // ── Prof : envoie sa position (throttle 100 ms, seulement si ça change) ──
     useEffect(() => {
       const el = scrollRef.current
-      if (!el || (typeFichier !== 'pdf' && typeFichier !== 'pptx' && typeFichier !== 'docx')) return
+      if (!el || !syncOn || loading || error) {
+        emitViewRef.current = null
+        return
+      }
+      let timer: ReturnType<typeof setTimeout> | null = null
+      let last = 0
+      let lastKey = ''
+
+      const flush = () => {
+        timer = null
+        last = Date.now()
+        const mx = el.scrollWidth - el.clientWidth
+        const my = el.scrollHeight - el.clientHeight
+        const v: ViewState = {
+          x: mx > 0 ? +(el.scrollLeft / mx).toFixed(4) : 0,
+          y: my > 0 ? +(el.scrollTop / my).toFixed(4) : 0,
+          zoom: +zoomRef.current.toFixed(3),
+          page: currentRef.current,
+        }
+        const key = `${v.x}|${v.y}|${v.zoom}|${v.page}`
+        if (key === lastKey) return
+        lastKey = key
+        onScrollSyncRef.current?.(v)
+      }
+      const schedule = () => {
+        if (timer) return
+        timer = setTimeout(flush, Math.max(0, SCROLL_SYNC_MS - (Date.now() - last)))
+      }
+
+      emitViewRef.current = schedule
+      el.addEventListener('scroll', schedule, { passive: true })
+      schedule() // position initiale
+      return () => {
+        if (timer) clearTimeout(timer)
+        el.removeEventListener('scroll', schedule)
+        emitViewRef.current = null
+      }
+    }, [syncOn, loading, error, typeFichier])
+
+    // Un changement de zoom sans déplacement est aussi envoyé
+    useEffect(() => {
+      emitViewRef.current?.()
+    }, [zoom])
+
+    // ── Ctrl+molette / pinch trackpad + pinch tactile (tous les types) ──
+    useEffect(() => {
+      const el = scrollRef.current
+      if (!el) return
 
       const onWheel = (e: WheelEvent) => {
         if (!e.ctrlKey && !e.metaKey) return
@@ -437,10 +527,14 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
 
       let startDist = 0
       let startZoom = 1
-      const dist = (t: TouchList) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY)
+      const dist = (t: TouchList) =>
+        Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY)
 
       const onTouchStart = (e: TouchEvent) => {
-        if (e.touches.length === 2) { startDist = dist(e.touches); startZoom = zoomRef.current }
+        if (e.touches.length === 2) {
+          startDist = dist(e.touches)
+          startZoom = zoomRef.current
+        }
       }
       const onTouchMove = (e: TouchEvent) => {
         if (e.touches.length === 2 && startDist > 0) {
@@ -450,7 +544,9 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
           applyZoom(startZoom * (dist(e.touches) / startDist), mx, my)
         }
       }
-      const onTouchEnd = () => { startDist = 0 }
+      const onTouchEnd = () => {
+        startDist = 0
+      }
 
       el.addEventListener('wheel', onWheel, { passive: false })
       el.addEventListener('touchstart', onTouchStart, { passive: true })
@@ -464,6 +560,7 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
       }
     }, [typeFichier, applyZoom, !!error, loading])
 
+    // ── Glisser pour déplacer (souris) ──
     const onMouseDown = (e: React.MouseEvent) => {
       const el = scrollRef.current
       if (!el || e.button !== 0) return
@@ -477,9 +574,35 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
       el.scrollLeft = d.l - (e.clientX - d.x)
       el.scrollTop = d.t - (e.clientY - d.y)
     }
-    const endDrag = () => { dragRef.current = null; setDragging(false) }
+    const endDrag = () => {
+      dragRef.current = null
+      setDragging(false)
+    }
 
-    // ── RENDU : Erreur ──
+    const dragProps = {
+      onMouseDown,
+      onMouseMove,
+      onMouseUp: endDrag,
+      onMouseLeave: endDrag,
+    }
+    const scrollStyle = {
+      cursor: dragging ? 'grabbing' : 'grab',
+      touchAction: 'pan-x pan-y',
+    } as const
+
+    const controls = (extra?: { showBg: boolean; bgDone: boolean; bgProgress: { done: number; total: number } }) => (
+      <ZoomControls
+        zoom={zoom}
+        onZoomOut={() => applyZoom(zoomRef.current / ZOOM_FACTOR)}
+        onZoomIn={() => applyZoom(zoomRef.current * ZOOM_FACTOR)}
+        onReset={resetView}
+        showBg={extra?.showBg}
+        bgDone={extra?.bgDone}
+        bgProgress={extra?.bgProgress}
+      />
+    )
+
+    // ── Erreur ──
     if (error) {
       return (
         <div className="flex-1 flex items-center justify-center bg-neutral-900 p-8">
@@ -490,24 +613,20 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
       )
     }
 
-    // ── RENDU : DOCX (Zoom CSS natif pour netteté parfaite) ──
+    // ── DOCX (zoom CSS natif : la zone défilable s'agrandit vraiment) ──
     if (typeFichier === 'docx') {
       if (loading) return <Loader label="Conversion du document Word…" />
       return (
-        <div className="relative flex-1 min-h-0 w-full h-full flex flex-col bg-neutral-900">
-          <ZoomControls zoom={zoom} applyZoom={applyZoom} resetView={resetView} />
+        <div className="relative flex-1 min-h-0 min-w-0 w-full h-full flex flex-col bg-neutral-900">
+          {controls()}
           <div
             ref={scrollRef}
             className="flex-1 min-h-0 overflow-auto flex"
-            style={{ cursor: dragging ? 'grabbing' : 'grab', touchAction: 'pan-x pan-y' }}
-            onMouseDown={onMouseDown}
-            onMouseMove={onMouseMove}
-            onMouseUp={endDrag}
-            onMouseLeave={endDrag}
+            style={scrollStyle}
+            {...dragProps}
           >
-            <div className="m-auto shrink-0 transition-transform duration-200 ease-out origin-top"
-                 style={{ transform: `scale(${zoom})`, padding: PAD, width: '800px' }}>
-              <div ref={docxContainerRef} className="bg-white shadow-2xl p-12 min-h-[1000px] prose max-w-none">
+            <div className="m-auto shrink-0" style={{ padding: PAD, width: 800 + PAD * 2, zoom }}>
+              <div className="bg-white shadow-2xl p-12 min-h-[1000px] prose max-w-none">
                 <div dangerouslySetInnerHTML={{ __html: docxHtml }} />
               </div>
             </div>
@@ -516,24 +635,31 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
       )
     }
 
-    // ── RENDU : Image ──
+    // ── Image ──
     if (typeFichier === 'image') {
       if (loading) return <Loader label="Chargement de l'image…" />
       return (
-        <div className="relative flex-1 min-h-0 w-full h-full flex flex-col bg-neutral-900">
-          <ZoomControls zoom={zoom} applyZoom={applyZoom} resetView={resetView} />
+        <div className="relative flex-1 min-h-0 min-w-0 w-full h-full flex flex-col bg-neutral-900">
+          {controls()}
           <div
             ref={scrollRef}
-            className="flex-1 min-h-0 overflow-auto flex items-center justify-center"
-            style={{ cursor: dragging ? 'grabbing' : 'grab', touchAction: 'pan-x pan-y' }}
-            onMouseDown={onMouseDown}
-            onMouseMove={onMouseMove}
-            onMouseUp={endDrag}
-            onMouseLeave={endDrag}
+            className="flex-1 min-h-0 overflow-auto flex"
+            style={scrollStyle}
+            {...dragProps}
           >
-            <div className="transition-transform duration-200 ease-out" style={{ transform: `scale(${zoom})`, transformOrigin: 'center center' }}>
+            <div className="m-auto shrink-0" style={{ padding: PAD, zoom }}>
               {imageUrl && (
-                <img src={imageUrl} alt="Document" className="max-w-full max-h-full object-contain shadow-2xl" draggable={false} onError={() => setError('Image introuvable')} />
+                <img
+                  src={imageUrl}
+                  alt="Document"
+                  draggable={false}
+                  className="block select-none shadow-2xl"
+                  style={{
+                    maxWidth: box.w ? Math.max(50, box.w - PAD * 2) : undefined,
+                    maxHeight: box.h ? Math.max(50, box.h - PAD * 2) : undefined,
+                  }}
+                  onError={() => setError('Image introuvable')}
+                />
               )}
             </div>
           </div>
@@ -541,23 +667,19 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
       )
     }
 
-    // ── RENDU : PDF & PPTX (Moteur Canvas unifié) ──
-    const showOverlay = loading || (!ready && typeFichier === 'pdf')
+    // ── PDF ──
+    const showOverlay = loading || !ready
     const showBg = !showOverlay && bgProgress.total > 1 && !bgHidden
-    const bgPct = bgProgress.total ? Math.round((bgProgress.done / bgProgress.total) * 100) : 0
 
     return (
       <div className="relative flex-1 min-h-0 min-w-0 w-full h-full flex flex-col bg-neutral-900">
-        <ZoomControls zoom={zoom} applyZoom={applyZoom} resetView={resetView} showBg={showBg} bgDone={bgDone} bgProgress={bgProgress} />
-        
+        {controls({ showBg, bgDone, bgProgress })}
+
         <div
           ref={scrollRef}
           className="flex-1 min-h-0 overflow-auto flex"
-          style={{ cursor: dragging ? 'grabbing' : 'grab', touchAction: 'pan-x pan-y' }}
-          onMouseDown={onMouseDown}
-          onMouseMove={onMouseMove}
-          onMouseUp={endDrag}
-          onMouseLeave={endDrag}
+          style={scrollStyle}
+          {...dragProps}
         >
           <div className="m-auto shrink-0 flex flex-col items-center" style={{ padding: PAD, gap: PAGE_GAP }}>
             {dims.map((d, i) => {
@@ -566,23 +688,26 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
                 <div
                   key={i}
                   data-idx={i}
-                  ref={(el) => { wrapperRefs.current[i] = el }}
-                  className="bg-white shadow-2xl shrink-0 flex items-center justify-center"
+                  ref={(el) => {
+                    wrapperRefs.current[i] = el
+                  }}
+                  className="bg-white shadow-2xl shrink-0"
                   style={{ width: d.w * base * zoom, height: d.h * base * zoom }}
                 >
-                  {typeFichier === 'pdf' ? (
-                    <canvas ref={(el) => { canvasRefs.current[i] = el }} className="block select-none" style={{ width: '100%', height: '100%' }} />
-                  ) : (
-                    // Fallback visuel pour PPTX en attendant le rendu JS
-                    <div className="text-neutral-400 text-sm">Diapositive {i + 1}</div>
-                  )}
+                  <canvas
+                    ref={(el) => {
+                      canvasRefs.current[i] = el
+                    }}
+                    className="block select-none"
+                    style={{ width: '100%', height: '100%' }}
+                  />
                 </div>
               )
             })}
           </div>
         </div>
 
-        {!showOverlay && rendering && typeFichier === 'pdf' && (
+        {!showOverlay && rendering && (
           <div className="absolute bottom-4 left-4 z-10 w-6 h-6 border-2 border-neutral-600 border-t-indigo-500 rounded-full animate-spin" />
         )}
 
@@ -599,7 +724,7 @@ const DocumentViewer = forwardRef<DocumentViewerHandle, Props>(
   }
 )
 
-// ── Composants Utilitaires ──
+// ── Composants utilitaires ──
 function Loader({ label }: { label: string }) {
   return (
     <div className="flex-1 flex items-center justify-center bg-neutral-900">
@@ -611,19 +736,69 @@ function Loader({ label }: { label: string }) {
   )
 }
 
-function ZoomControls({ zoom, applyZoom, resetView, showBg, bgDone, bgProgress }: any) {
+interface ZoomControlsProps {
+  zoom: number
+  onZoomOut: () => void
+  onZoomIn: () => void
+  onReset: () => void
+  showBg?: boolean
+  bgDone?: boolean
+  bgProgress?: { done: number; total: number }
+}
+
+function ZoomControls({ zoom, onZoomOut, onZoomIn, onReset, showBg, bgDone, bgProgress }: ZoomControlsProps) {
+  const pct = bgProgress && bgProgress.total ? Math.round((bgProgress.done / bgProgress.total) * 100) : 0
   return (
     <div className="shrink-0 z-20 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 px-3 py-2 bg-neutral-800 border-b border-neutral-700">
-      <button onClick={() => applyZoom(zoom / 1.25)} disabled={zoom <= 0.101} className="w-8 h-8 rounded-full bg-neutral-700 hover:bg-neutral-600 disabled:opacity-40 text-white flex items-center justify-center text-lg transition">−</button>
+      <button
+        onClick={onZoomOut}
+        disabled={zoom <= MIN_ZOOM + 0.001}
+        className="w-8 h-8 rounded-full bg-neutral-700 hover:bg-neutral-600 disabled:opacity-40 text-white flex items-center justify-center text-lg transition"
+        title="Dézoomer"
+      >
+        −
+      </button>
       <span className="text-white text-sm font-mono w-16 text-center">{Math.round(zoom * 100)}%</span>
-      <button onClick={() => applyZoom(zoom * 1.25)} disabled={zoom >= 4.999} className="w-8 h-8 rounded-full bg-neutral-700 hover:bg-neutral-600 disabled:opacity-40 text-white flex items-center justify-center text-lg transition">+</button>
-      <button onClick={resetView} className="px-3 h-8 rounded-full bg-neutral-700 hover:bg-neutral-600 text-white text-xs font-medium transition">Reset</button>
-      {showBg && (
-        <div className={`flex items-center gap-2 px-3 h-8 rounded-full text-xs border transition-colors ${bgDone ? 'bg-emerald-900/40 border-emerald-700 text-emerald-300' : 'bg-indigo-900/40 border-indigo-700 text-indigo-200'}`}>
-          {bgDone ? (<><span className="text-sm leading-none">✓</span><span>Toutes les pages prêtes</span></>) : (<>
-            <div className="w-3.5 h-3.5 border-2 border-indigo-700 border-t-indigo-300 rounded-full animate-spin" />
-            <span>Chargement {bgProgress.done}/{bgProgress.total}</span>
-          </>)}
+      <button
+        onClick={onZoomIn}
+        disabled={zoom >= MAX_ZOOM - 0.001}
+        className="w-8 h-8 rounded-full bg-neutral-700 hover:bg-neutral-600 disabled:opacity-40 text-white flex items-center justify-center text-lg transition"
+        title="Zoomer"
+      >
+        +
+      </button>
+      <button
+        onClick={onReset}
+        className="px-3 h-8 rounded-full bg-neutral-700 hover:bg-neutral-600 text-white text-xs font-medium transition"
+        title="Page entière"
+      >
+        Reset
+      </button>
+
+      {showBg && bgProgress && (
+        <div
+          className={`flex items-center gap-2 px-3 h-8 rounded-full text-xs border transition-colors ${
+            bgDone
+              ? 'bg-emerald-900/40 border-emerald-700 text-emerald-300'
+              : 'bg-indigo-900/40 border-indigo-700 text-indigo-200'
+          }`}
+        >
+          {bgDone ? (
+            <>
+              <span className="text-sm leading-none">✓</span>
+              <span className="whitespace-nowrap">Toutes les pages prêtes</span>
+            </>
+          ) : (
+            <>
+              <div className="w-3.5 h-3.5 border-2 border-indigo-700 border-t-indigo-300 rounded-full animate-spin" />
+              <span className="whitespace-nowrap">
+                Chargement des pages {bgProgress.done}/{bgProgress.total}
+              </span>
+              <div className="w-14 h-1.5 bg-indigo-950 rounded-full overflow-hidden">
+                <div className="h-full bg-indigo-400 transition-all" style={{ width: `${pct}%` }} />
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>
