@@ -124,7 +124,8 @@ export default function Sidebar({ userRole, userId, isActive = true }: SidebarPr
           { to: '/professeur/dashboard', label: ' Tableau de bord', icon: '📊', mobileLabel: 'Accueil' },
           { to: '/professeur/planning', label: ' Planning', icon: '📅', mobileLabel: 'Planning' },
           { to: '/professeur/cours', label: 'Mes cours', icon: '📚', mobileLabel: 'Mes cours' },
-          { to: '/professeur/diplome', label: 'Diplomes', icon: '📄', mobileLabel: 'Diplomes' },
+          { to: '/professeur/diplome', label: 'Ajout Diplomes', icon: '📄', mobileLabel: 'Ajout Diplomes' },
+          { to: '/professeur/Gestiondiplome', label: 'Diplomes', icon: '📄', mobileLabel: 'Diplomes' },
           logoutItem,
         ]
       case 'admin':
