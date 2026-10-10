@@ -1,9 +1,9 @@
 // components/classroom/PresentationMode.tsx
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { useGetLivresClasseQuery } from '../../store/apiSlice'
 import { usePresentation } from '../../hooks/usePresentation'
 import { usePartage } from '../../context/PartageContext'
-import DocumentViewer, { DocumentViewerHandle } from './DocumentViewer'
+import DocumentViewer, { DocumentViewerHandle, ViewState } from './DocumentViewer'
 import AnnotationCanvas from './AnnotationCanvas'
 
 interface Props {
@@ -20,19 +20,32 @@ export default function PresentationMode({
   const { data } = useGetLivresClasseQuery({ classe_id: classeId })
   const livres = (data?.results ?? data ?? []) as any[]
 
+  const isPresenter = role === 'professeur'
+  const viewerRef = useRef<DocumentViewerHandle>(null)
+  const overlayRef = useRef<HTMLDivElement>(null)
+  const lastScrollRef = useRef<ViewState | null>(null)
+
+  // Page affichée côté élève (suit le scroll du prof). null = pas encore reçue.
+  const [viewPage, setViewPage] = useState<number | null>(null)
+
   // Queue d'événements d'annotation à appliquer
   const [annoEvents, setAnnoEvents] = useState<any[]>([])
   const pushAnnoEvent = (evt: any) => setAnnoEvents(prev => [...prev, evt])
   const clearAnnoEvents = () => setAnnoEvents([])
 
-  const { state, send, startPresentation, goToPage, stopPresentation } = usePresentation(
-    classeId, seanceId, pushAnnoEvent
+  const { state, send, startPresentation, goToPage, stopPresentation, sendScroll } = usePresentation(
+    classeId,
+    seanceId,
+    pushAnnoEvent,
+    // Élèves : on applique la vue du prof
+    (v) => {
+      if (isPresenter) return
+      viewerRef.current?.applyRemoteView(v)
+      setViewPage(v.page)
+    }
   )
   const partage = usePartage()
-  const viewerRef = useRef<DocumentViewerHandle>(null)
-  const overlayRef = useRef<HTMLDivElement>(null)
 
-  const isPresenter = role === 'professeur'
   const isPresenting = !!state.livreId
 
   const [selectedLivreId, setSelectedLivreId] = useState<string | null>(null)
@@ -42,13 +55,27 @@ export default function PresentationMode({
   )
 
   const [localPage, setLocalPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)   // ← état, alimenté par le viewer
-  const currentPage = isPresenting ? state.page : localPage
+  const [totalPages, setTotalPages] = useState(1)
 
-const readyLivres = useMemo(
-  () => livres.filter(l => ['pdf', 'image', 'docx'].includes(l.type_fichier)),
-  [livres]
-)
+  // Prof : page du viewer. Élève : page envoyée par le prof (sinon la page de l'état WS).
+  const currentPage = isPresenter ? localPage : (viewPage ?? state.page)
+  // Les annotations sont rattachées à la page "officielle" de la présentation
+  const annoPage = isPresenting ? state.page : localPage
+
+  const readyLivres = useMemo(
+    () => livres.filter(l => ['pdf', 'image', 'docx'].includes(l.type_fichier)),
+    [livres]
+  )
+
+  useEffect(() => { setViewPage(null) }, [livre?.id])
+
+  // ── Navigation (prof uniquement) ──
+  const navigate = useCallback((p: number) => {
+    const target = Math.max(1, Math.min(totalPages, p))
+    viewerRef.current?.goToPage(target)
+    setLocalPage(target)
+    if (isPresenting) goToPage(target)
+  }, [totalPages, isPresenting, goToPage])
 
   // ── Navigation clavier ──
   useEffect(() => {
@@ -59,31 +86,27 @@ const readyLivres = useMemo(
 
       if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
         e.preventDefault()
-        const next = Math.min(currentPage + 1, totalPages)
-        if (isPresenting) goToPage(next)
-        else { setLocalPage(next); viewerRef.current?.goToPage(next) }
+        navigate(currentPage + 1)
       } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
         e.preventDefault()
-        const prev = Math.max(1, currentPage - 1)
-        if (isPresenting) goToPage(prev)
-        else { setLocalPage(prev); viewerRef.current?.goToPage(prev) }
+        navigate(currentPage - 1)
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [isPresenter, livre, currentPage, totalPages, isPresenting, goToPage])
+  }, [isPresenter, livre, currentPage, navigate])
 
-  // ── Sync viewer ↔ state WS ──
+  // ── Élève : suit la page envoyée par le prof ──
   useEffect(() => {
-    if (isPresenting && viewerRef.current) {
-      viewerRef.current.goToPage(state.page)
+    if (!isPresenter && isPresenting) {
+      viewerRef.current?.goToPage(state.page)
     }
-  }, [state.page, isPresenting])
+  }, [state.page, isPresenting, isPresenter])
 
   // ── La molette traverse le calque d'annotation et agit sur le document ──
   useEffect(() => {
     const el = overlayRef.current
-    if (!el) return
+    if (!el || !isPresenter) return
     const onWheel = (e: WheelEvent) => {
       e.preventDefault()
       if (e.ctrlKey || e.metaKey) {
@@ -94,25 +117,33 @@ const readyLivres = useMemo(
     }
     el.addEventListener('wheel', onWheel, { passive: false })
     return () => el.removeEventListener('wheel', onWheel)
-  }, [livre?.id])
+  }, [livre?.id, isPresenter])
 
   useEffect(() => { partage.markAsSeen('editeur') }, [])
 
-  const syncedRef = useRef(false)
-    useEffect(() => { syncedRef.current = false }, [livre?.id])
-    
-    const handleViewerPageChange = (page: number, total: number) => {
-      setTotalPages(total)
-      if (isPresenter) {
-        setLocalPage(page)
-      }
-    
-      // Le prof qui défile pendant la présentation entraîne la classe avec lui.
-      // On ignore la 1re notification complète (chargement) pour ne pas écraser la page en cours.
-      //if (total > 1 && !syncedRef.current) { syncedRef.current = true; return }
-      //if (isPresenter && isPresenting && total > 1 && page !== state.page) goToPage(page)
-    }
-  
+  // ── Prof : envoi de la position de scroll/zoom ──
+  const handleScrollSync = useCallback(
+    (v: ViewState) => {
+      lastScrollRef.current = v
+      sendScroll(v)
+    },
+    [sendScroll]
+  )
+
+  // Renvoi régulier : l'élève qui arrive en cours de route ou se reconnecte se cale seul
+  useEffect(() => {
+    if (!isPresenter || !isPresenting) return
+    const t = setInterval(() => {
+      if (lastScrollRef.current) sendScroll(lastScrollRef.current)
+    }, 3000)
+    return () => clearInterval(t)
+  }, [isPresenter, isPresenting, sendScroll])
+
+  const handleViewerPageChange = useCallback((page: number, total: number) => {
+    setTotalPages(total)
+    if (isPresenter) setLocalPage(page)
+  }, [isPresenter])
+
   const handleStartPresenting = () => {
     if (!livre || !userId) return
     startPresentation(livre.id, totalPages, userId, userName)
@@ -120,31 +151,23 @@ const readyLivres = useMemo(
     viewerRef.current?.goToPage(1)
   }
 
-
-
-  const handleLocalPageChange = (page: number) => {
-    setLocalPage(page)
-    viewerRef.current?.goToPage(page)
-  }
-
-
-  // 🆕 NOUVEAU : Sélectionne le livre ET démarre le partage automatiquement pour le prof
+  // Sélectionne le livre ET démarre le partage automatiquement pour le prof
   const handleSelectLivre = (livreId: string) => {
     setSelectedLivreId(livreId)
     setLocalPage(1)
-    
+    lastScrollRef.current = null
     if (isPresenter && userId) {
-      // On lance le partage avec 1 page par défaut. 
-      // Le vrai nombre de pages sera synchronisé automatiquement par handleViewerPageChange
       startPresentation(livreId, 1, userId, userName)
     }
   }
 
+  // Arrête le partage et revient à la grille de choix
   const handleStopPresenting = () => {
-    stopPresentation()
-    setSelectedLivreId(null) // 🆕 On désélectionne pour revenir à la grille de choix
+    if (isPresenting) stopPresentation()
+    lastScrollRef.current = null
+    setSelectedLivreId(null)
   }
-console.log('📚 Livre sélectionné:', livre)
+
   // ── Écran de sélection ──
   if (!livre) {
     return (
@@ -166,8 +189,7 @@ console.log('📚 Livre sélectionné:', livre)
                   className="bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 hover:border-indigo-500 rounded-xl p-4 text-left transition group"
                 >
                   <div className="text-3xl mb-2">
-                    
-                      {l.type_fichier === 'pdf' ? '📕' : l.type_fichier === 'docx' ? '📄' : '🖼️'}
+                    {l.type_fichier === 'pdf' ? '📕' : l.type_fichier === 'docx' ? '📄' : '🖼️'}
                   </div>
                   <p className="font-semibold text-sm truncate group-hover:text-indigo-300">{l.titre}</p>
                   <p className="text-xs text-neutral-400 mt-1">{l.type_fichier.toUpperCase()}</p>
@@ -180,7 +202,7 @@ console.log('📚 Livre sélectionné:', livre)
             <div className="text-center bg-neutral-800 rounded-xl p-8 border border-neutral-700">
               <p className="text-neutral-300">Aucun document prêt.</p>
               <p className="text-sm text-neutral-500 mt-2">
-                Importez des PDF/PPTX/DOCX/Images dans l'onglet "Livres" d'abord.
+                Importez des PDF/DOCX/Images dans l'onglet "Livres" d'abord.
               </p>
             </div>
           )}
@@ -203,8 +225,7 @@ console.log('📚 Livre sélectionné:', livre)
       <div className="bg-neutral-900 border-b border-neutral-800 px-4 py-2 flex items-center justify-between flex-shrink-0 z-20">
         <div className="flex items-center gap-3 min-w-0">
           <span className="text-xl flex-shrink-0">
-            {livre.type_fichier === 'pdf' ? '📕' : livre.type_fichier === 'docx' ? '📄' :
-             livre.type_fichier === 'pptx' ? '📊' : '🖼️'}
+            {livre.type_fichier === 'pdf' ? '📕' : livre.type_fichier === 'docx' ? '📄' : '🖼️'}
           </span>
           <div className="min-w-0">
             <p className="text-white text-sm font-semibold truncate">{livre.titre}</p>
@@ -217,60 +238,55 @@ console.log('📚 Livre sélectionné:', livre)
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-shrink-0">
-          {isPresenter && (
-            <>
-              {!isPresenting ? (
+        {isPresenter && (
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {isPresenting ? (
+              <button
+                onClick={handleStopPresenting}
+                className="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white text-xs font-semibold rounded-lg transition"
+              >
+                ⏹ Arrêter
+              </button>
+            ) : (
+              <>
                 <button
                   onClick={handleStartPresenting}
                   className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg transition"
                 >
                   📡 Partager à la classe
                 </button>
-              ) : (
                 <button
-                  onClick={handleStopPresenting}
-                  className="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white text-xs font-semibold rounded-lg transition"
+                  onClick={() => setSelectedLivreId(null)}
+                  className="px-3 py-1.5 bg-neutral-700 hover:bg-neutral-600 text-white text-xs rounded-lg transition"
                 >
-                  ⏹ Arrêter
+                  ↩ Changer
                 </button>
-              )}
-            </>
-          )}
-          <button
-            onClick={() => setSelectedLivreId(null)}
-            className="px-3 py-1.5 bg-neutral-700 hover:bg-neutral-600 text-white text-xs rounded-lg transition"
-          >
-            ↩ Changer
-          </button>
-        </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Zone de projection */}
       <div className="flex-1 min-h-0 relative overflow-hidden bg-black" style={{ contain: 'layout paint' }}>
-        
-        {/* 🆕 CORRECTION : Verrouille totalement la vue pour les élèves (pas de scroll, pas de zoom, pas de clic) */}
-        <div 
-          className="absolute inset-0 flex items-center justify-center"
-          style={{
-            // Si c'est le prof : il peut interagir (scroll/zoom si besoin).
-            // Si c'est un élève/admin/direction : TOUT est bloqué. Il ne voit que ce que le prof lui montre.
-            pointerEvents: isPresenter ? 'auto' : 'none',
-            overflow: isPresenter ? 'auto' : 'hidden',
-          }}
+        {/* Élèves : vue verrouillée, ils voient ce que le prof montre */}
+        <div
+          className="absolute inset-0 flex items-center justify-center overflow-hidden"
+          style={{ pointerEvents: isPresenter ? 'auto' : 'none' }}
         >
           <DocumentViewer
             ref={viewerRef}
             fichierUrl={livre.fichier_url}
             typeFichier={livre.type_fichier}
             onPageChange={handleViewerPageChange}
+            onScrollSync={isPresenter && isPresenting ? handleScrollSync : undefined}
           />
         </div>
-          
-        {/* Overlay d'annotations — INDÉPENDANT du tableau blanc */}
+
+        {/* Overlay d'annotations */}
         <div ref={overlayRef} className="absolute inset-0 pointer-events-none">
           <AnnotationCanvas
-            pageKey={`${livre.id}-${currentPage}`}
+            pageKey={`${livre.id}-${annoPage}`}
             isPresenter={isPresenter}
             send={send}
             remoteEvents={annoEvents}
@@ -280,51 +296,53 @@ console.log('📚 Livre sélectionné:', livre)
       </div>
 
       {/* Barre de navigation */}
-      <div className="relative z-30 bg-neutral-900 border-t border-neutral-800 px-4 py-3 flex items-center justify-center gap-4 flex-shrink-0"
-        style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
-        <button
-          onClick={() => {
-            const p = Math.max(1, currentPage - 1)
-            if (isPresenting) goToPage(p)
-            else handleLocalPageChange(p)
-          }}
-          disabled={currentPage <= 1}
-          className="w-10 h-10 rounded-full bg-neutral-800 hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed text-white text-lg transition flex items-center justify-center"
-        >
-          ◀
-        </button>
+      <div
+        className="relative z-30 bg-neutral-900 border-t border-neutral-800 px-4 py-3 flex items-center justify-center gap-4 flex-shrink-0"
+        style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
+      >
+        {isPresenter && (
+          <button
+            onClick={() => navigate(currentPage - 1)}
+            disabled={currentPage <= 1}
+            className="w-10 h-10 rounded-full bg-neutral-800 hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed text-white text-lg transition flex items-center justify-center"
+          >
+            ◀
+          </button>
+        )}
 
         <div className="flex items-center gap-2 text-white">
-          <input
-            type="number"
-            min={1}
-            max={totalPages}
-            value={currentPage}
-            onChange={(e) => {
-              const p = Math.max(1, Math.min(totalPages, parseInt(e.target.value) || 1))
-              if (isPresenting) goToPage(p)
-              else handleLocalPageChange(p)
-            }}
-            className="w-14 text-center bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-sm"
-          />
+          {isPresenter ? (
+            <input
+              type="number"
+              min={1}
+              max={totalPages}
+              value={currentPage}
+              onChange={(e) => navigate(parseInt(e.target.value) || 1)}
+              className="w-14 text-center bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-sm"
+            />
+          ) : (
+            <span className="w-14 text-center bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-sm">
+              {currentPage}
+            </span>
+          )}
           <span className="text-neutral-400 text-sm">/ {totalPages}</span>
         </div>
 
-        <button
-          onClick={() => {
-            const p = Math.min(totalPages, currentPage + 1)
-            if (isPresenting) goToPage(p)
-            else handleLocalPageChange(p)
-          }}
-          disabled={currentPage >= totalPages}
-          className="w-10 h-10 rounded-full bg-neutral-800 hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed text-white text-lg transition flex items-center justify-center"
-        >
-          ▶
-        </button>
+        {isPresenter && (
+          <button
+            onClick={() => navigate(currentPage + 1)}
+            disabled={currentPage >= totalPages}
+            className="w-10 h-10 rounded-full bg-neutral-800 hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed text-white text-lg transition flex items-center justify-center"
+          >
+            ▶
+          </button>
+        )}
 
-        <div className="ml-4 text-xs text-neutral-500 hidden md:block">
-          ⌨️ Utilisez ← → pour naviguer
-        </div>
+        {isPresenter && (
+          <div className="ml-4 text-xs text-neutral-500 hidden md:block">
+            ⌨️ Utilisez ← → pour naviguer
+          </div>
+        )}
       </div>
     </div>
   )
