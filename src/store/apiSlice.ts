@@ -302,15 +302,7 @@ export const apiSlice = createApi({
       invalidatesTags: ['Diplomes'],
     }),
 
-    // Modifier un diplôme (optionnel)
-    updateDiplome: builder.mutation<Diplome, { id: string } & Partial<CreateDiplomePayload>>({
-      query: ({ id, ...body }) => ({
-        url: `diplomes/${id}/`,
-        method: 'PATCH',
-        body,
-      }),
-      invalidatesTags: ['Diplomes'],
-    }),
+    
 
 
     // ─── Endpoints annonces ──────────────────────────────────────────────────────
