@@ -1,5 +1,5 @@
 // components/classroom/PresentationMode.tsx
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { useGetLivresClasseQuery } from '../../store/apiSlice'
 import { usePresentation } from '../../hooks/usePresentation'
 import { usePartage } from '../../context/PartageContext'
@@ -20,13 +20,20 @@ export default function PresentationMode({
   const { data } = useGetLivresClasseQuery({ classe_id: classeId })
   const livres = (data?.results ?? data ?? []) as any[]
 
-  // Queue d'événements d'annotation à appliquer
   const [annoEvents, setAnnoEvents] = useState<any[]>([])
   const pushAnnoEvent = (evt: any) => setAnnoEvents(prev => [...prev, evt])
   const clearAnnoEvents = () => setAnnoEvents([])
 
-  const { state, send, startPresentation, goToPage, stopPresentation } = usePresentation(
-    classeId, seanceId, pushAnnoEvent
+  // 🆕 NOUVEAU : État pour le scroll distant
+  const [remoteScroll, setRemoteScroll] = useState<{ x: number; y: number } | null>(null)
+
+  //  NOUVEAU : Callback pour recevoir le scroll distant
+  const handleRemoteScroll = useCallback((x: number, y: number) => {
+    setRemoteScroll({ x, y })
+  }, [])
+
+  const { state, send, startPresentation, goToPage, stopPresentation, sendScrollPosition } = usePresentation(
+    classeId, seanceId, pushAnnoEvent, handleRemoteScroll
   )
   const partage = usePartage()
   const viewerRef = useRef<DocumentViewerHandle>(null)
@@ -42,13 +49,13 @@ export default function PresentationMode({
   )
 
   const [localPage, setLocalPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)   // ← état, alimenté par le viewer
+  const [totalPages, setTotalPages] = useState(1)
   const currentPage = isPresenting ? state.page : localPage
 
-const readyLivres = useMemo(
-  () => livres.filter(l => ['pdf', 'image', 'docx'].includes(l.type_fichier)),
-  [livres]
-)
+  const readyLivres = useMemo(
+    () => livres.filter(l => ['pdf', 'image', 'docx'].includes(l.type_fichier)),
+    [livres]
+  )
 
   // ── Navigation clavier ──
   useEffect(() => {
@@ -80,7 +87,35 @@ const readyLivres = useMemo(
     }
   }, [state.page, isPresenting])
 
-  // ── La molette traverse le calque d'annotation et agit sur le document ──
+  // 🆕 NOUVEAU : Appliquer le scroll distant (élèves uniquement)
+  useEffect(() => {
+    if (remoteScroll && viewerRef.current && !isPresenter) {
+      viewerRef.current.scrollTo(remoteScroll.x, remoteScroll.y)
+    }
+  }, [remoteScroll, isPresenter])
+
+  // 🆕 NOUVEAU : Envoyer le scroll local (prof uniquement, toutes les 500ms)
+  useEffect(() => {
+    if (!isPresenter || !isPresenting || !viewerRef.current) return
+
+    let lastSent = { x: 0, y: 0 }
+    const interval = setInterval(() => {
+      const pos = viewerRef.current?.getScrollPosition()
+      if (pos) {
+        // 🆕 Optimisation : n'envoyer que si la position a changé de plus de 10px
+        const dx = Math.abs(pos.x - lastSent.x)
+        const dy = Math.abs(pos.y - lastSent.y)
+        if (dx > 10 || dy > 10) {
+          sendScrollPosition(pos.x, pos.y)
+          lastSent = pos
+        }
+      }
+    }, 500)
+
+    return () => clearInterval(interval)
+  }, [isPresenter, isPresenting, sendScrollPosition])
+
+  // ── La molette traverse le calque d'annotation ──
   useEffect(() => {
     const el = overlayRef.current
     if (!el) return
@@ -99,58 +134,41 @@ const readyLivres = useMemo(
   useEffect(() => { partage.markAsSeen('editeur') }, [])
 
   const syncedRef = useRef(false)
-    useEffect(() => { syncedRef.current = false }, [livre?.id])
-    
-    const handleViewerPageChange = (page: number, total: number) => {
-      setTotalPages(total)
-      if (isPresenter) {
-        setLocalPage(page)
-      }
-    
-      // Le prof qui défile pendant la présentation entraîne la classe avec lui.
-      // On ignore la 1re notification complète (chargement) pour ne pas écraser la page en cours.
-      //if (total > 1 && !syncedRef.current) { syncedRef.current = true; return }
-      //if (isPresenter && isPresenting && total > 1 && page !== state.page) goToPage(page)
-    }
-  
-  const handleStartPresenting = () => {
-    if (!livre || !userId) return
-    startPresentation(livre.id, totalPages, userId, userName)
-    setLocalPage(1)
-    viewerRef.current?.goToPage(1)
-  }
+  useEffect(() => { syncedRef.current = false }, [livre?.id])
 
-
-
-  const handleLocalPageChange = (page: number) => {
+  const handleViewerPageChange = (page: number, total: number) => {
+    setTotalPages(total)
     setLocalPage(page)
-    viewerRef.current?.goToPage(page)
+
+    if (total > 1 && !syncedRef.current) { syncedRef.current = true; return }
+    if (isPresenter && isPresenting && total > 1 && page !== state.page) goToPage(page)
   }
 
-
-  // 🆕 NOUVEAU : Sélectionne le livre ET démarre le partage automatiquement pour le prof
   const handleSelectLivre = (livreId: string) => {
     setSelectedLivreId(livreId)
     setLocalPage(1)
-    
+
     if (isPresenter && userId) {
-      // On lance le partage avec 1 page par défaut. 
-      // Le vrai nombre de pages sera synchronisé automatiquement par handleViewerPageChange
       startPresentation(livreId, 1, userId, userName)
     }
   }
 
   const handleStopPresenting = () => {
     stopPresentation()
-    setSelectedLivreId(null) // 🆕 On désélectionne pour revenir à la grille de choix
+    setSelectedLivreId(null)
   }
-console.log('📚 Livre sélectionné:', livre)
+
+  const handleLocalPageChange = (page: number) => {
+    setLocalPage(page)
+    viewerRef.current?.goToPage(page)
+  }
+
   // ── Écran de sélection ──
   if (!livre) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center bg-neutral-900 text-white p-8 overflow-y-auto">
         <div className="max-w-3xl w-full">
-          <h2 className="text-2xl font-bold mb-2 text-center">🎬 Mode Présentation</h2>
+          <h2 className="text-2xl font-bold mb-2 text-center"> Mode Présentation</h2>
           <p className="text-neutral-400 text-center mb-8">
             {isPresenter
               ? 'Sélectionnez un document à projeter à la classe'
@@ -166,8 +184,7 @@ console.log('📚 Livre sélectionné:', livre)
                   className="bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 hover:border-indigo-500 rounded-xl p-4 text-left transition group"
                 >
                   <div className="text-3xl mb-2">
-                    
-                      {l.type_fichier === 'pdf' ? '📕' : l.type_fichier === 'docx' ? '📄' : '🖼️'}
+                    {l.type_fichier === 'pdf' ? '📕' : l.type_fichier === 'docx' ? '📄' : '️'}
                   </div>
                   <p className="font-semibold text-sm truncate group-hover:text-indigo-300">{l.titre}</p>
                   <p className="text-xs text-neutral-400 mt-1">{l.type_fichier.toUpperCase()}</p>
@@ -180,14 +197,14 @@ console.log('📚 Livre sélectionné:', livre)
             <div className="text-center bg-neutral-800 rounded-xl p-8 border border-neutral-700">
               <p className="text-neutral-300">Aucun document prêt.</p>
               <p className="text-sm text-neutral-500 mt-2">
-                Importez des PDF/PPTX/DOCX/Images dans l'onglet "Livres" d'abord.
+                Importez des PDF/DOCX/Images dans l'onglet "Livres" d'abord.
               </p>
             </div>
           )}
 
           {!isPresenter && !isPresenting && (
             <div className="text-center bg-neutral-800 rounded-xl p-8 border border-neutral-700">
-              <div className="text-5xl mb-3">⏳</div>
+              <div className="text-5xl mb-3"></div>
               <p className="text-neutral-300">Le professeur n'a pas encore démarré la présentation.</p>
             </div>
           )}
@@ -198,13 +215,12 @@ console.log('📚 Livre sélectionné:', livre)
 
   // ── Écran de présentation ──
   return (
-    <div className="flex-1 min-h-0 h-full flex flex-col bg-neutral-950 relative overflow-hidden">
+    <div className="flex-1 flex flex-col bg-neutral-950 relative overflow-hidden">
       {/* Bandeau info */}
       <div className="bg-neutral-900 border-b border-neutral-800 px-4 py-2 flex items-center justify-between flex-shrink-0 z-20">
         <div className="flex items-center gap-3 min-w-0">
           <span className="text-xl flex-shrink-0">
-            {livre.type_fichier === 'pdf' ? '📕' : livre.type_fichier === 'docx' ? '📄' :
-             livre.type_fichier === 'pptx' ? '📊' : '🖼️'}
+            {livre.type_fichier === 'pdf' ? '📕' : livre.type_fichier === 'docx' ? '📄' : '🖼️'}
           </span>
           <div className="min-w-0">
             <p className="text-white text-sm font-semibold truncate">{livre.titre}</p>
@@ -222,7 +238,12 @@ console.log('📚 Livre sélectionné:', livre)
             <>
               {!isPresenting ? (
                 <button
-                  onClick={handleStartPresenting}
+                  onClick={() => {
+                    if (!userId) return
+                    startPresentation(livre.id, totalPages || 1, userId, userName)
+                    setLocalPage(1)
+                    viewerRef.current?.goToPage(1)
+                  }}
                   className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg transition"
                 >
                   📡 Partager à la classe
@@ -246,17 +267,22 @@ console.log('📚 Livre sélectionné:', livre)
         </div>
       </div>
 
+      {/* 🆕 NOUVEAU : Message d'avertissement pour DOCX */}
+      {livre.type_fichier === 'docx' && (
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-30 bg-amber-900/90 text-amber-100 text-xs px-4 py-2 rounded-lg shadow-lg backdrop-blur pointer-events-none flex items-center gap-2">
+          <span className="text-base">⚠️</span>
+          <span>Le défilement Word consomme de la bande passante</span>
+        </div>
+      )}
+
       {/* Zone de projection */}
-      <div className="flex-1 min-h-0 relative overflow-hidden bg-black" style={{ contain: 'layout paint' }}>
-        
-        {/* 🆕 CORRECTION : Verrouille totalement la vue pour les élèves (pas de scroll, pas de zoom, pas de clic) */}
-        <div 
-          className="absolute inset-0 flex items-center justify-center"
+      <div className="flex-1 relative overflow-hidden bg-black">
+        <div
+          className="absolute inset-0"
           style={{
-            // Si c'est le prof : il peut interagir (scroll/zoom si besoin).
-            // Si c'est un élève/admin/direction : TOUT est bloqué. Il ne voit que ce que le prof lui montre.
             pointerEvents: isPresenter ? 'auto' : 'none',
             overflow: isPresenter ? 'auto' : 'hidden',
+            contain: 'layout paint'
           }}
         >
           <DocumentViewer
@@ -266,8 +292,8 @@ console.log('📚 Livre sélectionné:', livre)
             onPageChange={handleViewerPageChange}
           />
         </div>
-          
-        {/* Overlay d'annotations — INDÉPENDANT du tableau blanc */}
+
+        {/* Overlay d'annotations */}
         <div ref={overlayRef} className="absolute inset-0 pointer-events-none">
           <AnnotationCanvas
             pageKey={`${livre.id}-${currentPage}`}
@@ -279,53 +305,54 @@ console.log('📚 Livre sélectionné:', livre)
         </div>
       </div>
 
-      {/* Barre de navigation */}
-      <div className="relative z-30 bg-neutral-900 border-t border-neutral-800 px-4 py-3 flex items-center justify-center gap-4 flex-shrink-0"
-        style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
-        <button
-          onClick={() => {
-            const p = Math.max(1, currentPage - 1)
-            if (isPresenting) goToPage(p)
-            else handleLocalPageChange(p)
-          }}
-          disabled={currentPage <= 1}
-          className="w-10 h-10 rounded-full bg-neutral-800 hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed text-white text-lg transition flex items-center justify-center"
-        >
-          ◀
-        </button>
-
-        <div className="flex items-center gap-2 text-white">
-          <input
-            type="number"
-            min={1}
-            max={totalPages}
-            value={currentPage}
-            onChange={(e) => {
-              const p = Math.max(1, Math.min(totalPages, parseInt(e.target.value) || 1))
+      {/* Barre de navigation — masquée pour les élèves */}
+      {isPresenter && (
+        <div className="bg-neutral-900 border-t border-neutral-800 px-4 py-3 flex items-center justify-center gap-4 flex-shrink-0 z-20">
+          <button
+            onClick={() => {
+              const p = Math.max(1, currentPage - 1)
               if (isPresenting) goToPage(p)
               else handleLocalPageChange(p)
             }}
-            className="w-14 text-center bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-sm"
-          />
-          <span className="text-neutral-400 text-sm">/ {totalPages}</span>
-        </div>
+            disabled={currentPage <= 1}
+            className="w-10 h-10 rounded-full bg-neutral-800 hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed text-white text-lg transition flex items-center justify-center"
+          >
+            ◀
+          </button>
 
-        <button
-          onClick={() => {
-            const p = Math.min(totalPages, currentPage + 1)
-            if (isPresenting) goToPage(p)
-            else handleLocalPageChange(p)
-          }}
-          disabled={currentPage >= totalPages}
-          className="w-10 h-10 rounded-full bg-neutral-800 hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed text-white text-lg transition flex items-center justify-center"
-        >
-          ▶
-        </button>
+          <div className="flex items-center gap-2 text-white">
+            <input
+              type="number"
+              min={1}
+              max={totalPages}
+              value={currentPage}
+              onChange={(e) => {
+                const p = Math.max(1, Math.min(totalPages, parseInt(e.target.value) || 1))
+                if (isPresenting) goToPage(p)
+                else handleLocalPageChange(p)
+              }}
+              className="w-14 text-center bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-sm"
+            />
+            <span className="text-neutral-400 text-sm">/ {totalPages}</span>
+          </div>
 
-        <div className="ml-4 text-xs text-neutral-500 hidden md:block">
-          ⌨️ Utilisez ← → pour naviguer
+          <button
+            onClick={() => {
+              const p = Math.min(totalPages, currentPage + 1)
+              if (isPresenting) goToPage(p)
+              else handleLocalPageChange(p)
+            }}
+            disabled={currentPage >= totalPages}
+            className="w-10 h-10 rounded-full bg-neutral-800 hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed text-white text-lg transition flex items-center justify-center"
+          >
+            ▶
+          </button>
+
+          <div className="ml-4 text-xs text-neutral-500 hidden md:block">
+            ⌨️ Utilisez ← → pour naviguer
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
