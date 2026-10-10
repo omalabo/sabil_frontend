@@ -1,4 +1,4 @@
-
+// hooks/usePresentation.ts
 import { useEffect, useRef, useCallback, useState } from 'react'
 
 export interface PresentationState {
@@ -16,12 +16,20 @@ const INITIAL_STATE: PresentationState = {
 export function usePresentation(
   classeId: string | null,
   seanceId: string | null,
-  onAnnotationEvent?: (data: any) => void
+  onAnnotationEvent?: (data: any) => void,
+  onScrollSync?: (x: number, y: number) => void  // 🆕 NOUVEAU
 ) {
   const wsRef = useRef<WebSocket | null>(null)
   const [state, setState] = useState<PresentationState>(INITIAL_STATE)
+  const stateRef = useRef(state)
+  stateRef.current = state
+
   const onAnnotationRef = useRef(onAnnotationEvent)
   onAnnotationRef.current = onAnnotationEvent
+
+  // 🆕 NOUVEAU : Ref pour le callback de scroll
+  const onScrollSyncRef = useRef(onScrollSync)
+  onScrollSyncRef.current = onScrollSync
 
   const send = useCallback((data: any) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -34,7 +42,6 @@ export function usePresentation(
     const token = localStorage.getItem('sabil_token')
     if (!token) return
 
-    // On réutilise le channel 'partage' existant
     const wsUrl = `wss://api.sabil-al-ilm.org/ws/session/partage/${classeId}/${seanceId}/?token=${token}`
     let ws: WebSocket
     let stopped = false
@@ -47,13 +54,12 @@ export function usePresentation(
         ws.send(JSON.stringify({ type: 'request_state' }))
       }
 
-      // Dans usePresentation.ts, à l'intérieur du useEffect du WebSocket :
       ws.onmessage = (e) => {
         try {
           const data = JSON.parse(e.data)
-      
+
+          // Gestion page
           if (data.type === 'presentation_start' || data.type === 'presentation_page') {
-            // 🆕 CORRECTION : On fusionne avec l'état précédent pour ne pas perdre livreId
             setState(prev => ({
               livreId: data.livre_id ?? prev.livreId,
               page: data.page ?? prev.page,
@@ -63,13 +69,19 @@ export function usePresentation(
             }))
           } else if (data.type === 'presentation_stop' || data.type === 'share_stop') {
             setState(INITIAL_STATE)
-          } else if (
+          }
+          // Gestion annotations
+          else if (
             data.type === 'anno_draw' ||
             data.type === 'anno_clear' ||
             data.type === 'anno_state' ||
             data.type === 'anno_page_change'
           ) {
             onAnnotationRef.current?.(data)
+          }
+          // 🆕 NOUVEAU : Gestion scroll sync
+          else if (data.type === 'scroll_sync') {
+            onScrollSyncRef.current?.(data.x, data.y)
           }
         } catch {}
       }
@@ -93,7 +105,6 @@ export function usePresentation(
         livre_id: livreId, page: 1, total,
         user_id: userId, user_name: userName,
       })
-      // Reset des annotations au démarrage
       send({ type: 'anno_clear', page: 1 })
     },
     [send]
@@ -102,7 +113,6 @@ export function usePresentation(
   const goToPage = useCallback((page: number) => {
     setState(prev => ({ ...prev, page }))
     send({ type: 'presentation_page', page })
-    // Reset des annotations à chaque page
     send({ type: 'anno_page_change', page })
   }, [send])
 
@@ -112,5 +122,10 @@ export function usePresentation(
     send({ type: 'anno_clear', page: 0 })
   }, [send])
 
-  return { state, send, startPresentation, goToPage, stopPresentation }
+  // 🆕 NOUVEAU : Fonction pour envoyer la position de scroll
+  const sendScrollPosition = useCallback((x: number, y: number) => {
+    send({ type: 'scroll_sync', x, y })
+  }, [send])
+
+  return { state, send, startPresentation, goToPage, stopPresentation, sendScrollPosition }
 }
