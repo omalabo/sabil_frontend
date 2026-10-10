@@ -146,7 +146,7 @@ export function PartageProvider({ children }: { children: ReactNode }) {
       unpublishStream,
       hasPublisher,
       setActiveSession,
-      //  Exposer les nouvelles fonctions
+      // 🆕 Exposer les nouvelles fonctions
       syncedTab,
       clearSyncedTab,
       requestTabSync,
