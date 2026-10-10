@@ -1463,7 +1463,6 @@ export const {
   useGetElevesByClasseQuery,
   useGetDiplomesQuery,
   useCreateDiplomeMutation,
-  useUpdateDiplomeMutation,
   useGetMyDiplomesQuery,
   useGetAdminElevesAPayerQuery,
   useSaveExpoTokenMutation,
