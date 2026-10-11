@@ -204,11 +204,18 @@ export default function GestionDiplomes() {
 
   // Hooks RTK
   const statutFilter = tab === 'all' ? '' : tab === 'active' ? 'active' : 'cancelled'
-  const { data: diplomes = [], isLoading } = useGetMyEmittedDiplomesQuery({
+  //const { data: diplomes = [], isLoading } = useGetMyEmittedDiplomesQuery({
+   // statut: statutFilter,
+    //classe_id: classeFilter,
+    //search,
+ // })
+
+  const { data, isLoading } = useGetMyEmittedDiplomesQuery({
     statut: statutFilter,
     classe_id: classeFilter,
     search,
   })
+  const diplomes = data?.results ?? data ?? []
   const { data: classesData } = useGetClassesQuery({})
   const classes = classesData?.results ?? []
 
