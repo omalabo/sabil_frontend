@@ -896,7 +896,7 @@ previewAdminFacture: builder.mutation<FacturePreview, {
         if (params.statut) searchParams.append('statut', params.statut)
         if (params.classe_id) searchParams.append('classe_id', params.classe_id)
         if (params.search) searchParams.append('search', params.search)
-        return `/api/diplomes/?${searchParams.toString()}`
+        return `/diplomes/?${searchParams.toString()}`
       },
       providesTags: (result) =>
         result
@@ -910,7 +910,7 @@ previewAdminFacture: builder.mutation<FacturePreview, {
     // ✅ Annuler un diplôme
     cancelDiplome: builder.mutation<Diplome, { id: string; motif?: string }>({
       query: ({ id, motif }) => ({
-        url: `/api/diplomes/${id}/annuler/`,
+        url: `/diplomes/${id}/annuler/`,
         method: 'PATCH',
         body: { motif: motif || '' },
       }),
@@ -924,7 +924,7 @@ previewAdminFacture: builder.mutation<FacturePreview, {
     // ✅ Réactiver un diplôme annulé
     reactivateDiplome: builder.mutation<Diplome, { id: string }>({
       query: ({ id }) => ({
-        url: `/api/diplomes/${id}/reactiver/`,
+        url: `/diplomes/${id}/reactiver/`,
         method: 'PATCH',
       }),
       invalidatesTags: (result, error, { id }) => [
@@ -937,7 +937,7 @@ previewAdminFacture: builder.mutation<FacturePreview, {
     // ✅ Modifier un diplôme (avec nouvelle image)
     updateDiplome: builder.mutation<Diplome, { id: string; formData: FormData }>({
       query: ({ id, formData }) => ({
-        url: `/api/diplomes/${id}/`,
+        url: `/diplomes/${id}/`,
         method: 'PUT',
         body: formData,
       }),
@@ -951,7 +951,7 @@ previewAdminFacture: builder.mutation<FacturePreview, {
     // ✅ Supprimer définitivement un diplôme (doit être annulé)
     deleteDiplome: builder.mutation<void, { id: string }>({
       query: ({ id }) => ({
-        url: `/api/diplomes/${id}/`,
+        url: `/diplomes/${id}/`,
         method: 'DELETE',
       }),
       invalidatesTags: (result, error, { id }) => [
