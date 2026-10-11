@@ -897,7 +897,7 @@ previewAdminFacture: builder.mutation<FacturePreview, {
         if (params.statut) searchParams.append('statut', params.statut)
         if (params.classe_id) searchParams.append('classe_id', params.classe_id)
         if (params.search) searchParams.append('search', params.search)
-        return `/api/diplomes/?${searchParams.toString()}`
+        return `/diplomes/?${searchParams.toString()}`
       },
       providesTags: (result) => {
         // ✅ CORRECTION : On extrait le tableau 'results' si c'est une réponse paginée
