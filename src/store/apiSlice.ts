@@ -886,7 +886,8 @@ previewAdminFacture: builder.mutation<FacturePreview, {
     }),
 
     // ✅ Liste des diplômes émis par le prof connecté (pour la page GestionDiplomes)
-    getMyEmittedDiplomes: builder.query<Diplome[], {
+
+    getMyEmittedDiplomes: builder.query<any, {
       statut?: 'active' | 'cancelled' | ''
       classe_id?: string
       search?: string
@@ -896,15 +897,17 @@ previewAdminFacture: builder.mutation<FacturePreview, {
         if (params.statut) searchParams.append('statut', params.statut)
         if (params.classe_id) searchParams.append('classe_id', params.classe_id)
         if (params.search) searchParams.append('search', params.search)
-        return `/diplomes/?${searchParams.toString()}`
+        return `/api/diplomes/?${searchParams.toString()}`
       },
-      providesTags: (result) =>
-        result
-          ? [
-              ...result.map(({ id }) => ({ type: 'MesEmissions' as const, id })),
-              { type: 'MesEmissions', id: 'LIST' },
-            ]
-          : [{ type: 'MesEmissions', id: 'LIST' }],
+      providesTags: (result) => {
+        // ✅ CORRECTION : On extrait le tableau 'results' si c'est une réponse paginée
+        const diplomes = result?.results ?? result ?? []
+        
+        return [
+          ...diplomes.map((d: any) => ({ type: 'MesEmissions' as const, id: d.id })),
+          { type: 'MesEmissions', id: 'LIST' },
+        ]
+      },
     }),
 
     // ✅ Annuler un diplôme
