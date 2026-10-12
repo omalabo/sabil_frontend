@@ -405,11 +405,27 @@ function MiniChat({ onClose, identity, classeId, userId, userName }: {
                     />
                   )}
                   
+               
+                  {/* Audio */}
+                  {/* {msg.type_message === 'audio' && fileUrl && (
+                    <div className="flex items-center gap-2 mt-1">
+                      <span>{msg.is_voice_note ? '🎤' : '🎵'}</span>
+                      <audio controls src={fileUrl} className="h-8" style={{ maxWidth: '180px' }} />
+                    </div>
+                  )} */}
+
                   {/* Audio */}
                   {msg.type_message === 'audio' && fileUrl && (
                     <div className="flex items-center gap-2 mt-1">
                       <span>{msg.is_voice_note ? '🎤' : '🎵'}</span>
-                      <audio controls src={fileUrl} className="h-8" style={{ maxWidth: '180px' }} />
+                      <audio 
+                        controls 
+                        controlsList="nodownload"
+                        onContextMenu={(e) => e.preventDefault()}
+                        src={fileUrl} 
+                        className="h-8" 
+                        style={{ maxWidth: '180px' }} 
+                      />
                     </div>
                   )}
                   
