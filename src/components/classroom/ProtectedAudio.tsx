@@ -11,7 +11,7 @@ const fmt = (s: number) => {
   const sec = Math.floor(s % 60)
   return `${m}:${sec.toString().padStart(2, '0')}`
 }
-
+const SPEEDS = [1, 1.25, 1.5, 2, 0.75]
 export default function ProtectedAudio({ src, className = '' }: Props) {
   const audioRef = useRef<HTMLAudioElement>(null)
   const blobUrlRef = useRef<string | null>(null)
@@ -60,6 +60,8 @@ export default function ProtectedAudio({ src, className = '' }: Props) {
     }
     if (!(await ensureLoaded())) return
     try {
+      audio.defaultPlaybackRate = speed
+      audio.playbackRate = speed
       await audio.play()
     } catch {
       setError(true)
@@ -91,11 +93,21 @@ export default function ProtectedAudio({ src, className = '' }: Props) {
     audio.currentTime = t
     setCurrent(t)
   }
+  const [speed, setSpeed] = useState(1)
 
+  const cycleSpeed = () => {
+    const next = SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length]
+    setSpeed(next)
+    const audio = audioRef.current
+    if (audio) {
+      audio.defaultPlaybackRate = next
+      audio.playbackRate = next
+    }
+  }
   return (
     <div
       className={`flex items-center gap-2 select-none ${className}`}
-      style={{ minWidth: 170, maxWidth: 220 }}
+      style={{ minWidth: 190, maxWidth: 240 }}
       onContextMenu={(e) => e.preventDefault()}
     >
       <audio
@@ -143,6 +155,14 @@ export default function ProtectedAudio({ src, className = '' }: Props) {
           <span className="text-[11px] tabular-nums text-gray-500 shrink-0">
             {fmt(playing || current > 0 ? current : duration)}
           </span>
+          <button
+            type="button"
+            onClick={cycleSpeed}
+            className="shrink-0 px-1.5 h-6 rounded-full bg-black/10 hover:bg-black/20 text-[11px] font-semibold tabular-nums text-gray-700 transition"
+            title="Vitesse de lecture"
+          >
+            {speed}×
+          </button>
         </>
       )}
     </div>
