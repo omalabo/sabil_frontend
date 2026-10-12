@@ -155,6 +155,21 @@ function MiniChatStopIcon() {
     </svg>
   )
 }
+
+// Lecteur audio sans bouton de téléchargement
+function ProtectedAudio({ src }: { src: string }) {
+  return (
+    <audio
+      controls
+      src={src}
+      preload="metadata"
+      controlsList="nodownload noplaybackrate"
+      onContextMenu={(e) => e.preventDefault()}
+      className="h-8"
+      style={{ maxWidth: '180px' }}
+    />
+  )
+}
 // ─────────────────────────────────────────────
 // CHAT INTÉGRÉ MINIATURE (style Meet)
 // ─────────────────────────────────────────────
@@ -418,14 +433,7 @@ function MiniChat({ onClose, identity, classeId, userId, userName }: {
                   {msg.type_message === 'audio' && fileUrl && (
                     <div className="flex items-center gap-2 mt-1">
                       <span>{msg.is_voice_note ? '🎤' : '🎵'}</span>
-                      <audio 
-                        controls 
-                        controlsList="nodownload"
-                        onContextMenu={(e) => e.preventDefault()}
-                        src={fileUrl} 
-                        className="h-8" 
-                        style={{ maxWidth: '180px' }} 
-                      />
+                      <ProtectedAudio src={fileUrl} />
                     </div>
                   )}
                   
