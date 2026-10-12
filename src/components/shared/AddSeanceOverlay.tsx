@@ -87,6 +87,7 @@ for (let h = START_HOUR; h <= END_HOUR; h++) {
 SLOTS.push('00:00');
 
 const SLOT_H  = 36;   // hauteur px d'un slot 30 min
+const MIN_COL_PX = 100; // largeur minimale d'un jour ; en dessous → scroll horizontal
 const NUM_COLS = 7;
 const RESIZE_HANDLE_PX = 10; // zone de détection resize en bas de chaque séance
 
@@ -909,13 +910,19 @@ export function WeekViewWithAdd({
   // ───────────────────────────────────────────────────────────
   return (
     <div style={{ position: 'relative' }}>
+
+      <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+      {/* ✅ largeur minimale = colonne heures + 7 jours */}
+      <div style={{ minWidth: 48 + NUM_COLS * MIN_COL_PX }}>
+        
       {/* ── Header jours ── */}
       <div style={{
         display: 'grid', gridTemplateColumns: `48px repeat(${NUM_COLS},1fr)`,
         borderBottom: '1px solid #e5e7eb', background: '#f9fafb',
         position: 'sticky', top: 0, zIndex: 10,
       }}>
-        <div style={{ padding: '10px 8px', fontSize: 10, color: '#9ca3af', textAlign: 'center' }}>h</div>
+        <div style={{ padding: '10px 8px', fontSize: 10, color: '#9ca3af', textAlign: 'center', 
+                     position: 'sticky', left: 0, zIndex: 11, background: '#f9fafb', }}>h</div>
         {JOURS_SHORT.map(j => (
           <div key={j} style={{
             padding: '10px 4px', fontSize: 11, fontWeight: 700, color: '#374151',
@@ -929,7 +936,8 @@ export function WeekViewWithAdd({
         <div style={{ display: 'flex' }}>
 
           {/* Colonne heures */}
-          <div style={{ width: 48, flexShrink: 0 }}>
+          <div style={{ width: 48, flexShrink: 0, 
+                       position: 'sticky', left: 0, zIndex: 12, background: '#f9fafb', }}>
             {SLOTS.map(slot => (
               <div key={slot} style={{
         height: SLOT_H,
@@ -1116,6 +1124,9 @@ export function WeekViewWithAdd({
       }}>
         🖱 Glisser pour créer · Bas d'une séance pour redimensionner · Survol: ↕ déplacer  ✕ supprimer
       </div>
+
+      </div>
+    </div>
 
       {/* Modal création */}
       {modal && (
