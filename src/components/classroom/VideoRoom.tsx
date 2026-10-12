@@ -132,6 +132,18 @@ const MINI_CHAT_STYLES = `
 }
 `
 
+const SCREEN_SHARE_STYLES = `
+.lk-participant-media-video[data-lk-source="screen_share"],
+.lk-participant-tile[data-lk-source="screen_share"] video,
+.lk-focus-layout video[data-lk-source="screen_share"] {
+  object-fit: contain !important;
+  object-position: center !important;
+  background: #000 !important;
+}
+`
+
+
+
 function MiniChatAttachIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
@@ -628,6 +640,7 @@ function ControlBar({
     const captureOptions: any = {
       audio: true,
       selfBrowserSurface: 'exclude', 
+      contentHint: 'detail',   // privilégie la lisibilité du texte
     }
     
     await localParticipant.setScreenShareEnabled(true, captureOptions)
@@ -900,6 +913,15 @@ function VideoRoomContent({
     room.on(RoomEvent.Disconnected, () => console.log('ROOM DISCONNECTED'))
     return () => { room.removeAllListeners() }
   }, [room])
+
+  useEffect(() => {
+    const style = document.createElement('style')
+    style.id = 'screen-share-styles'
+    style.textContent = SCREEN_SHARE_STYLES
+    document.head.appendChild(style)
+    return () => { document.getElementById('screen-share-styles')?.remove() }
+  }, [])
+  
 
   if (connectionState === ConnectionState.Disconnected) {
     return (
