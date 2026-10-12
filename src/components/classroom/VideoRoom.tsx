@@ -17,7 +17,7 @@ import { Class, Seance } from '../../types'
 import api from '../../config/axios'
 import { Message } from '../../types'
 import { usePartage } from '../../context/PartageContext'
-import ProtectedAudio from '/ProtectedAudio'
+import ProtectedAudio from './ProtectedAudio'
 
 interface VideoRoomProps {
   classe: Class
