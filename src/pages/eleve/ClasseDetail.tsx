@@ -39,6 +39,7 @@ import { AnnonceEleveCard } from '../direction/Annonces'  // ajustez le chemin s
 import { PartageProvider, usePartage } from '../../context/PartageContext'
 import PresentationMode from '../../components/classroom/PresentationMode'
 import LivresClasse from '../../components/classroom/LivresClasse'
+import ProtectedAudio from '../../components/classroom/ProtectedAudio'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface ClasseDetailProps { role: 'eleve' | 'professeur' | 'admin' | 'direction' }
@@ -3652,7 +3653,7 @@ const classesFiltrees = classes.filter((cls: Class) =>
                                     )}
 
                                     {/* 🎵 AUDIO / VOCAL */}
-                                    {msg.type_message === 'audio' && fileUrl && (
+                                  {/*  {msg.type_message === 'audio' && fileUrl && (
                                       <div style={{ padding: '8px 14px 12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: isMe ? 'rgba(255,255,255,0.6)' : '#f5f5f5', padding: '8px 12px', borderRadius: '24px' }}>
                                           <span style={{ fontSize: '20px' }}>{msg.is_voice_note ? '🎤' : '🎵'}</span>
@@ -3662,6 +3663,22 @@ const classesFiltrees = classes.filter((cls: Class) =>
                                             style={{ height: '32px', maxWidth: '200px', outline: 'none' }} 
                                             onError={(e) => console.error("Erreur chargement audio", e)}
                                           />
+                                        </div>
+                                        {msg.is_voice_note && <span style={{ fontSize: '11px', color: '#666', fontStyle: 'italic' }}>Note vocale</span>}
+                                        {warning && (
+                                          <span style={{ fontSize: '10px', color: '#dc2626', background: '#fef2f2', padding: '4px 8px', borderRadius: '8px', border: '1px solid #fecaca', alignSelf: 'flex-start' }}>
+                                            ⚠️ {warning}
+                                          </span>
+                                        )}
+                                      </div>
+                                    )} */}
+
+                                    {/* 🎵 AUDIO / VOCAL */}
+                                    {msg.type_message === 'audio' && fileUrl && (
+                                      <div style={{ padding: '8px 14px 12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: isMe ? 'rgba(255,255,255,0.6)' : '#f5f5f5', padding: '8px 12px', borderRadius: '24px' }}>
+                                          <span style={{ fontSize: '20px' }}>{msg.is_voice_note ? '🎤' : '🎵'}</span>
+                                          <ProtectedAudio src={fileUrl} />
                                         </div>
                                         {msg.is_voice_note && <span style={{ fontSize: '11px', color: '#666', fontStyle: 'italic' }}>Note vocale</span>}
                                         {warning && (
