@@ -17,6 +17,7 @@ import { Class, Seance } from '../../types'
 import api from '../../config/axios'
 import { Message } from '../../types'
 import { usePartage } from '../../context/PartageContext'
+import ProtectedAudio from '/ProtectedAudio'
 
 interface VideoRoomProps {
   classe: Class
@@ -156,20 +157,7 @@ function MiniChatStopIcon() {
   )
 }
 
-// Lecteur audio sans bouton de téléchargement
-function ProtectedAudio({ src }: { src: string }) {
-  return (
-    <audio
-      controls
-      src={src}
-      preload="metadata"
-      controlsList="nodownload noplaybackrate"
-      onContextMenu={(e) => e.preventDefault()}
-      className="h-8"
-      style={{ maxWidth: '180px' }}
-    />
-  )
-}
+
 // ─────────────────────────────────────────────
 // CHAT INTÉGRÉ MINIATURE (style Meet)
 // ─────────────────────────────────────────────
