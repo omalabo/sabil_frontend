@@ -30,7 +30,6 @@ interface Classe {
 }
 
 const DAYS_FR = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi']
-const DAYS_SHORT = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
 const DAYS_ORDER = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche']
 
 function calcHeureFin(heure: string | null, duree: number | null): string {
@@ -148,35 +147,28 @@ export default function EleveDashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
       {/* ═══════════════════════════════════════════════════════════════
-          HEADER — Bienvenue
+          HEADER — Votre espace en ligne
       ═══════════════════════════════════════════════════════════════ */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white px-6 py-8 md:px-10 md:py-10 relative overflow-hidden">
+      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white px-6 py-12 md:px-10 md:py-16 relative overflow-hidden">
         <div className="absolute inset-0 opacity-10" style={{
           backgroundImage: 'radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255,255,255,0.08) 0%, transparent 50%)'
         }} />
         <div className="relative z-10 max-w-7xl mx-auto">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div>
-              <p className="text-sm text-slate-400 mb-1">
-                {format(new Date(), "EEEE d MMMM yyyy 'à' HH:mm", { locale: fr })}
-              </p>
-              <h1 className="text-2xl md:text-3xl font-bold">
-                Bienvenue, {user?.display_name || user?.prenom || 'Élève'} 👋
-              </h1>
-            </div>
-            <button
-              onClick={() => navigate('/eleve/classes')}
-              className="px-5 py-2.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl text-sm font-medium transition-all backdrop-blur-sm"
-            >
-              📚 Mes classes
-            </button>
-          </div>
+          <p className="text-sm text-slate-400 mb-2">
+            {format(new Date(), "EEEE d MMMM yyyy 'à' HH:mm", { locale: fr })}
+          </p>
+          <h1 className="text-3xl md:text-4xl font-bold">
+            Votre espace en ligne
+          </h1>
+          <p className="text-slate-400 mt-2 text-sm">
+            Bienvenue, {user?.display_name || user?.prenom || 'Élève'} 👋
+          </p>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 md:px-10 py-8 space-y-8">
+      <div className="max-w-7xl mx-auto px-6 md:px-10 -mt-8 space-y-6">
         {/* ═══════════════════════════════════════════════════════════════
-            SECTION 1 — Mes programmes
+            SECTION 1 — Mes programmes (cards colorées comme l'image)
         ═══════════════════════════════════════════════════════════════ */}
         <section>
           <div className="flex items-center gap-2 mb-4">
@@ -184,23 +176,38 @@ export default function EleveDashboard() {
             <h2 className="text-lg font-bold text-slate-900">Mes programmes</h2>
           </div>
           {programmes.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {programmes.map((prog: string, i: number) => (
-                <div
-                  key={i}
-                  className="bg-white rounded-2xl border border-slate-200 p-4 hover:shadow-md hover:border-slate-300 transition-all cursor-default"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-                      {prog.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-semibold text-slate-900 text-sm truncate">{prog}</p>
-                      <p className="text-xs text-slate-500 mt-0.5">Programme actif</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {programmes.map((prog: string, i: number) => {
+                // Couleurs alternées comme dans l'image
+                const colors = [
+                  'from-blue-50 to-blue-100 border-blue-200',
+                  'from-emerald-50 to-emerald-100 border-emerald-200',
+                  'from-amber-50 to-amber-100 border-amber-200',
+                ]
+                const colorClass = colors[i % colors.length]
+                const iconBg = [
+                  'bg-blue-500',
+                  'bg-emerald-500',
+                  'bg-amber-500',
+                ][i % 3]
+
+                return (
+                  <div
+                    key={i}
+                    className={`bg-gradient-to-br ${colorClass} rounded-2xl border p-5 hover:shadow-lg transition-all cursor-default`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`w-12 h-12 rounded-xl ${iconBg} flex items-center justify-center text-white text-lg font-bold flex-shrink-0 shadow-md`}>
+                        {prog.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-bold text-slate-900 text-sm truncate">{prog}</p>
+                        <p className="text-xs text-slate-600 mt-1">Programme actif</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           ) : (
             <div className="bg-white rounded-2xl border border-slate-200 p-6 text-center">
@@ -210,32 +217,28 @@ export default function EleveDashboard() {
         </section>
 
         {/* ═══════════════════════════════════════════════════════════════
-            SECTION 2 — Mes prochains cours (liste semaine)
+            SECTION 2 — Prochains cours + Paiements (layout 2 colonnes comme l'image)
         ═══════════════════════════════════════════════════════════════ */}
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">📅</span>
-              <h2 className="text-lg font-bold text-slate-900">Mes prochains cours</h2>
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Prochains cours */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-lg"></span>
+              <h2 className="text-lg font-bold text-slate-900">Prochains cours</h2>
             </div>
-            <span className="text-xs text-slate-500">
-              {seancesSemaine.length} cours cette semaine
-            </span>
-          </div>
 
-          {loadingSeances ? (
-            <div className="flex justify-center py-12">
-              <div className="w-6 h-6 border-2 border-slate-200 border-t-indigo-500 rounded-full animate-spin" />
-            </div>
-          ) : seancesSemaine.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center">
-              <div className="text-4xl mb-3">🌙</div>
-              <p className="text-slate-600 font-medium">Aucun cours prévu cette semaine</p>
-              <p className="text-xs text-slate-400 mt-1">Reposez-vous bien !</p>
-            </div>
-          ) : (
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-              <div className="divide-y divide-slate-100">
+            {loadingSeances ? (
+              <div className="flex justify-center py-12">
+                <div className="w-6 h-6 border-2 border-slate-200 border-t-indigo-500 rounded-full animate-spin" />
+              </div>
+            ) : seancesSemaine.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="text-4xl mb-3">🌙</div>
+                <p className="text-slate-600 font-medium">Aucun cours prévu cette semaine</p>
+                <p className="text-xs text-slate-400 mt-1">Reposez-vous bien !</p>
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-96 overflow-y-auto">
                 {seancesSemaine.map((item, idx) => {
                   const heureDebut = item.seance.heure_debut_reelle?.substring(0, 5) || '--:--'
                   const heureFin = calcHeureFin(item.seance.heure_debut_reelle, item.seance.duree_reelle_minutes)
@@ -246,14 +249,18 @@ export default function EleveDashboard() {
                   return (
                     <div
                       key={`${item.seance.id}-${idx}`}
-                      className={`flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors ${
-                        item.isToday ? 'bg-indigo-50/50' : ''
+                      className={`flex items-center gap-3 p-3 rounded-xl border transition-all hover:shadow-md ${
+                        item.isToday
+                          ? 'bg-blue-50 border-blue-200'
+                          : item.isTomorrow
+                          ? 'bg-emerald-50 border-emerald-200'
+                          : 'bg-slate-50 border-slate-200'
                       }`}
                     >
-                      {/* Colonne jour/date */}
-                      <div className="flex-shrink-0 w-28 md:w-32">
-                        <p className={`text-sm font-bold ${
-                          item.isToday ? 'text-indigo-600' : item.isTomorrow ? 'text-emerald-600' : 'text-slate-900'
+                      {/* Jour/Heure */}
+                      <div className="flex-shrink-0 w-20">
+                        <p className={`text-xs font-bold ${
+                          item.isToday ? 'text-blue-600' : item.isTomorrow ? 'text-emerald-600' : 'text-slate-700'
                         }`}>
                           {item.jourLabel}
                         </p>
@@ -262,113 +269,135 @@ export default function EleveDashboard() {
                         </p>
                       </div>
 
-                      {/* Séparateur vertical */}
+                      {/* Séparateur */}
                       <div className="w-px h-10 bg-slate-200 flex-shrink-0" />
 
-                      {/* Colonne cours */}
+                      {/* Cours */}
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-slate-900 text-sm truncate">
                           {item.classe.nom}
-                          {item.classe.programme && (
-                            <span className="text-slate-500 font-normal"> — {item.classe.programme}</span>
-                          )}
                         </p>
                         <p className="text-xs text-slate-500 mt-0.5">
                           👤 {profNom}
                         </p>
                       </div>
 
-                      {/* Bouton Rejoindre */}
+                      {/* Bouton */}
                       <button
                         onClick={() => navigate(`/eleve/classes/${item.classe.id}?tab=salle`)}
-                        className={`flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                        className={`flex-shrink-0 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
                           item.isToday
-                            ? 'bg-slate-900 text-white hover:bg-slate-800 shadow-md'
-                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                            ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'
+                            : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
                         }`}
                       >
-                        {item.isToday ? '🎥 Rejoindre' : ' Voir'}
+                        {item.isToday ? '🎥 Rejoindre' : 'Voir'}
                       </button>
                     </div>
                   )
                 })}
               </div>
-            </div>
-          )}
-        </section>
+            )}
+          </div>
 
-        {/* ═══════════════════════════════════════════════════════════════
-            SECTION 3 — Paiements & factures + Stats rapides
-        ═══════════════════════════════════════════════════════════════ */}
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Paiements & factures */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-xl">
-                💳
-              </div>
-              <div>
-                <p className="font-semibold text-slate-900 text-sm">Paiements & factures</p>
-                <p className="text-xs text-slate-500">
-                  {nbFacturesEnAttente > 0 ? `${nbFacturesEnAttente} facture en attente` : 'À jour'}
-                </p>
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-lg">💳</span>
+              <h2 className="text-lg font-bold text-slate-900">Paiements & factures</h2>
+            </div>
+
+            <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl border border-amber-200 p-5 mb-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-amber-700 font-medium mb-1">Montant à régler</p>
+                  <p className="text-3xl font-bold text-amber-900">
+                    {montantAPayer.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                  </p>
+                  <p className="text-xs text-amber-600 mt-2">
+                    {nbFacturesEnAttente > 0 ? `${nbFacturesEnAttente} facture en attente` : '✓ À jour'}
+                  </p>
+                </div>
+                <div className="text-4xl">💰</div>
               </div>
             </div>
-            <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-bold text-slate-900">
-                {montantAPayer.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
-              </span>
-              <span className="text-xs text-slate-500">à régler</span>
-            </div>
+
             <button
               onClick={() => navigate('/eleve/classes?tab=infos')}
-              className="mt-3 text-xs text-indigo-600 font-medium hover:text-indigo-700 flex items-center gap-1"
+              className="w-full py-3 bg-slate-900 text-white rounded-xl font-medium hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
             >
               Voir les détails <span>→</span>
             </button>
           </div>
+        </section>
 
+        {/* ═══════════════════════════════════════════════════════════════
+            SECTION 3 — Stats rapides (cards colorées)
+        ═══════════════════════════════════════════════════════════════ */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Classes actives */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 hover:shadow-md transition-shadow">
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl border border-blue-200 p-5 hover:shadow-lg transition-all">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-xl">
-                📚
+              <div className="w-12 h-12 rounded-xl bg-blue-500 flex items-center justify-center text-white text-xl shadow-md">
+                
               </div>
               <div>
-                <p className="font-semibold text-slate-900 text-sm">Classes actives</p>
-                <p className="text-xs text-slate-500">Inscriptions en cours</p>
+                <p className="font-bold text-slate-900 text-sm">Classes actives</p>
+                <p className="text-xs text-slate-600">Inscriptions en cours</p>
               </div>
             </div>
-            <p className="text-2xl font-bold text-slate-900">
+            <p className="text-3xl font-bold text-blue-900">
               {stats?.nb_classes_actives ?? '—'}
             </p>
             <button
               onClick={() => navigate('/eleve/classes')}
-              className="mt-3 text-xs text-indigo-600 font-medium hover:text-indigo-700 flex items-center gap-1"
+              className="mt-3 text-xs text-blue-600 font-medium hover:text-blue-700 flex items-center gap-1"
             >
               Voir mes classes <span>→</span>
             </button>
           </div>
 
           {/* Séances */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 hover:shadow-md transition-shadow">
+          <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-2xl border border-emerald-200 p-5 hover:shadow-lg transition-all">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-xl">
+              <div className="w-12 h-12 rounded-xl bg-emerald-500 flex items-center justify-center text-white text-xl shadow-md">
                 📅
               </div>
               <div>
-                <p className="font-semibold text-slate-900 text-sm">Séances actives</p>
-                <p className="text-xs text-slate-500">Toutes classes confondues</p>
+                <p className="font-bold text-slate-900 text-sm">Séances actives</p>
+                <p className="text-xs text-slate-600">Toutes classes confondues</p>
               </div>
             </div>
-            <p className="text-2xl font-bold text-slate-900">
+            <p className="text-3xl font-bold text-emerald-900">
               {stats?.nb_seances ?? '—'}
             </p>
             <button
               onClick={() => navigate('/eleve/classes')}
-              className="mt-3 text-xs text-indigo-600 font-medium hover:text-indigo-700 flex items-center gap-1"
+              className="mt-3 text-xs text-emerald-600 font-medium hover:text-emerald-700 flex items-center gap-1"
             >
               Voir le planning <span>→</span>
+            </button>
+          </div>
+
+          {/* Programmes */}
+          <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-2xl border border-amber-200 p-5 hover:shadow-lg transition-all">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-12 h-12 rounded-xl bg-amber-500 flex items-center justify-center text-white text-xl shadow-md">
+                🎓
+              </div>
+              <div>
+                <p className="font-bold text-slate-900 text-sm">Programmes</p>
+                <p className="text-xs text-slate-600">Inscriptions actives</p>
+              </div>
+            </div>
+            <p className="text-3xl font-bold text-amber-900">
+              {programmes.length}
+            </p>
+            <button
+              onClick={() => navigate('/eleve/classes')}
+              className="mt-3 text-xs text-amber-600 font-medium hover:text-amber-700 flex items-center gap-1"
+            >
+              Voir les détails <span>→</span>
             </button>
           </div>
         </section>
