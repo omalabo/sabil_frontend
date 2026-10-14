@@ -210,9 +210,6 @@ function DirectionWeekView({ items, onSelect, onValidateHoraire }: {
                   const leftPct = (ji / NUM_COLS) * 100;
                   const widthPct = 100 / NUM_COLS;
 
-                  // ✅ nb de lignes du titre = (hauteur - padding/bordure 10 - ligne du prof 12) / 12
-                  const maxTitleLines = Math.max(1, Math.floor((heightPx - 10 - 12) / 12));
-
                   return (
                     <div key={item.id} style={{ position:'absolute', top: topPx, left:`${leftPct}%`, width:`${widthPct}%`, height: heightPx, padding:'0 4px', pointerEvents:'auto', zIndex: 10, boxSizing:'border-box' }}>
                       <button
