@@ -278,11 +278,8 @@ export default function EleveDashboard() {
 
                       {/* ✅ BOUTON : redirige vers l'onglet 🎥 Salle de la classe */}
                       <button
-                        onClick={() => {
-                          // On remplace les espaces par des tirets et on met en minuscule pour que ce soit plus propre
-                          const slug = item.classe.nom.toLowerCase().replace(/\s+/g, '-')
-                          navigate(`/eleve/classe/${slug}?tab=salle`)
-                        }}
+                        onClick={() => navigate(`/eleve/classe/${item.classe.id}?tab=salle`)}
+                        
                         className={`flex-shrink-0 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
                           item.isToday
                             ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'
