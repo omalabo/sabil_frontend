@@ -2458,7 +2458,7 @@ const getMotivationImageUrl = (contenu: string | null | undefined): string => {
   const getDepartMessage = (statut?: string) => {
   const intro = statut === 'a_supprimer'
     ? `Ce groupe va bientôt être supprimé\nLe professeur est sorti du groupe.`
-    : `Ce groupe est en pause\nLe professeur a terminé ses cours`
+    : `Ce groupe est en pause\n`
 
   return `Nous espérons que vous allez bien
 
