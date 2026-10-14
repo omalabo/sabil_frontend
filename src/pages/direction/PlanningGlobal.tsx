@@ -41,6 +41,7 @@ SLOTS.push('00:00');
 const SLOT_H         = 36;
 const NUM_COLS       = 7;
 const RESIZE_HANDLE  = 10;
+const MIN_COL_PX = 120; // largeur minimale d'un jour ; en dessous → scroll horizontal
 const JOUR_IDX: Record<string,number> = {
   lundi:0, mardi:1, mercredi:2, jeudi:3, vendredi:4, samedi:5, dimanche:6,
 };
@@ -136,130 +137,135 @@ function DirectionWeekView({ items, onSelect, onValidateHoraire }: {
 
   return (
     <div style={{ position:'relative' }}>
-      <div style={{ display:'grid', gridTemplateColumns: `48px repeat(${NUM_COLS},1fr)`, borderBottom:'1px solid #e5e7eb', background:'#f9fafb', position:'sticky', top:0, zIndex:10 }}>
-        <div style={{ padding:'10px 8px', fontSize:10, color:'#9ca3af', textAlign:'center' }}>h</div>
-        {JOURS_SHORT.map(j => (
-          <div key={j} style={{ padding:'10px 4px', fontSize:11, fontWeight:700, color:'#374151', textAlign:'center', borderLeft:'1px solid #e5e7eb' }}>{j}</div>
-        ))}
-      </div>
-      <div style={{ overflowY:'auto', maxHeight:'calc(100vh - 300px)' }}>
-        <div style={{ display:'flex' }}>
-          <div style={{ width:48, flexShrink:0 }}>
-            {/* {SLOTS.map(slot => (
-              <div key={slot} style={{ height: SLOT_H, borderBottom: slot.endsWith(':00') ? '1px solid #e5e7eb' : '1px dashed #f3f4f6', display:'flex', alignItems:'center', justifyContent:'flex-end', paddingRight:8, background:'#f9fafb' }}>
-                {slot.endsWith(':00') && <span style={{ fontSize:10, fontFamily:'monospace', color:'#9ca3af' }}>{slot}</span>}
-              </div>
-            ))} */}
 
-            {SLOTS.map(slot => (
-              <div key={slot}  style={{
-        height: SLOT_H,
-        borderBottom: '1px solid #e5e7eb',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'flex-end',
-        paddingRight: 8,
-        background: '#f9fafb',
-      }}>
-                <span style={{
-          fontSize: 10,
-          fontFamily: 'monospace',
-          color: '#4b5563',
-        }}>
-                  {slot}
-                </span>
-              </div>
+      {/* ✅ un seul conteneur qui scrolle (horizontal + vertical) */}
+      <div style={{ overflow:'auto', maxHeight:'calc(100vh - 300px)', WebkitOverflowScrolling:'touch' }}>
+        <div style={{ minWidth: 48 + NUM_COLS * MIN_COL_PX }}>
+
+          {/* ── Header jours ── */}
+          <div style={{ display:'grid', gridTemplateColumns: `48px repeat(${NUM_COLS},1fr)`, borderBottom:'1px solid #e5e7eb', background:'#f9fafb', position:'sticky', top:0, zIndex:20 }}>
+            <div style={{ padding:'10px 8px', fontSize:10, color:'#9ca3af', textAlign:'center', position:'sticky', left:0, zIndex:21, background:'#f9fafb' }}>h</div>
+            {JOURS_SHORT.map(j => (
+              <div key={j} style={{ padding:'10px 4px', fontSize:11, fontWeight:700, color:'#374151', textAlign:'center', borderLeft:'1px solid #e5e7eb' }}>{j}</div>
             ))}
-
           </div>
-          <div ref={gridRef} style={{ flex:1, position:'relative', userSelect:'none', cursor:'default' }}>
-            {SLOTS.map(slot => (
-              <div key={slot} style={{ display:'grid', gridTemplateColumns:`repeat(${NUM_COLS},1fr)`, height:SLOT_H, borderBottom: '1px solid #e5e7eb', }}>
-                {JOURS_SHORT.map((_,ci) => <div key={ci} style={{ borderLeft:'1px solid #e5e7eb' }} />)}
-              </div>
-            ))}
-            <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, pointerEvents:'none' }}>
-              {items.map(item => {
-                if (item.statut === 'supprimer') return null;
-                const ji = resolveJourIdx(item);
-                const rt = toHHMM(item.heure_debut_reelle);
-                if (ji === -1 || !rt) return null;
-                const si = SLOTS.indexOf(rt);
-                if (si === -1) return null;
 
-                const isDispo = !item.classe;
-                const isClasseSupprimee = item.classe?.statut === 'a_supprimer';
-                const isClassePause = item.classe?.statut === 'en_pause';
-                const isClasseActive = item.classe?.statut === 'active';
+          {/* ── Corps ── */}
+          <div style={{ display:'flex' }}>
 
-                const dynamicColor = isClasseSupprimee
-                  ? {
-                      bg: '#fef2f2',
-                      border: '#ef4444',
-                      text: '#991b1b',
-                    }
-                  : isClassePause
-                    ? {
-                        bg: '#fff7ed',
-                        border: '#fb923c',
-                        text: '#9a3412',
-                      }
-                    : isClasseActive
-                      ? {
-                          bg: '#eff6ff',
-                          border: '#60a5fa',
-                          text: '#1e40af',
-                        }
-                      : {
-                          bg: '#eff6ff',
-                          border: '#3b82f6',
-                          text: '#1e40af',
-                        };
-                const durSlots = Math.max(1, Math.ceil((item.duree_reelle_minutes||30)/30));
-                const topPx = si * SLOT_H;
-                const heightPx = durSlots * SLOT_H;
-                const leftPct = (ji / NUM_COLS) * 100;
-                const widthPct = 100 / NUM_COLS;
-
-                return (
-                  <div key={item.id} style={{ position:'absolute', top: topPx, left:`${leftPct}%`, width:`${widthPct}%`, height: heightPx, padding:'0 4px', pointerEvents:'auto', zIndex: 10, boxSizing:'border-box' }}>
-                    <button
-                      onMouseDown={e => e.stopPropagation()}
-                      onClick={() => {
-                        if (isDispo) {
-                          const dur = Math.max(30, Math.ceil((item.duree_reelle_minutes||30)/30)*30);
-                          onValidateHoraire(item, dur);
-                        } else {
-                          onSelect(item);
-                        }
-                      }}
-                      style={{
-                        width:'100%', height:'100%', textAlign:'left', padding:'4px 6px', borderRadius:8,
-                        borderLeft: isDispo ? '4px solid #10b981' : `4px solid ${dynamicColor.border}`,
-                        background: isDispo ? '#ecfdf5' : dynamicColor.bg,
-                        color: isDispo ? '#065f46' : dynamicColor.text,
-                        fontSize:10, display:'flex', flexDirection:'column', justifyContent:'space-between', cursor:'pointer',
-                        border: isDispo ? (item.statut === 'horaire_valide' ? '1px solid #6ee7b7' : '1px solid #a7f3d0') : '1px solid #bfdbfe',
-                      }}
-                    >
-                      <div style={{ fontWeight:700, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{isDispo ? '🟢 Dispo' : item.classe!.nom}</div>
-                      <div style={{ fontSize:9, opacity:.8, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', marginTop:1 }}>
-                        {isDispo ? (item as any).professeur_disponible?.display_name ?? '' : item.classe?.professeur?.display_name ?? ''}
-                      </div>
-                      {isDispo && item.statut && (
-                        <div style={{ fontSize:9, fontWeight:600, marginTop:2, color: '#059669' }}>
-                          {item.statut === 'horaire_valide' ? '✓ Validé' : item.statut === 'horaire_non_valide' ? '✗ Rejeté' : item.statut === 'active' ? '⏳ En attente' : item.statut}
-                        </div>
-                      )}
-                    </button>
-                  </div>
-                );
-              })}
+            {/* Colonne des heures (collée à gauche) */}
+            <div style={{ width:48, flexShrink:0, position:'sticky', left:0, zIndex:12, background:'#f9fafb' }}>
+              {SLOTS.map(slot => (
+                <div key={slot} style={{
+                  height: SLOT_H,
+                  borderBottom: '1px solid #e5e7eb',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'flex-end',
+                  paddingRight: 8,
+                  background: '#f9fafb',
+                }}>
+                  <span style={{ fontSize: 10, fontFamily: 'monospace', color: '#4b5563' }}>
+                    {slot}
+                  </span>
+                </div>
+              ))}
             </div>
 
+            {/* Zone grille */}
+            <div ref={gridRef} style={{ flex:1, position:'relative', userSelect:'none', cursor:'default' }}>
+              {SLOTS.map(slot => (
+                <div key={slot} style={{ display:'grid', gridTemplateColumns:`repeat(${NUM_COLS},1fr)`, height:SLOT_H, borderBottom: '1px solid #e5e7eb' }}>
+                  {JOURS_SHORT.map((_,ci) => <div key={ci} style={{ borderLeft:'1px solid #e5e7eb' }} />)}
+                </div>
+              ))}
+
+              <div style={{ position:'absolute', top:0, left:0, right:0, bottom:0, pointerEvents:'none' }}>
+                {items.map(item => {
+                  if (item.statut === 'supprimer') return null;
+                  const ji = resolveJourIdx(item);
+                  const rt = toHHMM(item.heure_debut_reelle);
+                  if (ji === -1 || !rt) return null;
+                  const si = SLOTS.indexOf(rt);
+                  if (si === -1) return null;
+
+                  const isDispo = !item.classe;
+                  const isClasseSupprimee = item.classe?.statut === 'a_supprimer';
+                  const isClassePause = item.classe?.statut === 'en_pause';
+                  const isClasseActive = item.classe?.statut === 'active';
+
+                  const dynamicColor = isClasseSupprimee
+                    ? { bg: '#fef2f2', border: '#ef4444', text: '#991b1b' }
+                    : isClassePause
+                      ? { bg: '#fff7ed', border: '#fb923c', text: '#9a3412' }
+                      : isClasseActive
+                        ? { bg: '#eff6ff', border: '#60a5fa', text: '#1e40af' }
+                        : { bg: '#eff6ff', border: '#3b82f6', text: '#1e40af' };
+
+                  const durSlots = Math.max(1, Math.ceil((item.duree_reelle_minutes||30)/30));
+                  const topPx = si * SLOT_H;
+                  const heightPx = durSlots * SLOT_H;
+                  // nb de lignes possibles = hauteur - padding/bordure (10) - ligne du nom du prof (12), / hauteur de ligne (12)
+                  const maxTitleLines = Math.max(1, Math.floor((heightPx - 10 - 12) / 12));
+                  const leftPct = (ji / NUM_COLS) * 100;
+                  const widthPct = 100 / NUM_COLS;
+
+                  // ✅ nb de lignes du titre = (hauteur - padding/bordure 10 - ligne du prof 12) / 12
+                  const maxTitleLines = Math.max(1, Math.floor((heightPx - 10 - 12) / 12));
+
+                  return (
+                    <div key={item.id} style={{ position:'absolute', top: topPx, left:`${leftPct}%`, width:`${widthPct}%`, height: heightPx, padding:'0 4px', pointerEvents:'auto', zIndex: 10, boxSizing:'border-box' }}>
+                      <button
+                        onMouseDown={e => e.stopPropagation()}
+                        onClick={() => {
+                          if (isDispo) {
+                            const dur = Math.max(30, Math.ceil((item.duree_reelle_minutes||30)/30)*30);
+                            onValidateHoraire(item, dur);
+                          } else {
+                            onSelect(item);
+                          }
+                        }}
+                        style={{
+                          width:'100%', height:'100%', textAlign:'left', padding:'4px 6px', borderRadius:8,
+                          borderLeft: isDispo ? '4px solid #10b981' : `4px solid ${dynamicColor.border}`,
+                          background: isDispo ? '#ecfdf5' : dynamicColor.bg,
+                          color: isDispo ? '#065f46' : dynamicColor.text,
+                          fontSize:10, display:'flex', flexDirection:'column', justifyContent:'space-between', cursor:'pointer',
+                          border: isDispo ? (item.statut === 'horaire_valide' ? '1px solid #6ee7b7' : '1px solid #a7f3d0') : '1px solid #bfdbfe',
+                        }}
+                      >
+                        {/* ✅ Titre : passe à la ligne selon la hauteur de la séance */}
+                        <div style={{
+                          fontWeight: 700,
+                          lineHeight: '12px',
+                          overflow: 'hidden',
+                          overflowWrap: 'anywhere',
+                          display: '-webkit-box',
+                          WebkitBoxOrient: 'vertical',
+                          WebkitLineClamp: maxTitleLines,
+                        }}>
+                          {isDispo ? '🟢 Dispo' : item.classe!.nom}
+                        </div>
+                        <div style={{ fontSize:9, opacity:.8, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', marginTop:1 }}>
+                          {isDispo ? (item as any).professeur_disponible?.display_name ?? '' : item.classe?.professeur?.display_name ?? ''}
+                        </div>
+                        {isDispo && item.statut && (
+                          <div style={{ fontSize:9, fontWeight:600, marginTop:2, color: '#059669' }}>
+                            {item.statut === 'horaire_valide' ? '✓ Validé' : item.statut === 'horaire_non_valide' ? '✗ Rejeté' : item.statut === 'active' ? '⏳ En attente' : item.statut}
+                          </div>
+                        )}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
+
         </div>
       </div>
+
+      {/* Tip : reste en dehors du scroll */}
       <div style={{ position:'absolute', bottom:8, right:10, fontSize:10, color:'#9ca3af', background:'rgba(249,250,251,.9)', padding:'3px 8px', borderRadius:99, border:'1px solid #e5e7eb', pointerEvents:'none' }}>
         🟢 Cliquer sur une dispo verte pour valider ses horaires
       </div>
