@@ -279,7 +279,7 @@ export default function EleveDashboard() {
                       {/* ✅ BOUTON : redirige vers l'onglet 🎥 Salle de la classe */}
                       <button
                         onClick={() =>
-                          navigate(`/eleve/classes/${item.classe.id}?tab=salle`)
+                          navigate(`/eleve/classe/${item.classe.id}?tab=salle`)
                         }
                         className={`flex-shrink-0 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
                           item.isToday
