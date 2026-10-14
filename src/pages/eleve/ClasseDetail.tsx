@@ -2456,48 +2456,50 @@ const getMotivationImageUrl = (contenu: string | null | undefined): string => {
   c?.statut === 'a_supprimer' || c?.statut === 'en_pause'
 
   const getDepartMessage = (statut?: string) => {
-  const intro = statut === 'a_supprimer'
-    ? `Ce groupe va bientôt être supprimé\nLe professeur est sorti du groupe.`
-    : `Ce groupe est en pause\n`
+  // 1️⃣ CAS : La classe va être supprimée (message long avec les liens)
+  if (statut === 'a_supprimer') {
+    return `Nous espérons que vous allez bien.
 
-  return `Nous espérons que vous allez bien
+    📌 Ce groupe va bientôt être supprimé. Le professeur a terminé ses cours dans ce groupe.
 
-  ${intro}
-  Souhaitez poursuivre les cours dans d'autres matières ?
-  Vous pouvez faire un essai 3.50€ la séance de 30min avec un autre professeur si vous le souhaitez.
+    Souhaitez poursuivre les cours dans d'autres matières ?
+    Vous pouvez faire un essai à 3.50€ la séance de 30min avec un autre professeur si vous le souhaitez.
 
-  Voici les cours possibles en solo :
-  Apprendre à lire, méthode al madania, nour al bayan, qaida nourania...
-  Langue arabe programme forqan ou tome de Médine,
-  Tajwid niveau 1 et 2, touhfatoul atfal, jazariyah, oussoul hafs, oussoul warch
-  CORAN mémorisation, Correction, tilawa
-  Fluidification de la lecture.
-  Aquida la croyance, explication des 3 fondements, des 4 règles, des 6 fondements, les annulatifs de l'islam, kashf ach choubouhat, kitab at tawhid, oussoul sounnah...
-  Fiqh jurisprudence, la prière, la purification, fiqh du couple, l'éducation des enfants, l'héritage, la vente...
-  Tafsir
-  Hadith
-  Sira la biographie du prophète ﷺ
-  Apprendre la Rokia
-  Formation pour devenir enseignant.
-  Cours mondains : maths, physique chimie...
+    Voici les cours possibles en solo :
+    • Apprendre à lire, méthode al madania, nour al bayan, qaida nourania...
+    • Langue arabe programme forqan ou tome de Médine,
+    • Tajwid niveau 1 et 2, touhfatoul atfal, jazariyah, oussoul hafs, oussoul warch
+    • CORAN mémorisation, Correction, tilawa, Fluidification de la lecture.
+    • Aquida, Fiqh, Tafsir, Hadith, Sira (biographie du prophète ﷺ)...
+    • Apprendre la Rokia, Formation pour devenir enseignant.
+    • Cours mondains : maths, physique chimie...
 
-  Si vous n'êtes pas intéressé pour le moment, vous pouvez nous retrouver ici :
-  Canal principal ANNONCE DE COURS en groupe à petit prix
-  t.me/sabil_al_ilm
-  Canal de support de TAJWID
-  t.me/sabil_al_ilm_TAJWID
-  FACEBOOK
-  https://www.facebook.com/share/1AN1QpNfod/
-  INSTAGRAM
-  https://www.instagram.com/sabil.al.ilm?igsh=OGk4ZHhkbXZpeHQ0
-  CONTACT sœurs : sabil.al.ilm@gmail.com
-  CONTACT frères : Sabil.al.ilm.homme@gmail.com
-  SITE INTERNET
-  https://sabil-al-ilm.org/
+    Si vous n'êtes pas intéressé pour le moment, vous pouvez nous retrouver ici :
+    📢 Canal principal : t.me/sabil_al_ilm
+    📢 Canal Tajwid : t.me/sabil_al_ilm_TAJWID
+    📘 Facebook : https://www.facebook.com/share/1AN1QpNfod/
+    📸 Instagram : https://www.instagram.com/sabil.al.ilm
+    ✉️ CONTACT sœurs : sabil.al.ilm@gmail.com
+    ✉️ CONTACT frères : Sabil.al.ilm.homme@gmail.com
+    🌐 SITE INTERNET : https://sabil-al-ilm.org/
 
-  Nous attendons votre retour.
-  À bientôt إن شاء الله`
-  }
+    Nous attendons votre retour. À bientôt`
+      }
+
+  // 2️⃣ CAS : La classe est en pause (message court et rassurant)
+  if (statut === 'en_pause') {
+    return `Nous espérons que vous allez bien.
+
+    ⏸️ Ce groupe est temporairement en pause.
+    Les cours reprendront dans quelques jours.
+
+    Merci de votre patience et à très bientôt `
+      }
+       // Fallback par défaut
+  return null
+
+
+ }
 
   const handleEditSeance = (seance: Seance) => {
     setEditingSeanceId(seance.id)
