@@ -1,25 +1,31 @@
-import { NavLink, useLocation } from 'react-router-dom'
-import { UserRole, TacheDirection } from '../../types'
-import { useGetNotificationsQuery, useMarkNotificationReadMutation, useGetTachesDirectionQuery } from '../../store/apiSlice'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { UserRole, TacheDirection, AnnonceEleve } from '../../types'
+import { useAppDispatch } from '../../store/hooks'
+import { logout } from '../../store/authSlice'
+import {
+  useGetNotificationsQuery,
+  useMarkNotificationReadMutation,
+  useGetTachesDirectionQuery,
+  useGetMesAnnoncesQuery, // 🆕 Ajout
+} from '../../store/apiSlice'
 
 interface SidebarProps {
   userRole?: UserRole
-  userId?: string // ✅ Ajouté
-  isActive?: boolean // 🔒 false = compte désactivé
+  userId?: string
+  isActive?: boolean
 }
 
-// 🗺️ Association route du menu -> type(s) de notification
 const NOTIF_BADGE_MAP: Record<string, string[]> = {
   '/direction/planning-global': ['changement_creneau', 'nouveau_creneau', 'classe_a_supprimer', 'classe_mise_en_pause'],
   '/direction/classes': ['new_message_chat_classe', 'new_facture_soumise', 'new_facture_soumise_recall', 'facture_payee', 'facture_confirmee', 'facture_totalement_payee'],
   '/eleve/classes': ['nouveau_creneau', 'changement_creneau', 'new_facture_soumise', 'facture_confirmee', 'new_message_chat_classe'],
   '/eleve/factures': ['new_facture_soumise', 'facture_confirmee'],
+  '/eleve/annonces': ['nouvelle_annonce'], // 🆕 Type de notif pour annonces (ajustez selon votre backend)
   '/professeur/planning': ['inscription_eleve'],
   '/professeur/cours': ['new_message_chat_classe', 'facture_payee'],
   '/admin/classes': ['new_facture_soumise', 'facture_payee', 'facture_confirmee', 'new_message_chat_classe', 'facture_totalement_payee'],
 }
 
-// Pour le marquage "lu" au clic
 const NOTIF_MARK_READ_ON_NAV: Record<string, string[]> = {
   '/direction/planning-global': ['changement_creneau', 'nouveau_creneau'],
 }
@@ -32,24 +38,32 @@ interface MenuItem {
   isLogout?: boolean
 }
 
-// ✅ CORRECTION : userId est maintenant bien déstructuré ici
 export default function Sidebar({ userRole, userId, isActive = true }: SidebarProps) {
   const location = useLocation()
+  const navigate = useNavigate()
+  const dispatch = useAppDispatch()
 
-  // 📡 Notifications non lues
+  const isNativeApp = typeof window !== 'undefined' && !!(window as any).ReactNativeWebView
+
   const { data: notificationsData } = useGetNotificationsQuery(
     { page: 1, lu: false },
-    {
-      pollingInterval: 30000,
-      skip: !userRole,
-    }
+    { pollingInterval: 30000, skip: !userRole }
   )
 
-  // ✅ CORRECTION : Ce bloc est maintenant BIEN À L'INTÉRIEUR du composant
   const { data: tachesRaw } = useGetTachesDirectionQuery(undefined, {
     pollingInterval: 30000,
     skip: !userId || (userRole !== 'admin' && userRole !== 'direction'),
   })
+
+  // 🆕 Récupérer les annonces pour l'élève (pour le badge clignotant)
+  const { data: mesAnnoncesRaw } = useGetMesAnnoncesQuery(undefined, {
+    pollingInterval: 30000,
+    skip: userRole !== 'eleve',
+  })
+  const mesAnnonces: AnnonceEleve[] = Array.isArray(mesAnnoncesRaw)
+    ? mesAnnoncesRaw
+    : (mesAnnoncesRaw as any)?.results ?? []
+  const hasAnnoncesNonLues = mesAnnonces.some((a: any) => !a.statut)
 
   const taches: TacheDirection[] = Array.isArray(tachesRaw)
     ? tachesRaw
@@ -73,28 +87,16 @@ export default function Sidebar({ userRole, userId, isActive = true }: SidebarPr
   const handleMenuClick = (route: string) => {
     const types = NOTIF_MARK_READ_ON_NAV[route]
     if (!types) return
-
     const toMark = unreadNotifs.filter((n) => types.includes((n as any).type))
-    toMark.forEach((n) => {
-      markRead(n.id)
-    })
+    toMark.forEach((n) => markRead(n.id))
   }
 
-  const getLinkClasses = (isActiveLink: boolean) => `
-    flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-all
-    ${isActiveLink 
-      ? 'bg-primary-100 text-primary-700' 
-      : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
-    }
-  `
-
-  const getMobileLinkClasses = (isActiveLink: boolean) => `
-    flex flex-col items-center justify-center gap-1 px-2 py-1.5 rounded-lg transition-all
-    ${isActiveLink 
-      ? 'text-primary-600' 
-      : 'text-neutral-500 hover:text-neutral-700'
-    }
-  `
+  const getLinkClasses = (isActiveLink: boolean) =>
+    `flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+      isActiveLink
+        ? 'bg-primary-100 text-primary-700'
+        : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+    }`
 
   const getMenuItems = () => {
     const logoutItem: MenuItem = {
@@ -104,15 +106,20 @@ export default function Sidebar({ userRole, userId, isActive = true }: SidebarPr
       mobileLabel: 'Sortir',
       isLogout: true,
     }
+
     switch (userRole) {
       case 'eleve': {
         const fullMenu = [
           { to: '/eleve/dashboard', label: 'Accueil', icon: '🏠', mobileLabel: 'Accueil' },
           { to: '/eleve/classes', label: ' Mes cours', icon: '📚', mobileLabel: 'Classes' },
-          { to: '/eleve/diplomes', label: ' Mes diplômes', icon: '📄', mobileLabel: 'Diplômes' },
+          {
+            to: '/eleve/annonces',
+            label: ' Annonces',
+            icon: '📢',
+            mobileLabel: 'Annonces',
+          }, // 🆕 Remplace Diplômes
           { to: '/eleve/chat-admin', label: ' Admin', icon: '💬', mobileLabel: 'Admin' },
           { to: '/eleve/factures', label: ' Mes Factures', icon: '💰', mobileLabel: 'Factures' },
-          
         ]
         if (!isActive) {
           return fullMenu.filter((item) => item.to === '/eleve/factures')
@@ -156,84 +163,71 @@ export default function Sidebar({ userRole, userId, isActive = true }: SidebarPr
 
   const menuItems = getMenuItems()
 
+  // 🆕 Fonction pour savoir si une route doit afficher le badge annonces
+  const showAnnonceBadge = (route: string) => {
+    return route === '/eleve/annonces' && hasAnnoncesNonLues
+  }
+
   return (
     <>
-   
-      {/* 📱 Bottom Navigation - Mobile/Tablette uniquement (Scrollable) */}
-       {/*<nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 z-50 safe-area-pb">*/}
-
-      
-        <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 z-50 safe-area-pb">
-        {/* ✅ Ajout de overflow-x-auto, snap-x, et masquage de la scrollbar */}
+      {/* 📱 Bottom Navigation - Mobile/Tablette */}
+      <nav className={`${isNativeApp ? '' : 'lg:hidden'} fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 z-50 safe-area-pb`}>
         <div className="flex items-center gap-1 overflow-x-auto snap-x snap-mandatory px-2 py-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          {menuItems
-            .filter((item) => !item.to.includes('planning'))
-            .map((item) => (
-              /* ✅ flex-shrink-0 et min-w-[72px] empêchent l'écrasement des icônes */
-              /* ✅ snap-center permet au défilement de s'arrêter net sur l'icône */
-              <NavLink
-                key={item.to}
-                to={item.to}
-                onClick={(e) => {
-                  if (item.isLogout) {
-                    e.preventDefault()
-                    localStorage.removeItem('sabil_token')
-                    window.location.href = '/login'
-                  } else {
-                    handleMenuClick(item.to)
-                  }
-                }}
-                className={({ isActive: linkActive }) => `
-                  
-                  flex flex-col items-center justify-center gap-1 px-2 py-1.5 rounded-lg transition-all flex-shrink-0 snap-center min-w-[72px]
-                  ${linkActive 
-                    ? 'text-primary-600' 
-                    : 'text-neutral-500 hover:text-neutral-700'
-                  }
-                `}
-              >
-                <span className="relative text-xl">
-                  {item.icon}
-                  
-                  {/* ✅ Badge Tâches (Chiffré) */}
-                  {(item.to === '/admin/taches' || item.to === '/direction/taches') && nbMesTaches > 0 ? (
-                    <span className="absolute -top-1.5 -right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-white animate-pulse">
-                      {nbMesTaches > 99 ? '99+' : nbMesTaches}
-                    </span>
-                  ) : (
-                    /* ✅ Badge Notification classique (Point orange) */
-                    hasNotifBadge(item.to) && (
-                      <span className="absolute -top-0.5 -right-1.5 w-2.5 h-2.5 rounded-full bg-orange-500 animate-pulse ring-2 ring-white" />
-                    )
-                  )}
-                </span>
-                {/* text-center et leading-tight pour que le texte reste propre sur 2 lignes si nécessaire */}
-                <span className="text-[10px] font-medium text-center leading-tight">{item.mobileLabel}</span>
-              </NavLink>
-            ))}
+          {menuItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              onClick={(e) => {
+                if (item.isLogout) {
+                  e.preventDefault()
+                  dispatch(logout())
+                  navigate('/login')
+                } else {
+                  handleMenuClick(item.to)
+                }
+              }}
+              className={({ isActive: linkActive }) => `
+                flex flex-col items-center justify-center gap-1 px-2 py-1.5 rounded-lg transition-all flex-shrink-0 snap-center min-w-[72px]
+                ${linkActive ? 'text-primary-600' : 'text-neutral-500 hover:text-neutral-700'}
+              `}
+            >
+              <span className="relative text-xl">
+                {item.icon}
+                {/* 🆕 Badge Annonces clignotant (prioritaire) */}
+                {showAnnonceBadge(item.to) ? (
+                  <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-orange-500 animate-pulse ring-2 ring-white" />
+                ) : (item.to === '/admin/taches' || item.to === '/direction/taches') && nbMesTaches > 0 ? (
+                  <span className="absolute -top-1.5 -right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-white animate-pulse">
+                    {nbMesTaches > 99 ? '99+' : nbMesTaches}
+                  </span>
+                ) : (
+                  hasNotifBadge(item.to) && (
+                    <span className="absolute -top-0.5 -right-1.5 w-2.5 h-2.5 rounded-full bg-orange-500 animate-pulse ring-2 ring-white" />
+                  )
+                )}
+              </span>
+              <span className="text-[10px] font-medium text-center leading-tight">{item.mobileLabel}</span>
+            </NavLink>
+          ))}
         </div>
       </nav>
 
-      {/* 💻 Sidebar Desktop - Cachée sur mobile */}
-        {/*<aside className="hidden md:flex md:flex-col w-64 bg-white border-r border-neutral-200 h-screen sticky top-0"> */}
-        {/* Logo */}
-        <aside className="hidden lg:flex lg:flex-col w-64 bg-white border-r border-neutral-200 h-screen sticky top-0">
+      {/* 💻 Sidebar Desktop */}
+      <aside className={`${isNativeApp ? 'hidden' : 'hidden lg:flex lg:flex-col'} w-64 bg-white border-r border-neutral-200 h-screen sticky top-0`}>
         <div className="p-4 border-b border-neutral-200 flex items-center justify-center">
-          <img 
+          <img
             src="/logo.jpeg"
-            alt="Sabil Al Ilm - Le chemin de la Science" 
+            alt="Sabil Al Ilm - Le chemin de la Science"
             className="h-32 w-auto object-contain"
           />
         </div>
 
-        {/* ⚠️ Bandeau si compte désactivé */}
         {!isActive && (
           <div className="mx-4 mt-3 p-2.5 rounded-lg bg-danger-50 border border-danger-200 text-danger-700 text-xs">
             🔒 Compte désactivé — accès limité aux factures
           </div>
         )}
 
-        {/* Menu */}
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {menuItems.map((item) => (
             <NavLink
@@ -252,14 +246,14 @@ export default function Sidebar({ userRole, userId, isActive = true }: SidebarPr
             >
               <span className="relative text-lg">
                 {item.icon}
-                
-                {/* ✅ Badge Tâches (Chiffré) */}
-                {(item.to === '/admin/taches' || item.to === '/direction/taches') && nbMesTaches > 0 ? (
+                {/* 🆕 Badge Annonces clignotant (prioritaire) */}
+                {showAnnonceBadge(item.to) ? (
+                  <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-orange-500 animate-pulse ring-2 ring-white" />
+                ) : (item.to === '/admin/taches' || item.to === '/direction/taches') && nbMesTaches > 0 ? (
                   <span className="absolute -top-1.5 -right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-white animate-pulse">
                     {nbMesTaches > 99 ? '99+' : nbMesTaches}
                   </span>
                 ) : (
-                  /* ✅ Badge Notification classique (Point orange) */
                   hasNotifBadge(item.to) && (
                     <span className="absolute -top-0.5 -right-1 w-2.5 h-2.5 rounded-full bg-orange-500 animate-pulse ring-2 ring-white" />
                   )
@@ -270,7 +264,6 @@ export default function Sidebar({ userRole, userId, isActive = true }: SidebarPr
           ))}
         </nav>
 
-        {/* Déconnexion */}
         {userRole !== 'eleve' && (
           <div className="p-4 border-t border-neutral-200">
             <button
