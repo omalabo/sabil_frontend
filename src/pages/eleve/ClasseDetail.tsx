@@ -2733,7 +2733,7 @@ const handleSendMessage = async (e: React.FormEvent) => {
     { id: 'supports', icon: '📁', label: 'Supports' },
     { id: 'editeur', icon: '🎬', label: 'Présentation', hasAlert: false },
     { id: 'livres', icon: '📚', label: 'Livres' },
-    { id: 'rediffusion', icon: '🎬', label: 'Rediffusion', hasAlert: false },
+    { id: 'rediffusion', icon: '📜', label: 'Rediffusion', hasAlert: false },
     { id: 'infos', icon: '💰', label: 'Infos', hasAlert: showFactureBlink || unreadNotifs.some(n => n.classe === activeClassId && (INFOS_BADGE_TYPES[role] || []).includes(n.type)) },
   ];
   if (role === 'direction') return base.filter(t => ['salle', 'chat', 'infos'].includes(t.id));
