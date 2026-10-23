@@ -2726,28 +2726,30 @@ const handleSendMessage = async (e: React.FormEvent) => {
   // 🆕 Filtrage des onglets pour directeur
   const availableTabs = useMemo(() => {
   const base = [
+    // 🆕 Rediffusion : TOUJOURS visible pour tous les rôles
     
     { id: 'salle', icon: '🎥', label: 'Salle', hasAlert: unreadNotifs.some(n => n.classe === activeClassId && SALLE_BADGE_TYPES.includes(n.type)) },
     { id: 'chat', icon: '💬', label: 'Chat', hasAlert: unreadNotifs.some(n => n.classe === activeClassId && CHAT_BADGE_TYPES.includes(n.type)) },
     { id: 'tableau', icon: '🖊️', label: 'Tableau' },
     { id: 'supports', icon: '📁', label: 'Supports' },
-    { id: 'editeur', icon: '🎬', label: 'Présentation', hasAlert: false },
+    { id: 'editeur', icon: '📜', label: 'Présentation', hasAlert: false },
     { id: 'livres', icon: '📚', label: 'Livres' },
-    { id: 'rediffusion', icon: '📜', label: 'Rediffusion', hasAlert: false },
+    { id: 'rediffusion', icon: '🎬', label: 'Rediffusion', hasAlert: false },
     { id: 'infos', icon: '💰', label: 'Infos', hasAlert: showFactureBlink || unreadNotifs.some(n => n.classe === activeClassId && (INFOS_BADGE_TYPES[role] || []).includes(n.type)) },
   ];
-  if (role === 'direction') return base.filter(t => ['salle', 'chat', 'infos'].includes(t.id));
+  // 🆕 La direction voit aussi l'onglet Rediffusion (en plus de salle, chat, infos)
+  if (role === 'direction') return base.filter(t => ['rediffusion', 'salle', 'chat', 'infos'].includes(t.id));
   return base;
 }, [role, unreadNotifs, activeClassId, showFactureBlink]);
 
   
 
- useEffect(() => {
-  if (role === 'direction' && !['salle', 'chat', 'infos'].includes(activeTab))
-    {
-      setActiveTab('chat');
-    }
-  }, [role, activeTab]);
+useEffect(() => {
+  if (role === 'direction' && !['rediffusion', 'salle', 'chat', 'infos'].includes(activeTab)) {
+    setActiveTab('chat');
+  }
+}, [role, activeTab]);
+  
 
   // ─── QueryFinModal ────────────────────────────────────────────────────────
   const QueryFinModal = () => {
@@ -3446,7 +3448,7 @@ const classesFiltrees = classes.filter((cls: Class) =>
                   <RediffusionTab
                     classeId={activeClassId}
                     activeClass={activeClass}
-                    role={role === 'admin' || role === 'direction' ? 'eleve' : role}
+                    role={role}
                   />
                 )}
 
