@@ -19,6 +19,7 @@ import MesDiplomes from './pages/eleve/MesDiplomes'
 import EleveEnregistrements from './pages/eleve/Enregistrements'
 import EleveParametres from './pages/eleve/Parametres'
 import EleveFactures from './pages/eleve/Factures'
+import AnnoncesEleve from './pages/eleve/AnnoncesEleve'
 
 // Pages Professeur
 import ProfDashboard from './pages/professeur/Dashboard'
@@ -134,6 +135,7 @@ function App() {
             <Route path="/eleve/enregistrements" element={<EleveEnregistrements />} />
             <Route path="/eleve/parametres" element={<EleveParametres />} />
             <Route path="/eleve/factures" element={<EleveFactures />} />
+            <Route path="/eleve/annonces" element={<AnnoncesEleve />} />
           </Route>
         </Route>
 
