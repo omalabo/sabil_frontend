@@ -35,7 +35,7 @@ import { Class, Message, User, Facture, FacturePreview, FactureLigne, FactureEle
 import type { SeanceManquee, AbsenceSignaler, AnnonceEleve} from '../../types'
 import SubmitFactureModal from '../../components/shared/Submitfacturemodal'
 import { AnnonceEleveCard } from '../direction/Annonces'  // ajustez le chemin selon votre structure
-
+import RediffusionTab from '../../components/classroom/RediffusionTab'
 import { PartageProvider, usePartage } from '../../context/PartageContext'
 import PresentationMode from '../../components/classroom/PresentationMode'
 import LivresClasse from '../../components/classroom/LivresClasse'
@@ -2725,22 +2725,20 @@ const handleSendMessage = async (e: React.FormEvent) => {
 
   // 🆕 Filtrage des onglets pour directeur
   const availableTabs = useMemo(() => {
+  const base = [
     
-    const base = [
-      ...(role === 'eleve' && annoncesActives.length > 0
-        ? [{ id: 'annonces', icon: '📢', label: 'Annonces', hasAlert: hasNonLues }]
-        : []),
-      { id: 'salle', icon: '🎥', label: 'Salle', hasAlert: unreadNotifs.some(n => n.classe === activeClassId && SALLE_BADGE_TYPES.includes(n.type)) },
-      { id: 'chat', icon: '💬', label: 'Chat' , hasAlert: unreadNotifs.some(n => n.classe === activeClassId && CHAT_BADGE_TYPES.includes(n.type))},
-      { id: 'tableau', icon: '🖊️', label: 'Tableau' },
-      { id: 'supports', icon: '📁', label: 'Supports' },
-      { id: 'editeur', icon: '🎬', label: 'Présentation', hasAlert: false },
-      { id: 'livres', icon: '📝', label: 'Livres' },
-      { id: 'infos', icon: '💰', label: 'Infos', hasAlert: showFactureBlink || unreadNotifs.some(n => n.classe === activeClassId && (INFOS_BADGE_TYPES[role] || []).includes(n.type)) },
-    ];
-    if (role === 'direction') return base.filter(t => ['salle', 'chat', 'infos'].includes(t.id));
-    return base;
-  }, [role, annoncesActives.length, hasNonLues, unreadNotifs, activeClassId]);
+    { id: 'salle', icon: '🎥', label: 'Salle', hasAlert: unreadNotifs.some(n => n.classe === activeClassId && SALLE_BADGE_TYPES.includes(n.type)) },
+    { id: 'chat', icon: '💬', label: 'Chat', hasAlert: unreadNotifs.some(n => n.classe === activeClassId && CHAT_BADGE_TYPES.includes(n.type)) },
+    { id: 'tableau', icon: '🖊️', label: 'Tableau' },
+    { id: 'supports', icon: '📁', label: 'Supports' },
+    { id: 'editeur', icon: '🎬', label: 'Présentation', hasAlert: false },
+    { id: 'livres', icon: '📚', label: 'Livres' },
+    { id: 'rediffusion', icon: '🎬', label: 'Rediffusion', hasAlert: false },
+    { id: 'infos', icon: '💰', label: 'Infos', hasAlert: showFactureBlink || unreadNotifs.some(n => n.classe === activeClassId && (INFOS_BADGE_TYPES[role] || []).includes(n.type)) },
+  ];
+  if (role === 'direction') return base.filter(t => ['salle', 'chat', 'infos'].includes(t.id));
+  return base;
+}, [role, unreadNotifs, activeClassId, showFactureBlink]);
 
   
 
@@ -3444,16 +3442,12 @@ const classesFiltrees = classes.filter((cls: Class) =>
                   </div>
                 )}
 
-                {activeTab === 'annonces' && (
-                  <div style={{ flex: 1, overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 12, background: '#f0f2f5' }}>
-                    <div style={{ padding: '8px 0', marginBottom: 4 }}>
-                      <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#1e1b4b' }}>📢 Annonces</p>
-                      <p style={{ margin: '2px 0 0', fontSize: 11, color: '#667781' }}>{annoncesActives.length} annonce{annoncesActives.length > 1 ? 's' : ''}</p>
-                    </div>
-                    {annoncesActives.map((annonce: any) => (
-                      <AnnonceEleveCard key={annonce.id} annonce={annonce} />
-                    ))}
-                  </div>
+                {activeTab === 'rediffusion' && activeClassId && (
+                  <RediffusionTab
+                    classeId={activeClassId}
+                    activeClass={activeClass}
+                    role={role === 'admin' || role === 'direction' ? 'eleve' : role}
+                  />
                 )}
 
                 {activeTab === 'chat' && (
