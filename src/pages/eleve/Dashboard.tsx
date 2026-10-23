@@ -6,10 +6,11 @@ import {
   useGetEleveDashboardQuery,
   useGetEleveStatsQuery,
   useGetClassesQuery,
+  useGetMyDiplomesQuery, // 🆕
 } from '../../store/apiSlice'
 import { format, isToday, isTomorrow, addDays, getDay } from 'date-fns'
 import { fr } from 'date-fns/locale'
-import { useMemo, useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import api from '../../config/axios'
 
 interface Seance {
@@ -46,6 +47,9 @@ export default function EleveDashboard() {
   const { data: dashboard, isLoading } = useGetEleveDashboardQuery(undefined, { skip: !user })
   const { data: stats, isLoading: statsLoading } = useGetEleveStatsQuery(undefined, { skip: !user })
   const { data: classesData, isLoading: classesLoading } = useGetClassesQuery({}, { skip: !user })
+  // 🆕 Récupérer les diplômes pour compter
+  const { data: diplomesData } = useGetMyDiplomesQuery(undefined, { skip: !user })
+  const nbDiplomes = Array.isArray(diplomesData) ? diplomesData.length : 0
 
   const [seancesSemaine, setSeancesSemaine] = useState<Array<{
     seance: Seance
@@ -57,7 +61,7 @@ export default function EleveDashboard() {
   }>>([])
   const [loadingSeances, setLoadingSeances] = useState(false)
 
-  // Charger les séances de la semaine (du jour actuel à dimanche)
+  // Charger les séances de la semaine
   useEffect(() => {
     if (!classesData?.results || !user) return
     const loadSeances = async () => {
@@ -90,12 +94,10 @@ export default function EleveDashboard() {
                 const jourIndex = DAYS_ORDER.indexOf(jourSeance)
                 const daysUntil = jourIndex - (currentIndex >= 0 ? currentIndex : 0)
                 const seanceDate = addDays(today, daysUntil >= 0 ? daysUntil : 7 + daysUntil)
-
                 let jourLabel = ''
                 if (isToday(seanceDate)) jourLabel = "Aujourd'hui"
                 else if (isTomorrow(seanceDate)) jourLabel = 'Demain'
                 else jourLabel = format(seanceDate, 'EEE d MMM', { locale: fr })
-
                 allSeances.push({
                   seance,
                   classe: cls,
@@ -114,8 +116,7 @@ export default function EleveDashboard() {
           return (a.seance.heure_debut_reelle || '').localeCompare(b.seance.heure_debut_reelle || '')
         })
         setSeancesSemaine(allSeances)
-      } catch {}
-      finally {
+      } catch {} finally {
         setLoadingSeances(false)
       }
     }
@@ -125,6 +126,7 @@ export default function EleveDashboard() {
   const programmes = stats?.programmes || []
   const montantAPayer = Number(stats?.montant_a_payer ?? 0)
   const nbFacturesEnAttente = stats?.nb_factures_en_attente ?? 0
+  const nbClassesActives = stats?.nb_classes_actives ?? 0
 
   if (isLoading || statsLoading || classesLoading)
     return (
@@ -159,60 +161,148 @@ export default function EleveDashboard() {
 
       <div className="max-w-7xl mx-auto px-6 md:px-10 -mt-8 space-y-6">
         {/* ═══════════════════════════════════════════════════════════════
-            SECTION 1 — Mes programmes
+            SECTION 1 — Cards principales (Classes, Factures, Diplômes)
         ═══════════════════════════════════════════════════════════════ */}
-        <section>
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-lg">📖</span>
-            <h2 className="text-lg font-bold text-slate-900">Mes programmes</h2>
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* ── 1.1 Classes actives ── */}
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl border border-blue-200 p-5 hover:shadow-lg transition-all">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-blue-500 flex items-center justify-center text-white text-xl shadow-md">
+                  🎓
+                </div>
+                <div>
+                  <p className="font-bold text-slate-900 text-sm">Classes actives</p>
+                  <p className="text-xs text-slate-600">Inscriptions en cours</p>
+                </div>
+              </div>
+              <p className="text-3xl font-bold text-blue-900">{nbClassesActives || '—'}</p>
+            </div>
+            {/* 🆕 Bouton d'accès */}
+            <button
+              onClick={() => navigate('/eleve/classes')}
+              className="w-full mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition shadow-md flex items-center justify-center gap-2"
+            >
+              📚 Voir mes classes →
+            </button>
           </div>
-          {programmes.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {programmes.map((prog: string, i: number) => {
-                const colors = [
-                  'from-blue-50 to-blue-100 border-blue-200',
-                  'from-emerald-50 to-emerald-100 border-emerald-200',
-                  'from-amber-50 to-amber-100 border-amber-200',
-                ]
-                const colorClass = colors[i % colors.length]
-                const iconBg = ['bg-blue-500', 'bg-emerald-500', 'bg-amber-500'][i % 3]
-                return (
-                  <div
-                    key={i}
-                    className={`bg-gradient-to-br ${colorClass} rounded-2xl border p-5 hover:shadow-lg transition-all cursor-default`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div
-                        className={`w-12 h-12 rounded-xl ${iconBg} flex items-center justify-center text-white text-lg font-bold flex-shrink-0 shadow-md`}
-                      >
-                        {prog.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-bold text-slate-900 text-sm truncate">{prog}</p>
-                        <p className="text-xs text-slate-600 mt-1">Programme actif</p>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
+
+          {/* ── 1.2 Factures ── */}
+          <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-2xl border border-amber-200 p-5 hover:shadow-lg transition-all">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-amber-500 flex items-center justify-center text-white text-xl shadow-md">
+                  💰
+                </div>
+                <div>
+                  <p className="font-bold text-slate-900 text-sm">À régler</p>
+                  <p className="text-xs text-slate-600">
+                    {nbFacturesEnAttente > 0
+                      ? `${nbFacturesEnAttente} facture${nbFacturesEnAttente > 1 ? 's' : ''}`
+                      : '✓ À jour'}
+                  </p>
+                </div>
+              </div>
+              <p className="text-2xl font-bold text-amber-900">
+                {montantAPayer.toLocaleString('fr-FR', {
+                  style: 'currency',
+                  currency: 'EUR',
+                  maximumFractionDigits: 0,
+                })}
+              </p>
             </div>
-          ) : (
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 text-center">
-              <p className="text-sm text-slate-500 italic">Aucun programme inscrit</p>
+            {/* 🆕 Bouton d'accès */}
+            <button
+              onClick={() => navigate('/eleve/factures')}
+              className="w-full mt-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg transition shadow-md flex items-center justify-center gap-2"
+            >
+              💳 Voir mes factures →
+            </button>
+          </div>
+
+          {/* ── 1.3 Diplômes (NOUVEAU) ── */}
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl border border-purple-200 p-5 hover:shadow-lg transition-all">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-purple-500 flex items-center justify-center text-white text-xl shadow-md">
+                  🏆
+                </div>
+                <div>
+                  <p className="font-bold text-slate-900 text-sm">Mes diplômes</p>
+                  <p className="text-xs text-slate-600">Attestations obtenues</p>
+                </div>
+              </div>
+              <p className="text-3xl font-bold text-purple-900">{nbDiplomes}</p>
             </div>
-          )}
+            {/* 🆕 Bouton d'accès */}
+            <button
+              onClick={() => navigate('/eleve/diplomes')}
+              className="w-full mt-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg transition shadow-md flex items-center justify-center gap-2"
+            >
+              🎖️ Voir mes diplômes →
+            </button>
+          </div>
         </section>
 
         {/* ═══════════════════════════════════════════════════════════════
-            SECTION 2 — Prochains cours + Paiements
+            SECTION 2 — Programmes (liste à puces)
         ═══════════════════════════════════════════════════════════════ */}
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* ── Prochains cours ── */}
+        <section>
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">📖</span>
+                <h2 className="text-lg font-bold text-slate-900">Mes programmes</h2>
+              </div>
+              <span className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+                {programmes.length} inscription{programmes.length > 1 ? 's' : ''} active{programmes.length > 1 ? 's' : ''}
+              </span>
+            </div>
+
+            {programmes.length > 0 ? (
+              <ul className="space-y-2">
+                {programmes.map((prog: string, i: number) => {
+                  const colors = [
+                    { dot: 'bg-blue-500', bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-900' },
+                    { dot: 'bg-emerald-500', bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-900' },
+                    { dot: 'bg-amber-500', bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-900' },
+                    { dot: 'bg-purple-500', bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-900' },
+                    { dot: 'bg-rose-500', bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-900' },
+                  ]
+                  const c = colors[i % colors.length]
+                  return (
+                    <li
+                      key={i}
+                      className={`flex items-center gap-3 px-4 py-2.5 rounded-xl border ${c.bg} ${c.border} transition hover:shadow-sm`}
+                    >
+                      <span className={`w-2.5 h-2.5 rounded-full ${c.dot} flex-shrink-0`} />
+                      <span className={`text-sm font-semibold ${c.text} flex-1`}>{prog}</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500 bg-white px-2 py-0.5 rounded-full border border-slate-200">
+                        Actif
+                      </span>
+                    </li>
+                  )
+                })}
+              </ul>
+            ) : (
+              <div className="text-center py-6">
+                <div className="text-3xl mb-2">📭</div>
+                <p className="text-sm text-slate-500 italic">Aucun programme inscrit pour le moment</p>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* ═══════════════════════════════════════════════════════════════
+            SECTION 3 — Prochains cours
+        ═══════════════════════════════════════════════════════════════ */}
+        <section>
           <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
             <div className="flex items-center gap-2 mb-4">
               <span className="text-lg">📅</span>
               <h2 className="text-lg font-bold text-slate-900">Prochains cours</h2>
             </div>
+
             {loadingSeances ? (
               <div className="flex justify-center py-12">
                 <div className="w-6 h-6 border-2 border-slate-200 border-t-indigo-500 rounded-full animate-spin" />
@@ -224,7 +314,7 @@ export default function EleveDashboard() {
                 <p className="text-xs text-slate-400 mt-1">Reposez-vous bien !</p>
               </div>
             ) : (
-              <div className="space-y-3 max-h-96 overflow-y-auto">
+              <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
                 {seancesSemaine.map((item, idx) => {
                   const heureDebut = item.seance.heure_debut_reelle?.substring(0, 5) || '--:--'
                   const heureFin = calcHeureFin(
@@ -235,7 +325,6 @@ export default function EleveDashboard() {
                     typeof item.classe.professeur === 'object'
                       ? item.classe.professeur?.display_name || 'Professeur'
                       : 'Professeur'
-
                   return (
                     <div
                       key={`${item.seance.id}-${idx}`}
@@ -264,10 +353,8 @@ export default function EleveDashboard() {
                           {heureDebut} – {heureFin}
                         </p>
                       </div>
-
                       {/* Séparateur */}
                       <div className="w-px h-10 bg-slate-200 flex-shrink-0" />
-
                       {/* Cours */}
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-slate-900 text-sm truncate">
@@ -275,11 +362,9 @@ export default function EleveDashboard() {
                         </p>
                         <p className="text-xs text-slate-500 mt-0.5">👤 {profNom}</p>
                       </div>
-
-                      {/* ✅ BOUTON : redirige vers l'onglet 🎥 Salle de la classe */}
+                      {/* Bouton : redirige vers ClasseDetail onglet Salle */}
                       <button
                         onClick={() => navigate(`/eleve/classe/${item.classe.id}?tab=salle`)}
-                        
                         className={`flex-shrink-0 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
                           item.isToday
                             ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'
@@ -293,100 +378,6 @@ export default function EleveDashboard() {
                 })}
               </div>
             )}
-          </div>
-
-          {/* ── Paiements & factures ── */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-lg">💳</span>
-              <h2 className="text-lg font-bold text-slate-900">Paiements & factures</h2>
-            </div>
-            <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl border border-amber-200 p-5 mb-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-amber-700 font-medium mb-1">Montant à régler</p>
-                  <p className="text-3xl font-bold text-amber-900">
-                    {montantAPayer.toLocaleString('fr-FR', {
-                      style: 'currency',
-                      currency: 'EUR',
-                    })}
-                  </p>
-                  <p className="text-xs text-amber-600 mt-2">
-                    {nbFacturesEnAttente > 0
-                      ? `${nbFacturesEnAttente} facture en attente`
-                      : '✓ À jour'}
-                  </p>
-                </div>
-                <div className="text-4xl">💰</div>
-              </div>
-            </div>
-            {/* ✅ Bouton "Voir les détails" supprimé */}
-            <p className="text-xs text-slate-400 italic text-center">
-              Retrouvez le détail de vos factures dans l'onglet 💰 Infos de chaque classe.
-            </p>
-          </div>
-        </section>
-
-        {/* ═══════════════════════════════════════════════════════════════
-            SECTION 3 — Stats rapides (titre à gauche, chiffre à droite)
-        ═══════════════════════════════════════════════════════════════ */}
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* ── Classes actives ── */}
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl border border-blue-200 p-5 hover:shadow-lg transition-all">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-blue-500 flex items-center justify-center text-white text-xl shadow-md">
-                  🎓
-                </div>
-                <div>
-                  <p className="font-bold text-slate-900 text-sm">Classes actives</p>
-                  <p className="text-xs text-slate-600">Inscriptions en cours</p>
-                </div>
-              </div>
-              {/* ✅ Chiffre à droite */}
-              <p className="text-3xl font-bold text-blue-900">
-                {stats?.nb_classes_actives ?? '—'}
-              </p>
-            </div>
-            {/* ✅ Bouton "Voir mes classes" supprimé */}
-          </div>
-
-          {/* ── Séances ── */}
-          <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-2xl border border-emerald-200 p-5 hover:shadow-lg transition-all">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-emerald-500 flex items-center justify-center text-white text-xl shadow-md">
-                  📅
-                </div>
-                <div>
-                  <p className="font-bold text-slate-900 text-sm">Séances actives</p>
-                  <p className="text-xs text-slate-600">Toutes classes confondues</p>
-                </div>
-              </div>
-              {/* ✅ Chiffre à droite */}
-              <p className="text-3xl font-bold text-emerald-900">
-                {stats?.nb_seances ?? '—'}
-              </p>
-            </div>
-            {/* ✅ Bouton "Voir le planning" supprimé */}
-          </div>
-
-          {/* ── Programmes ── */}
-          <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-2xl border border-amber-200 p-5 hover:shadow-lg transition-all">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-amber-500 flex items-center justify-center text-white text-xl shadow-md">
-                  🏆
-                </div>
-                <div>
-                  <p className="font-bold text-slate-900 text-sm">Programmes</p>
-                  <p className="text-xs text-slate-600">Inscriptions actives</p>
-                </div>
-              </div>
-              {/* ✅ Chiffre à droite */}
-              <p className="text-3xl font-bold text-amber-900">{programmes.length}</p>
-            </div>
-            {/* ✅ Bouton "Voir les détails" supprimé */}
           </div>
         </section>
       </div>
