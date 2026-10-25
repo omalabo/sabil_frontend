@@ -1153,6 +1153,8 @@ function EleveFacturesInline({ classeId, role }: { classeId: string; role: 'elev
     </div>
   )
 }
+const isRtlText = (t: string) => /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/.test(t)
+
 interface WhiteboardProps { classeId: string; seanceId: string; role: 'eleve' | 'professeur' | 'admin' }
 function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -1185,7 +1187,7 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
  
   
   const COLORS = [{ label: 'Noir', value: '#1a1a2e' }, { label: 'Rouge', value: '#e63946' }, { label: 'Bleu', value: '#1d6fa4' }, { label: 'Vert', value: '#2d9e6b' }, { label: 'Orange', value: '#f4a261' }, { label: 'Violet', value: '#7b2d8b' }, { label: 'Blanc', value: '#ffffff' }]
-  const ARABIC_CHARS = ['ا', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ', 'د', 'ذ', 'ر', 'ز', 'س', 'ش', 'ص', 'ض', 'ط', 'ظ', 'ع', 'غ', 'ف', 'ق', 'ك', 'ل', 'م', 'ن', 'ه', 'و', 'ي', 'ة', 'ى', 'لا', 'أ', 'إ', 'آ', 'ئ', 'ؤ', ' ', '،', '.']
+  //const ARABIC_CHARS = ['ا', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ', 'د', 'ذ', 'ر', 'ز', 'س', 'ش', 'ص', 'ض', 'ط', 'ظ', 'ع', 'غ', 'ف', 'ق', 'ك', 'ل', 'م', 'ن', 'ه', 'و', 'ي', 'ة', 'ى', 'لا', 'أ', 'إ', 'آ', 'ئ', 'ؤ', ' ', '،', '.']
 
 
   const partage = usePartage() // 🆕
@@ -1286,7 +1288,8 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
     else if (data.type === 'text') {
       ctx.font = `${data.fontSize || 40}px 'Amiri',serif`
       ctx.fillStyle = data.color
-      ctx.direction = 'rtl'
+      //ctx.direction = 'rtl'
+      ctx.direction = isRtlText(data.text) ? 'rtl' : 'ltr'
       ctx.textAlign = 'center'      // 🆕
       ctx.textBaseline = 'middle'   // 🆕
       ctx.fillText(data.text, data.x, data.y)
@@ -1389,7 +1392,8 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
 
     ctx.font = `${floatingText.fontSize}px 'Amiri',serif`
     ctx.fillStyle = floatingText.color
-    ctx.direction = 'rtl'
+    //ctx.direction = 'rtl'
+    ctx.direction = isRtlText(floatingText.text) ? 'rtl' : 'ltr'
     ctx.textAlign = 'center'      // 🆕
     ctx.textBaseline = 'middle'   // 🆕
     ctx.fillText(floatingText.text, floatingText.x, floatingText.y)
@@ -1545,7 +1549,8 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
                 fontFamily: "'Amiri', serif",
                 fontSize: `${pixelFontSize}px`,
                 color: floatingText.color,
-                direction: 'rtl',
+                //direction: 'rtl',
+                direction: isRtlText(floatingText.text) ? 'rtl' : 'ltr',
                 cursor: isDraggingText ? 'grabbing' : 'grab',
                 userSelect: 'none',
                 padding: '8px 12px',
@@ -1577,9 +1582,26 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
       {showArabicKeyboard && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-5 max-w-md w-full shadow-xl">
-            <h4 className="font-semibold text-neutral-900 mb-3">✍️ Clavier arabe</h4>
-            <div className="w-full border border-neutral-200 rounded px-3 py-2 mb-2 text-right text-lg bg-neutral-50 min-h-[40px]" style={{ fontFamily: "'Amiri',serif", direction: 'rtl' }}>{arabicText || <span className="text-neutral-300">Votre texte…</span>}</div>
-            <div className="flex flex-wrap gap-1 mb-2 max-h-28 overflow-y-auto">{ARABIC_CHARS.map((char, i) => <button key={i} onClick={() => setArabicText(p => p + char)} className="w-8 h-8 border border-neutral-200 rounded hover:bg-indigo-50 text-sm font-medium" style={{ fontFamily: "'Amiri',serif" }}>{char}</button>)} <button onClick={() => setArabicText(p => p.slice(0, -1))} className="px-2 h-8 border border-red-200 text-red-500 rounded hover:bg-red-50 text-xs">⌫</button></div>
+            <h4 className="font-semibold text-neutral-900 mb-3">✍️ Écrire sur le tableau</h4>
+            <textarea
+              autoFocus
+              dir="auto"
+              rows={3}
+              inputMode="text"
+              enterKeyHint="done"
+              autoCapitalize="sentences"
+              autoCorrect="on"
+              spellCheck
+              value={arabicText}
+              onChange={e => setArabicText(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleArabicConfirm() }
+                if (e.key === 'Escape') { setShowArabicKeyboard(false); setArabicText('') }
+              }}
+              placeholder="Votre texte…"
+              className="w-full border border-neutral-200 rounded px-3 py-2 mb-3 text-lg bg-neutral-50 focus:outline-none focus:border-indigo-400 resize-none"
+              style={{ fontFamily: "'Amiri',serif" }}
+            />
             <div className="flex justify-end gap-2"><button onClick={() => { setShowArabicKeyboard(false); setArabicText('') }} className="px-3 py-1 text-sm text-neutral-600 hover:bg-neutral-100 rounded">Annuler</button> <button onClick={handleArabicConfirm} disabled={!arabicText.trim()} className="px-4 py-1 text-sm bg-indigo-600 text-white rounded disabled:opacity-50">Écrire</button></div>
           </div>
         </div>
