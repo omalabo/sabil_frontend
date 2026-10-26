@@ -1,7 +1,7 @@
 // ClasseDetail.tsx — Navigation par classe avec créneaux du jour
 import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from 'react'
-import { flushSync } from 'react-dom'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
+import { flushSync } from 'react-dom'
 import { useAppSelector } from '../../store/hooks'
 import { selectAuth } from '../../store/authSlice'
 import {
@@ -1176,6 +1176,8 @@ function EleveFacturesInline({ classeId, role }: { classeId: string; role: 'elev
     </div>
   )
 }
+
+
 // ─── Zone de texte du tableau (type Word) : helpers ──────────────────────
 const TEXT_PAD = 8          // marge intérieure (unités canvas)
 const TEXT_LINE_H = 1.3     // interligne
@@ -1198,6 +1200,8 @@ const layoutTextLines = (ctx: CanvasRenderingContext2D, text: string, fontSize: 
   return out
 }
 
+
+
 interface WhiteboardProps { classeId: string; seanceId: string; role: 'eleve' | 'professeur' | 'admin' }
 function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -1211,16 +1215,32 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
   const [color, setColor] = useState('#1a1a2e')
   const [lineWidth, setLineWidth] = useState(3)
   const [bgColor, setBgColor] = useState<'white' | 'grid' | 'lines'>('white')
-  // 🆕 Zone de texte type Word : apparaît là où on clique, on tape directement, déplaçable/redimensionnable
+  //const [showArabicKeyboard, setShowArabicKeyboard] = useState(false)
+  //const [arabicText, setArabicText] = useState('')
+  //const [textPos, setTextPos] = useState<{ x: number; y: number } | null>(null)
+  // 🆕 Texte flottant déplaçable (avant d'être figé sur le canvas)
+  //const [floatingText, setFloatingText] = useState<{
+  //  text: string
+  // x: number
+  //  y: number
+  //  color: string
+  //  fontSize: number
+  //} | null>(null)
+  //const [isDraggingText, setIsDraggingText] = useState(false)
+  //const dragOffset = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
+  //const floatingTextRef = useRef<HTMLDivElement>(null)
+    // 🆕 Zone de texte type Word : apparaît là où on clique, on tape directement, déplaçable/redimensionnable
   const [textBox, setTextBox] = useState<{
     x: number; y: number; w: number; h: number   // coordonnées canvas
     text: string; color: string; fontSize: number
   } | null>(null)
   const textAreaRef = useRef<HTMLTextAreaElement>(null)
   const lastTouchTs = useRef(0)
+  
   const [remoteCursor, setRemoteCursor] = useState<{ x: number; y: number } | null>(null)
   const [wsStatus, setWsStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting')
   const COLORS = [{ label: 'Noir', value: '#1a1a2e' }, { label: 'Rouge', value: '#e63946' }, { label: 'Bleu', value: '#1d6fa4' }, { label: 'Vert', value: '#2d9e6b' }, { label: 'Orange', value: '#f4a261' }, { label: 'Violet', value: '#7b2d8b' }, { label: 'Blanc', value: '#ffffff' }]
+  //const ARABIC_CHARS = ['ا', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ', 'د', 'ذ', 'ر', 'ز', 'س', 'ش', 'ص', 'ض', 'ط', 'ظ', 'ع', 'غ', 'ف', 'ق', 'ك', 'ل', 'م', 'ن', 'ه', 'و', 'ي', 'ة', 'ى', 'لا', 'أ', 'إ', 'آ', 'ئ', 'ؤ', ' ', '،', '.']
   
   const partage = usePartage() // 🆕
   const shareStreamRef = useRef<MediaStream | null>(null) // 🆕
@@ -1341,15 +1361,15 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
   const startDraw = (e: React.MouseEvent | React.TouchEvent) => {
     const canvas = canvasRef.current; if (!canvas) return; const pos = getPos(e, canvas)
     if ('touches' in e) lastTouchTs.current = Date.now()
-    if (tool === 'text') {
-      // un mousedown "émulé" juste après un toucher doit être ignoré (mobile)
-      if (!('touches' in e) && Date.now() - lastTouchTs.current < 800) return
-      if (textBox) commitTextBox()   // fige la zone précédente (supprimée si vide)
-      flushSync(() => setTextBox({ x: pos.x, y: pos.y, w: 500, h: 48 * TEXT_LINE_H + TEXT_PAD * 2, text: '', color, fontSize: 48 }))
-      textAreaRef.current?.focus()   // clavier de l'utilisateur prêt immédiatement
-      return
-    }
-    if (textBox) commitTextBox()
+        if (tool === 'text') {
+          // un mousedown "émulé" juste après un toucher doit être ignoré (mobile)
+          if (!('touches' in e) && Date.now() - lastTouchTs.current < 800) return
+          if (textBox) commitTextBox()   // fige la zone précédente (supprimée si vide)
+          flushSync(() => setTextBox({ x: pos.x, y: pos.y, w: 500, h: 48 * TEXT_LINE_H + TEXT_PAD * 2, text: '', color, fontSize: 48 }))
+          textAreaRef.current?.focus()   // clavier de l'utilisateur prêt immédiatement
+          return
+        }
+        if (textBox) commitTextBox()
     isDrawing.current = true; lastPos.current = pos
     const ctx = ctxRef.current; if (!ctx) return
     const snap = ctx.getImageData(0, 0, canvas.width, canvas.height); historyRef.current.push(snap); redoRef.current = []
@@ -1407,7 +1427,7 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
     }
   }
 
-  // 🆕 Fige la zone de texte sur le canvas et l'envoie aux autres (ligne par ligne)
+    // 🆕 Fige la zone de texte sur le canvas et l'envoie aux autres (ligne par ligne)
   const commitTextBox = () => {
     const tb = textBox
     if (!tb) return
@@ -1504,7 +1524,7 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
       </div>
       <div className="flex-1 overflow-auto relative">
         <canvas ref={canvasRef} width={1200} height={700} onMouseDown={startDraw} onMouseMove={draw} onMouseUp={stopDraw} onMouseLeave={stopDraw} onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={stopDraw} style={{ cursor: tool === 'cursor' ? 'default' : tool === 'eraser' ? 'crosshair' : tool === 'text' ? 'text' : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Ccircle cx='8' cy='8' r='7' fill='none' stroke='%23000' stroke-width='1'/%3E%3C/svg%3E") 8 8, crosshair`, display: 'block', touchAction: 'none', maxWidth: '100%' }} />
-        {/* 🆕 Zone de texte type Word : saisie directe avec le clavier de l'utilisateur */}
+               {/* 🆕 Zone de texte type Word : saisie directe avec le clavier de l'utilisateur */}
         {textBox && (() => {
           const canvas = canvasRef.current
           const sx = canvas ? canvas.offsetWidth / canvas.width : 1
@@ -1550,6 +1570,7 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
         })()}
         {remoteCursor && role === 'eleve' && <div style={{ position: 'absolute', left: remoteCursor.x, top: remoteCursor.y, pointerEvents: 'none', transform: 'translate(-50%,-50%)', width: 12, height: 12, borderRadius: '50%', background: 'rgba(99,102,241,.7)', boxShadow: '0 0 0 4px rgba(99,102,241,.2)' }} />}
       </div>
+      
     </div>
   )
 }
