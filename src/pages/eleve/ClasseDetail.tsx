@@ -1186,8 +1186,6 @@ interface TextBox {
 }
 
 // Dans le composant, ajouter ces states
-const [committedTextBoxes, setCommittedTextBoxes] = useState<TextBox[]>([])
-const [hoveredTextBoxId, setHoveredTextBoxId] = useState<string | null>(null)
 
 function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -1211,7 +1209,9 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
   
   const [remoteCursor, setRemoteCursor] = useState<{ x: number; y: number } | null>(null)
   const [wsStatus, setWsStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting')
- 
+  // 🆕 Zones de texte committées et survol
+  const [committedTextBoxes, setCommittedTextBoxes] = useState<TextBox[]>([])
+  const [hoveredTextBoxId, setHoveredTextBoxId] = useState<string | null>(null)
   
   const COLORS = [{ label: 'Noir', value: '#1a1a2e' }, { label: 'Rouge', value: '#e63946' }, { label: 'Bleu', value: '#1d6fa4' }, { label: 'Vert', value: '#2d9e6b' }, { label: 'Orange', value: '#f4a261' }, { label: 'Violet', value: '#7b2d8b' }, { label: 'Blanc', value: '#ffffff' }]
   //const ARABIC_CHARS = ['ا', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ', 'د', 'ذ', 'ر', 'ز', 'س', 'ش', 'ص', 'ض', 'ط', 'ظ', 'ع', 'غ', 'ف', 'ق', 'ك', 'ل', 'م', 'ن', 'ه', 'و', 'ي', 'ة', 'ى', 'لا', 'أ', 'إ', 'آ', 'ئ', 'ؤ', ' ', '،', '.']
