@@ -1614,30 +1614,29 @@ const deleteCommittedTextBox = (id: string) => {
         </span>
       </div>
         <div className="flex-1 overflow-auto relative">
-        <canvas 
-          ref={canvasRef} 
-          width={1200} 
-          height={700} 
-          onMouseDown={startDraw} 
+        <canvas
+          ref={canvasRef}
+          width={1200}
+          height={700}
+          onMouseDown={startDraw}
           onMouseMove={(e) => { draw(e); handleCanvasHover(e) }}
-          onMouseUp={stopDraw} 
+          onMouseUp={stopDraw}
           onMouseLeave={() => { stopDraw(); setHoveredTextBoxId(null) }}
-          onTouchStart={startDraw} 
+          onTouchStart={startDraw}
           onTouchMove={(e) => { draw(e); handleCanvasHover(e) }}
           onTouchEnd={stopDraw}
-          style={{ 
-            cursor: tool === 'text' 
+          style={{
+            cursor: tool === 'text'
               ? (hoveredTextBoxId ? 'pointer' : 'text')
-              : tool === 'cursor' ? 'default' 
-              : tool === 'eraser' ? 'crosshair' 
+              : tool === 'cursor' ? 'default'
+              : tool === 'eraser' ? 'crosshair'
               : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Ccircle cx='8' cy='8' r='7' fill='none' stroke='%23000' stroke-width='1'/%3E%3C/svg%3E") 8 8, crosshair`,
-            display: 'block', 
-            touchAction: 'none', 
-            maxWidth: '100%' 
-          }} 
+            display: 'block',
+            touchAction: 'none',
+            maxWidth: '100%'
+          }}
         />
           
-                {/* 🆕 Zone de texte type Word : saisie directe avec le clavier de l'utilisateur */}
         {/* 🆕 Zone de texte type Word : saisie directe avec le clavier de l'utilisateur */}
         {textBox && (() => {
           const canvas = canvasRef.current
@@ -1661,14 +1660,6 @@ const deleteCommittedTextBox = (id: string) => {
               <button
                 onClick={(e) => {
                   e.stopPropagation()
-                  // Si la zone vient d'une zone committée, on notifie les autres
-                  if (textBox.id) {
-                    sendWs({ type: 'text_deleted', id: textBox.id })
-                    if (role === 'professeur') {
-                      const dataUrl = canvasRef.current?.toDataURL()
-                      if (dataUrl) sendWs({ type: 'canvas_state', dataUrl })
-                    }
-                  }
                   setTextBox(null)
                 }}
                 title="Supprimer cette zone"
@@ -1698,7 +1689,7 @@ const deleteCommittedTextBox = (id: string) => {
               </button>
               
               <textarea
-                key={`tb-${textBox.x}-${textBox.y}-${textBox.text.length}`}
+                key={`tb-${Date.now()}-${textBox.x}-${textBox.y}`}
                 ref={textAreaRef}
                 autoFocus
                 dir="auto"
@@ -1725,6 +1716,7 @@ const deleteCommittedTextBox = (id: string) => {
             </div>
           )
         })()}
+        
 
         {/* 🆕 Zones de texte committées : survol = bordure en pointillés + bouton supprimer */}
         {committedTextBoxes.map(tb => {
