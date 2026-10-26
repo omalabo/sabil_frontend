@@ -1178,6 +1178,17 @@ const layoutTextLines = (ctx: CanvasRenderingContext2D, text: string, fontSize: 
 }
 
 interface WhiteboardProps { classeId: string; seanceId: string; role: 'eleve' | 'professeur' | 'admin' }
+// En haut du composant CollaborativeWhiteboard, après les autres interfaces
+interface TextBox {
+  id: string
+  x: number; y: number; w: number; h: number
+  text: string; color: string; fontSize: number
+}
+
+// Dans le composant, ajouter ces states
+const [committedTextBoxes, setCommittedTextBoxes] = useState<TextBox[]>([])
+const [hoveredTextBoxId, setHoveredTextBoxId] = useState<string | null>(null)
+
 function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const wsRef = useRef<WebSocket | null>(null)
@@ -1316,6 +1327,17 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
     else if (data.type === 'cursor' && role === 'eleve') { setRemoteCursor({ x: data.x, y: data.y }) }
     else if (data.type === 'canvas_state') { const img = new Image(); img.onload = () => ctx.drawImage(img, 0, 0); img.src = data.dataUrl }
     else if (data.type === 'undo' && data.dataUrl) { const img = new Image(); img.onload = () => { fillBg(ctx, canvas, bgColor); ctx.drawImage(img, 0, 0) }; img.src = data.dataUrl }
+    else if (data.type === 'text_committed') {
+        setCommittedTextBoxes(prev => {
+          if (prev.some(t => t.id === data.box.id)) return prev
+          return [...prev, data.box]
+        })
+      }
+      else if (data.type === 'text_deleted') {
+        setCommittedTextBoxes(prev => prev.filter(t => t.id !== data.id))
+        // Redessiner le canvas sans cette zone
+        setTimeout(() => redrawCanvas(), 0)
+      }
   }, [bgColor, role])
   const getPos = (e: React.MouseEvent | React.TouchEvent, canvas: HTMLCanvasElement) => {
     const rect = canvas.getBoundingClientRect(); const sx = canvas.width / rect.width; const sy = canvas.height / rect.height
@@ -1327,13 +1349,39 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
     const canvas = canvasRef.current; if (!canvas) return; const pos = getPos(e, canvas)
         if ('touches' in e) lastTouchTs.current = Date.now()
         if (tool === 'text') {
-          // un mousedown "émulé" juste après un toucher doit être ignoré (mobile)
-          if (!('touches' in e) && Date.now() - lastTouchTs.current < 800) return
-          if (textBox) commitTextBox()   // fige la zone précédente (supprimée si vide)
-          flushSync(() => setTextBox({ x: pos.x, y: pos.y, w: 500, h: 48 * TEXT_LINE_H + TEXT_PAD * 2, text: '', color, fontSize: 48 }))
-          textAreaRef.current?.focus()   // clavier de l'utilisateur prêt immédiatement
-          return
-        }
+  // Ignorer le mousedown émulé après un toucher (mobile)
+  if (!('touches' in e) && Date.now() - lastTouchTs.current < 800) return
+
+  // 🔍 Chercher si on clique sur une zone déjà committée
+  const existing = committedTextBoxes.find(tb =>
+    pos.x >= tb.x && pos.x <= tb.x + tb.w &&
+    pos.y >= tb.y && pos.y <= tb.y + tb.h
+  )
+
+  if (existing) {
+    // ✅ Réactiver la zone en mode édition (comme dans Word)
+    setTextBox({ x: existing.x, y: existing.y, w: existing.w, h: existing.h, text: existing.text, color: existing.color, fontSize: existing.fontSize })
+    // Retirer de la liste des committées (elle redevient "active")
+    setCommittedTextBoxes(prev => prev.filter(t => t.id !== existing.id))
+    // Notifier les autres pour éviter les doublons
+    sendWs({ type: 'text_deleted', id: existing.id })
+    // Redessiner le canvas sans cette zone
+    redrawCanvas()
+    if (role === 'professeur') {
+      const dataUrl = canvasRef.current?.toDataURL()
+      if (dataUrl) sendWs({ type: 'canvas_state', dataUrl })
+    }
+  } else if (textBox) {
+    // ⚠️ Une zone est déjà active et on clique AILLEURS → on garde le focus (on ne fait rien)
+    // C'est le comportement Word : le curseur reste dans la zone
+    return
+  } else {
+    // 🆕 Créer une nouvelle zone
+    flushSync(() => setTextBox({ x: pos.x, y: pos.y, w: 500, h: 48 * TEXT_LINE_H + TEXT_PAD * 2, text: '', color, fontSize: 48 }))
+  }
+  textAreaRef.current?.focus()
+  return
+}
         if (textBox) commitTextBox()
     isDrawing.current = true; lastPos.current = pos
     const ctx = ctxRef.current; if (!ctx) return
@@ -1393,15 +1441,11 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
     }
   }
 
-    // 🆕 Fige la zone de texte sur le canvas et l'envoie aux autres (ligne par ligne)
-  const commitTextBox = () => {
-    const tb = textBox
-    if (!tb) return
-    setTextBox(null)
-    if (!tb.text.trim()) return
-    const canvas = canvasRef.current; const ctx = ctxRef.current
-    if (!canvas || !ctx) return
-    historyRef.current.push(ctx.getImageData(0, 0, canvas.width, canvas.height)); redoRef.current = []
+  const redrawCanvas = () => {
+  const canvas = canvasRef.current; const ctx = ctxRef.current
+  if (!canvas || !ctx) return
+  fillBg(ctx, canvas, bgColor)
+  committedTextBoxes.forEach(tb => {
     const lh = tb.fontSize * TEXT_LINE_H
     layoutTextLines(ctx, tb.text, tb.fontSize, tb.w - TEXT_PAD * 2).forEach((ln, i) => {
       if (!ln.text) return
@@ -1413,10 +1457,68 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
       ctx.textAlign = ln.rtl ? 'right' : 'left'
       ctx.textBaseline = 'middle'
       ctx.fillText(ln.text, x, y)
-      sendWs({ type: 'text', text: ln.text, x, y, fontSize: tb.fontSize, color: tb.color, align: ln.rtl ? 'right' : 'left', dir: ln.rtl ? 'rtl' : 'ltr', baseline: 'middle' })
     })
-    ctx.direction = 'ltr'; ctx.textAlign = 'start'; ctx.textBaseline = 'alphabetic'
+  })
+  ctx.direction = 'ltr'; ctx.textAlign = 'start'; ctx.textBaseline = 'alphabetic'
+}
+
+  const handleCanvasHover = (e: React.MouseEvent | React.TouchEvent) => {
+  if (tool !== 'text' || textBox) {
+    if (hoveredTextBoxId) setHoveredTextBoxId(null)
+    return
   }
+  const canvas = canvasRef.current; if (!canvas) return
+  const pos = getPos(e, canvas)
+  const hovered = committedTextBoxes.find(tb =>
+    pos.x >= tb.x && pos.x <= tb.x + tb.w &&
+    pos.y >= tb.y && pos.y <= tb.y + tb.h
+  )
+  setHoveredTextBoxId(hovered?.id ?? null)
+}
+
+    // 🆕 Fige la zone de texte sur le canvas et l'envoie aux autres (ligne par ligne)
+  const commitTextBox = () => {
+  const tb = textBox
+  if (!tb) return
+  setTextBox(null)
+  if (!tb.text.trim()) return
+
+  const canvas = canvasRef.current; const ctx = ctxRef.current
+  if (!canvas || !ctx) return
+
+  historyRef.current.push(ctx.getImageData(0, 0, canvas.width, canvas.height))
+  redoRef.current = []
+
+  const id = `tb_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+  const newBox: TextBox = { id, x: tb.x, y: tb.y, w: tb.w, h: tb.h, text: tb.text, color: tb.color, fontSize: tb.fontSize }
+
+  // Dessiner le texte sur le canvas
+  const lh = tb.fontSize * TEXT_LINE_H
+  layoutTextLines(ctx, tb.text, tb.fontSize, tb.w - TEXT_PAD * 2).forEach((ln, i) => {
+    if (!ln.text) return
+    const x = ln.rtl ? tb.x + tb.w - TEXT_PAD : tb.x + TEXT_PAD
+    const y = tb.y + TEXT_PAD + i * lh + lh / 2
+    ctx.font = `${tb.fontSize}px 'Amiri',serif`
+    ctx.fillStyle = tb.color
+    ctx.direction = ln.rtl ? 'rtl' : 'ltr'
+    ctx.textAlign = ln.rtl ? 'right' : 'left'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(ln.text, x, y)
+    sendWs({ type: 'text', text: ln.text, x, y, fontSize: tb.fontSize, color: tb.color, align: ln.rtl ? 'right' : 'left', dir: ln.rtl ? 'rtl' : 'ltr', baseline: 'middle' })
+  })
+  ctx.direction = 'ltr'; ctx.textAlign = 'start'; ctx.textBaseline = 'alphabetic'
+
+  // Ajouter à la liste locale
+  setCommittedTextBoxes(prev => [...prev, newBox])
+  // Notifier les autres
+  sendWs({ type: 'text_committed', box: newBox })
+
+  // Envoyer l'état complet
+  if (role === 'professeur') {
+    const dataUrl = canvas.toDataURL()
+    sendWs({ type: 'canvas_state', dataUrl })
+  }
+}
 
   // 🆕 Déplacer / redimensionner la zone de texte (souris + tactile)
   const dragTextBox = (mode: 'move' | 'resize') => (e: React.PointerEvent) => {
@@ -1489,7 +1591,29 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
         </span>
       </div>
         <div className="flex-1 overflow-auto relative">
-        <canvas ref={canvasRef} width={1200} height={700} onMouseDown={startDraw} onMouseMove={draw} onMouseUp={stopDraw} onMouseLeave={stopDraw} onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={stopDraw} style={{ cursor: tool === 'cursor' ? 'default' : tool === 'eraser' ? 'crosshair' : tool === 'text' ? 'text' : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Ccircle cx='8' cy='8' r='7' fill='none' stroke='%23000' stroke-width='1'/%3E%3C/svg%3E") 8 8, crosshair`, display: 'block', touchAction: 'none', maxWidth: '100%' }} />
+        <canvas 
+          ref={canvasRef} 
+          width={1200} 
+          height={700} 
+          onMouseDown={startDraw} 
+          onMouseMove={(e) => { draw(e); handleCanvasHover(e) }}
+          onMouseUp={stopDraw} 
+          onMouseLeave={() => { stopDraw(); setHoveredTextBoxId(null) }}
+          onTouchStart={startDraw} 
+          onTouchMove={(e) => { draw(e); handleCanvasHover(e) }}
+          onTouchEnd={stopDraw}
+          style={{ 
+            cursor: tool === 'text' 
+              ? (hoveredTextBoxId ? 'pointer' : 'text')
+              : tool === 'cursor' ? 'default' 
+              : tool === 'eraser' ? 'crosshair' 
+              : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Ccircle cx='8' cy='8' r='7' fill='none' stroke='%23000' stroke-width='1'/%3E%3C/svg%3E") 8 8, crosshair`,
+            display: 'block', 
+            touchAction: 'none', 
+            maxWidth: '100%' 
+          }} 
+        />
+          
                 {/* 🆕 Zone de texte type Word : saisie directe avec le clavier de l'utilisateur */}
         {textBox && (() => {
           const canvas = canvasRef.current
@@ -1534,6 +1658,35 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
             </div>
           )
         })()}
+
+        {/* 🆕 Zones de texte committées : survol = bordure en pointillés (comme Word) */}
+        {committedTextBoxes.map(tb => {
+          const isHovered = hoveredTextBoxId === tb.id
+          if (!isHovered) return null
+          const canvas = canvasRef.current
+          const sx = canvas ? canvas.offsetWidth / canvas.width : 1
+          const sy = canvas ? canvas.offsetHeight / canvas.height : 1
+          return (
+            <div
+              key={tb.id}
+              style={{
+                position: 'absolute',
+                zIndex: 9,
+                left: (canvas?.offsetLeft ?? 0) + tb.x * sx,
+                top: (canvas?.offsetTop ?? 0) + tb.y * sy,
+                width: tb.w * sx,
+                height: tb.h * sy,
+                border: '2px dashed #6366f1',
+                borderRadius: 4,
+                pointerEvents: 'none',
+                background: 'rgba(99,102,241,0.05)',
+                transition: 'all 0.15s ease',
+              }}
+            />
+          )
+        })}
+
+          
         {remoteCursor && role === 'eleve' && <div style={{ position: 'absolute', left: remoteCursor.x, top: remoteCursor.y, pointerEvents: 'none', transform: 'translate(-50%,-50%)', width: 12, height: 12, borderRadius: '50%', background: 'rgba(99,102,241,.7)', boxShadow: '0 0 0 4px rgba(99,102,241,.2)' }} />}
       </div>
       
