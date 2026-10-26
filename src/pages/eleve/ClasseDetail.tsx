@@ -1462,6 +1462,19 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
   ctx.direction = 'ltr'; ctx.textAlign = 'start'; ctx.textBaseline = 'alphabetic'
 }
 
+
+  // 🆕 Supprime une zone de texte committée
+const deleteCommittedTextBox = (id: string) => {
+  setCommittedTextBoxes(prev => prev.filter(t => t.id !== id))
+  setHoveredTextBoxId(null)
+  sendWs({ type: 'text_deleted', id })
+  redrawCanvas()
+  if (role === 'professeur') {
+    const dataUrl = canvasRef.current?.toDataURL()
+    if (dataUrl) sendWs({ type: 'canvas_state', dataUrl })
+  }
+}
+
   const handleCanvasHover = (e: React.MouseEvent | React.TouchEvent) => {
   if (tool !== 'text' || textBox) {
     if (hoveredTextBoxId) setHoveredTextBoxId(null)
@@ -1633,6 +1646,7 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
                 borderRadius: '4px 4px 0 0', userSelect: 'none',
               }}>✥ Déplacer</div>
               <textarea
+                key={`tb-${textBox.x}-${textBox.y}-${textBox.text.length}`}
                 ref={textAreaRef}
                 autoFocus
                 dir="auto"
@@ -1660,6 +1674,7 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
         })()}
 
         {/* 🆕 Zones de texte committées : survol = bordure en pointillés (comme Word) */}
+        {/* 🆕 Zones de texte committées : survol = bordure en pointillés + bouton supprimer */}
         {committedTextBoxes.map(tb => {
           const isHovered = hoveredTextBoxId === tb.id
           if (!isHovered) return null
@@ -1682,7 +1697,48 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
                 background: 'rgba(99,102,241,0.05)',
                 transition: 'all 0.15s ease',
               }}
-            />
+            >
+              {/* 🆕 Bouton supprimer en haut à droite */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  deleteCommittedTextBox(tb.id)
+                }}
+                title="Supprimer cette zone de texte"
+                style={{
+                  position: 'absolute',
+                  top: -12,
+                  right: -12,
+                  width: 24,
+                  height: 24,
+                  borderRadius: '50%',
+                  background: '#ef4444',
+                  color: '#fff',
+                  border: '2px solid #fff',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  boxShadow: '0 2px 6px rgba(0,0,0,.2)',
+                  pointerEvents: 'auto',
+                  padding: 0,
+                  lineHeight: 1,
+                  transition: 'transform .15s, background .15s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#dc2626'
+                  e.currentTarget.style.transform = 'scale(1.15)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#ef4444'
+                  e.currentTarget.style.transform = 'scale(1)'
+                }}
+              >
+                ✕
+              </button>
+            </div>
           )
         })}
 
