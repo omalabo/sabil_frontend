@@ -1,6 +1,7 @@
 // ClasseDetail.tsx — Navigation par classe avec créneaux du jour
 import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
+import { flushSync } from 'react-dom'
 import { useAppSelector } from '../../store/hooks'
 import { selectAuth } from '../../store/authSlice'
 import {
