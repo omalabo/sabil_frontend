@@ -1,5 +1,6 @@
 // ClasseDetail.tsx — Navigation par classe avec créneaux du jour
 import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from 'react'
+import { flushSync } from 'react-dom'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAppSelector } from '../../store/hooks'
 import { selectAuth } from '../../store/authSlice'
@@ -41,6 +42,28 @@ import PresentationMode from '../../components/classroom/PresentationMode'
 import LivresClasse from '../../components/classroom/LivresClasse'
 import ProtectedAudio from '../../components/classroom/ProtectedAudio'
 
+
+// ✅ 1. IMPORTER TOUTES LES IMAGES (Vite va les gérer parfaitement)
+import img1 from '../../assets/01-bienvenue.jpeg'
+import img2 from '../../assets/02-muhammad-ibn-nadr.jpeg'
+import img3 from '../../assets/03-jafar-as-sadiq.jpeg'
+import img4 from '../../assets/04-shaikh-muqbil.jpeg'
+import img5 from '../../assets/05-abou-hourayra.jpeg'
+import img6 from '../../assets/06-les-4-questions.jpeg'
+import img7 from '../../assets/07-noter-prenom.jpeg'
+import img8 from '../../assets/08-rappel-comportement.jpeg'
+
+// ✅ 2. Créer un tableau de correspondance (tag → image importée)
+const MOTIVATION_IMAGES_MAP: Record<string, string> = {
+  'img1': img1,
+  'img2': img2,
+  'img3': img3,
+  'img4': img4,
+  'img5': img5,
+  'img6': img6,
+  'img7': img7,
+  'img8': img8,
+}
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface ClasseDetailProps { role: 'eleve' | 'professeur' | 'admin' | 'direction' }
 interface LiveKitSession {
@@ -60,7 +83,7 @@ interface EleveRow {
 }
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
-const SALLE_STYLES = `@keyframes salle-pulse-ring{0%{transform:scale(1);opacity:.6}70%{transform:scale(1.35);opacity:0}100%{transform:scale(1.35);opacity:0}} @keyframes salle-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}} @keyframes panel-slide-in{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}} @keyframes content-fade-up{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}} @keyframes seance-glow{0%,100%{box-shadow:0 0 0 0 rgba(99,102,241,.25)}50%{box-shadow:0 0 0 8px rgba(99,102,241,0)}} .salle-join-btn{position:relative;display:inline-flex;align-items:center;gap:10px;padding:14px 36px;font-size:15px;font-weight:600;letter-spacing:.3px;color:#fff;background:linear-gradient(135deg,#1a73e8,#1557b0);border:none;border-radius:50px;cursor:pointer;box-shadow:0 4px 20px rgba(26,115,232,.45);transition:transform .15s,box-shadow .15s,opacity .15s} .salle-join-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 28px rgba(26,115,232,.55)} .salle-join-btn:disabled{opacity:.55;cursor:not-allowed} .salle-join-btn .spinner{width:18px;height:18px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite} @keyframes spin{to{transform:rotate(360deg)}} .salle-info-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:50px;font-size:13px;color:rgba(255,255,255,.7)} .salle-avatar-ring{position:absolute;inset:-6px;border-radius:50%;background:rgba(26,115,232,.35);animation:salle-pulse-ring 2.4s ease-out infinite} .panel-slide-in{animation:panel-slide-in .25s ease-out} .content-fade-up{animation:content-fade-up .3s ease-out} .seance-active-glow{animation:seance-glow 2s ease-in-out infinite} @keyframes todayPopupIn{from{opacity:0;transform:translateY(-6px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}} @keyframes tab-blink{0%,100%{opacity:1}50%{opacity:.3}} @keyframes slideInRight {from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; }} @keyframes facture-ping{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.3)}} @media (max-width: 1023px) {.mobile-panel-toggle { display: flex !important; align-items: center; justify-content: center; } .main-content { margin-left: 0 !important; }} .time24-item:hover{background:rgba(255,255,255,.12)} 
+const SALLE_STYLES = `@keyframes salle-pulse-ring{0%{transform:scale(1);opacity:.6}70%{transform:scale(1.35);opacity:0}100%{transform:scale(1.35);opacity:0}} @keyframes salle-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}} @keyframes panel-slide-in{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}} @keyframes content-fade-up{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}} @keyframes seance-glow{0%,100%{box-shadow:0 0 0 0 rgba(99,102,241,.25)}50%{box-shadow:0 0 0 8px rgba(99,102,241,0)}} .salle-join-btn{position:relative;display:inline-flex;align-items:center;gap:10px;padding:14px 36px;font-size:15px;font-weight:600;letter-spacing:.3px;color:#fff;background:linear-gradient(135deg,#1a73e8,#1557b0);border:none;border-radius:50px;cursor:pointer;box-shadow:0 4px 20px rgba(26,115,232,.45);transition:transform .15s,box-shadow .15s,opacity .15s} .salle-join-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 28px rgba(26,115,232,.55)} .salle-join-btn:disabled{opacity:.55;cursor:not-allowed} .salle-join-btn .spinner{width:18px;height:18px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite} @keyframes spin{to{transform:rotate(360deg)}} .salle-info-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:50px;font-size:13px;color:rgba(255,255,255,.7)} .salle-avatar-ring{position:absolute;inset:-6px;border-radius:50%;background:rgba(26,115,232,.35);animation:salle-pulse-ring 2.4s ease-out infinite} .panel-slide-in{animation:panel-slide-in .25s ease-out} .content-fade-up{animation:content-fade-up .3s ease-out} .seance-active-glow{animation:seance-glow 2s ease-in-out infinite} @keyframes todayPopupIn{from{opacity:0;transform:translateY(-6px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}} @keyframes tab-blink{0%,100%{opacity:1}50%{opacity:.3}} @keyframes slideInRight {from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; }} @keyframes facture-ping{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.3)}} @media (max-width: 767px) {.mobile-panel-toggle { display: flex !important; align-items: center; justify-content: center; } .main-content { margin-left: 0 !important; }} .time24-item:hover{background:rgba(255,255,255,.12)} 
 .chat-icon-btn {
 display: flex;
 align-items: center;
@@ -190,7 +213,7 @@ function ElevesModal({ seance, onClose, onSaved }: { seance: Seance; onClose: ()
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh]">
         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-200">
           <div>
-            <h3 className="text-lg font-semibold text-neutral-900"> Élèves — {formatDateSeance(seance)}</h3>
+            <h3 className="text-lg font-semibold text-neutral-900">Élèves — {formatDateSeance(seance)}</h3>
             <p className="text-xs text-neutral-500 mt-0.5">Présence et durée de participation</p>
           </div>
           <button onClick={onClose} className="p-2 rounded-lg hover:bg-neutral-100 text-neutral-500">✕</button>
@@ -1153,7 +1176,27 @@ function EleveFacturesInline({ classeId, role }: { classeId: string; role: 'elev
     </div>
   )
 }
+// ─── Zone de texte du tableau (type Word) : helpers ──────────────────────
+const TEXT_PAD = 8          // marge intérieure (unités canvas)
+const TEXT_LINE_H = 1.3     // interligne
+// Détecte une langue qui s'écrit de droite à gauche (arabe, hébreu, persan, ourdou…)
 const isRtlText = (t: string) => /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/.test(t)
+// Coupe le texte en lignes selon la largeur de la zone (gère les retours à la ligne manuels)
+const layoutTextLines = (ctx: CanvasRenderingContext2D, text: string, fontSize: number, maxW: number) => {
+  ctx.font = `${fontSize}px 'Amiri',serif`
+  const out: { text: string; rtl: boolean }[] = []
+  text.split('\n').forEach(par => {
+    const rtl = isRtlText(par)
+    if (!par.trim()) { out.push({ text: '', rtl }); return }
+    let cur = ''
+    par.split(' ').forEach(w => {
+      const test = cur ? cur + ' ' + w : w
+      if (cur && ctx.measureText(test).width > maxW) { out.push({ text: cur, rtl }); cur = w } else cur = test
+    })
+    out.push({ text: cur, rtl })
+  })
+  return out
+}
 
 interface WhiteboardProps { classeId: string; seanceId: string; role: 'eleve' | 'professeur' | 'admin' }
 function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) {
@@ -1168,39 +1211,53 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
   const [color, setColor] = useState('#1a1a2e')
   const [lineWidth, setLineWidth] = useState(3)
   const [bgColor, setBgColor] = useState<'white' | 'grid' | 'lines'>('white')
-  const [showArabicKeyboard, setShowArabicKeyboard] = useState(false)
-  const [arabicText, setArabicText] = useState('')
-  const [textPos, setTextPos] = useState<{ x: number; y: number } | null>(null)
-  // 🆕 Texte flottant déplaçable (avant d'être figé sur le canvas)
-  const [floatingText, setFloatingText] = useState<{
-    text: string
-    x: number
-    y: number
-    color: string
-    fontSize: number
+  // 🆕 Zone de texte type Word : apparaît là où on clique, on tape directement, déplaçable/redimensionnable
+  const [textBox, setTextBox] = useState<{
+    x: number; y: number; w: number; h: number   // coordonnées canvas
+    text: string; color: string; fontSize: number
   } | null>(null)
-  const [isDraggingText, setIsDraggingText] = useState(false)
-  const dragOffset = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
-  const floatingTextRef = useRef<HTMLDivElement>(null)
+  const textAreaRef = useRef<HTMLTextAreaElement>(null)
+  const lastTouchTs = useRef(0)
   const [remoteCursor, setRemoteCursor] = useState<{ x: number; y: number } | null>(null)
   const [wsStatus, setWsStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting')
- 
-  
   const COLORS = [{ label: 'Noir', value: '#1a1a2e' }, { label: 'Rouge', value: '#e63946' }, { label: 'Bleu', value: '#1d6fa4' }, { label: 'Vert', value: '#2d9e6b' }, { label: 'Orange', value: '#f4a261' }, { label: 'Violet', value: '#7b2d8b' }, { label: 'Blanc', value: '#ffffff' }]
-  //const ARABIC_CHARS = ['ا', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ', 'د', 'ذ', 'ر', 'ز', 'س', 'ش', 'ص', 'ض', 'ط', 'ظ', 'ع', 'غ', 'ف', 'ق', 'ك', 'ل', 'م', 'ن', 'ه', 'و', 'ي', 'ة', 'ى', 'لا', 'أ', 'إ', 'آ', 'ئ', 'ؤ', ' ', '،', '.']
-
-
+  
   const partage = usePartage() // 🆕
   const shareStreamRef = useRef<MediaStream | null>(null) // 🆕
 
   const sharingTableau = partage.state.channel === 'tableau' && partage.state.byUserId === partage.userId // 🆕
 
-  
+  // 🆕 Démarre/arrête la publication du canvas quand le partage change
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas || !sharingTableau || role !== 'professeur') return
+
+    const stream = canvas.captureStream(10) // 10 images/seconde, suffisant pour l'écriture
+    shareStreamRef.current = stream
+    partage.publishStream(stream, 'tableau').then(ok => {
+      if (!ok) {
+        alert("⚠️ Rejoignez d'abord la salle vidéo pour partager le tableau.")
+        partage.stopShare()
+      }
+    })
+
+    return () => {
+      partage.unpublishStream('tableau')
+      shareStreamRef.current?.getTracks().forEach(t => t.stop())
+      shareStreamRef.current = null
+    }
+  }, [sharingTableau, role])
+
+  // 🆕 Marque l'onglet comme "vu" dès l'ouverture → arrête le clignotement bleu
+  useEffect(() => { partage.markAsSeen('tableau') }, [])
+
+
+
+
   useEffect(() => {
     const token = localStorage.getItem('sabil_token')
     if (!token) { setWsStatus('disconnected'); return }
-    const wsUrl = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://api.sabil-al-ilm.org/ws/tableau/${classeId}/${seanceId}/?token=${token}`
-    
+    const wsUrl = `wss://api.sabil-al-ilm.org/ws/tableau/${classeId}/${seanceId}/?token=${token}`
     let stateReceived = false
     
     const connect = () => {
@@ -1232,33 +1289,6 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
     connect()
     return () => wsRef.current?.close()
   }, [classeId, seanceId])
-
-  
-
-  // 🆕 Démarre/arrête la publication du canvas quand le partage change
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas || !sharingTableau || role !== 'professeur') return
-
-    const stream = canvas.captureStream(10) // 10 images/seconde, suffisant pour l'écriture
-    shareStreamRef.current = stream
-    partage.publishStream(stream, 'tableau').then(ok => {
-      if (!ok) {
-        alert("⚠️ Rejoignez d'abord la salle vidéo pour partager le tableau.")
-        partage.stopShare()
-      }
-    })
-
-    return () => {
-      partage.unpublishStream('tableau')
-      shareStreamRef.current?.getTracks().forEach(t => t.stop())
-      shareStreamRef.current = null
-    }
-  }, [sharingTableau, role])
-
-  // 🆕 Marque l'onglet comme "vu" dès l'ouverture → arrête le clignotement bleu
-  useEffect(() => { partage.markAsSeen('tableau') }, [])
-  
   
   useEffect(() => { 
     const canvas = canvasRef.current; 
@@ -1276,6 +1306,7 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
       sendWs({ type: 'canvas_state', dataUrl })
     }
   }, [bgColor])
+
   const fillBg = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, bg: string) => {
     ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height)
     if (bg === 'grid') { ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = 1; for (let x = 0; x < canvas.width; x += 30) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke() } for (let y = 0; y < canvas.height; y += 30) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke() } }
@@ -1288,10 +1319,9 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
     else if (data.type === 'text') {
       ctx.font = `${data.fontSize || 40}px 'Amiri',serif`
       ctx.fillStyle = data.color
-      //ctx.direction = 'rtl'
-      ctx.direction = isRtlText(data.text) ? 'rtl' : 'ltr'
-      ctx.textAlign = 'center'      // 🆕
-      ctx.textBaseline = 'middle'   // 🆕
+      ctx.direction = data.dir ?? (isRtlText(data.text) ? 'rtl' : 'ltr')
+      ctx.textAlign = data.align ?? 'center'
+      ctx.textBaseline = data.baseline ?? 'middle'
       ctx.fillText(data.text, data.x, data.y)
       ctx.direction = 'ltr'
       ctx.textAlign = 'start'       // 🆕
@@ -1310,7 +1340,16 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
   const sendWs = (data: any) => { if (wsRef.current?.readyState === WebSocket.OPEN) wsRef.current.send(JSON.stringify(data)) }
   const startDraw = (e: React.MouseEvent | React.TouchEvent) => {
     const canvas = canvasRef.current; if (!canvas) return; const pos = getPos(e, canvas)
-    if (tool === 'text') { setTextPos(pos); setShowArabicKeyboard(true); return }
+    if ('touches' in e) lastTouchTs.current = Date.now()
+    if (tool === 'text') {
+      // un mousedown "émulé" juste après un toucher doit être ignoré (mobile)
+      if (!('touches' in e) && Date.now() - lastTouchTs.current < 800) return
+      if (textBox) commitTextBox()   // fige la zone précédente (supprimée si vide)
+      flushSync(() => setTextBox({ x: pos.x, y: pos.y, w: 500, h: 48 * TEXT_LINE_H + TEXT_PAD * 2, text: '', color, fontSize: 48 }))
+      textAreaRef.current?.focus()   // clavier de l'utilisateur prêt immédiatement
+      return
+    }
+    if (textBox) commitTextBox()
     isDrawing.current = true; lastPos.current = pos
     const ctx = ctxRef.current; if (!ctx) return
     const snap = ctx.getImageData(0, 0, canvas.width, canvas.height); historyRef.current.push(snap); redoRef.current = []
@@ -1339,19 +1378,6 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
       sendWs({ type: 'canvas_state', dataUrl })
     }
   }
-  
-  const handleUndo = () => {
-    const canvas = canvasRef.current; const ctx = ctxRef.current; if (!canvas || !ctx || !historyRef.current.length) return
-    const prev = historyRef.current.pop()!; redoRef.current.push(ctx.getImageData(0, 0, canvas.width, canvas.height)); ctx.putImageData(prev, 0, 0)
-    sendWs({ type: 'undo', dataUrl: canvas.toDataURL() })
-    
-    // 🆕 Envoyer l'état complet du canvas après undo
-    if (role === 'professeur') {
-      const dataUrl = canvas.toDataURL()
-      sendWs({ type: 'canvas_state', dataUrl })
-    }
-  }
-  
   const handleClear = () => {
     const canvas = canvasRef.current
     const ctx = ctxRef.current
@@ -1368,112 +1394,76 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
       sendWs({ type: 'canvas_state', dataUrl })
     }
   }
-  const handleArabicConfirm = () => {
-    if (!arabicText.trim() || !textPos) return
-    // 🆕 Créer un texte flottant déplaçable au lieu de dessiner directement
-    setFloatingText({
-      text: arabicText,
-      x: textPos.x,
-      y: textPos.y,
-      color: color,
-      fontSize: 80
-    })
-    setShowArabicKeyboard(false)
-    setArabicText('')
-    setTextPos(null)
+
+  const handleUndo = () => {
+    const canvas = canvasRef.current; const ctx = ctxRef.current; if (!canvas || !ctx || !historyRef.current.length) return
+    const prev = historyRef.current.pop()!; redoRef.current.push(ctx.getImageData(0, 0, canvas.width, canvas.height)); ctx.putImageData(prev, 0, 0)
+    sendWs({ type: 'undo', dataUrl: canvas.toDataURL() })
+    
+    // 🆕 Envoyer l'état complet du canvas après undo
+    if (role === 'professeur') {
+      const dataUrl = canvas.toDataURL()
+      sendWs({ type: 'canvas_state', dataUrl })
+    }
   }
 
-  // 🆕 Imprimer le texte flottant sur le canvas (après déplacement)
-  const commitFloatingText = useCallback(() => {
-    if (!floatingText) return
-    const canvas = canvasRef.current
-    const ctx = ctxRef.current
+  // 🆕 Fige la zone de texte sur le canvas et l'envoie aux autres (ligne par ligne)
+  const commitTextBox = () => {
+    const tb = textBox
+    if (!tb) return
+    setTextBox(null)
+    if (!tb.text.trim()) return
+    const canvas = canvasRef.current; const ctx = ctxRef.current
     if (!canvas || !ctx) return
-
-    ctx.font = `${floatingText.fontSize}px 'Amiri',serif`
-    ctx.fillStyle = floatingText.color
-    //ctx.direction = 'rtl'
-    ctx.direction = isRtlText(floatingText.text) ? 'rtl' : 'ltr'
-    ctx.textAlign = 'center'      // 🆕
-    ctx.textBaseline = 'middle'   // 🆕
-    ctx.fillText(floatingText.text, floatingText.x, floatingText.y)
-    ctx.direction = 'ltr'
-    ctx.textAlign = 'start'       // 🆕 reset pour ne pas affecter d'autres dessins
-    ctx.textBaseline = 'alphabetic' // 🆕 reset
-
-    sendWs({
-      type: 'text',
-      text: floatingText.text,
-      x: floatingText.x,
-      y: floatingText.y,
-      fontSize: floatingText.fontSize,
-      color: floatingText.color
+    historyRef.current.push(ctx.getImageData(0, 0, canvas.width, canvas.height)); redoRef.current = []
+    const lh = tb.fontSize * TEXT_LINE_H
+    layoutTextLines(ctx, tb.text, tb.fontSize, tb.w - TEXT_PAD * 2).forEach((ln, i) => {
+      if (!ln.text) return
+      const x = ln.rtl ? tb.x + tb.w - TEXT_PAD : tb.x + TEXT_PAD
+      const y = tb.y + TEXT_PAD + i * lh + lh / 2
+      ctx.font = `${tb.fontSize}px 'Amiri',serif`
+      ctx.fillStyle = tb.color
+      ctx.direction = ln.rtl ? 'rtl' : 'ltr'
+      ctx.textAlign = ln.rtl ? 'right' : 'left'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(ln.text, x, y)
+      sendWs({ type: 'text', text: ln.text, x, y, fontSize: tb.fontSize, color: tb.color, align: ln.rtl ? 'right' : 'left', dir: ln.rtl ? 'rtl' : 'ltr', baseline: 'middle' })
     })
+    ctx.direction = 'ltr'; ctx.textAlign = 'start'; ctx.textBaseline = 'alphabetic'
+  }
 
-    setFloatingText(null)
-  }, [floatingText])
-  
-  // 🆕 Handlers pour le drag du texte flottant
-  const handleFloatingTextMouseDown = (e: React.MouseEvent) => {
-    if (!floatingTextRef.current) return
-    e.preventDefault()
-    e.stopPropagation()
-    setIsDraggingText(true)
-    const rect = floatingTextRef.current.getBoundingClientRect()
-    dragOffset.current = {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
+  // 🆕 Déplacer / redimensionner la zone de texte (souris + tactile)
+  const dragTextBox = (mode: 'move' | 'resize') => (e: React.PointerEvent) => {
+    if (!textBox) return
+    const canvas = canvasRef.current; if (!canvas) return
+    e.preventDefault(); e.stopPropagation()
+    const el = e.currentTarget as HTMLElement
+    el.setPointerCapture(e.pointerId)
+    const rect = canvas.getBoundingClientRect()
+    const sx = canvas.width / rect.width; const sy = canvas.height / rect.height
+    const start = { px: e.clientX, py: e.clientY, tb: textBox }
+    const minH = start.tb.fontSize * TEXT_LINE_H + TEXT_PAD * 2
+    const onMove = (ev: PointerEvent) => {
+      const dx = (ev.clientX - start.px) * sx; const dy = (ev.clientY - start.py) * sy
+      setTextBox(prev => !prev ? prev : mode === 'move'
+        ? { ...prev, x: start.tb.x + dx, y: start.tb.y + dy }
+        : { ...prev, w: Math.max(120, start.tb.w + dx), h: Math.max(minH, start.tb.h + dy) })
     }
+    const onUp = () => { el.removeEventListener('pointermove', onMove); el.removeEventListener('pointerup', onUp); el.removeEventListener('pointercancel', onUp) }
+    el.addEventListener('pointermove', onMove); el.addEventListener('pointerup', onUp); el.addEventListener('pointercancel', onUp)
   }
-  
-  const handleFloatingTextMouseMove = (e: React.MouseEvent) => {
-    if (!isDraggingText || !floatingText || !floatingTextRef.current) return
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const canvasRect = canvas.getBoundingClientRect()
-    const scaleX = canvas.width / canvasRect.width
-    const scaleY = canvas.height / canvasRect.height
-    const newX = (e.clientX - canvasRect.left - dragOffset.current.x) * scaleX
-    const newY = (e.clientY - canvasRect.top - dragOffset.current.y) * scaleY   // ← plus de +fontSize*0.3
-    setFloatingText(prev => prev ? { ...prev, x: newX, y: newY } : null)
-  }
-  
-  const handleFloatingTextMouseUp = () => {
-    setIsDraggingText(false)
-  }
-  
-  // 🆕 Touch handlers pour mobile
-  const handleFloatingTextTouchStart = (e: React.TouchEvent) => {
-    if (!floatingTextRef.current) return
-    e.stopPropagation()
-    setIsDraggingText(true)
-    const touch = e.touches[0]
-    const rect = floatingTextRef.current.getBoundingClientRect()
-    dragOffset.current = {
-      x: touch.clientX - rect.left,
-      y: touch.clientY - rect.top
-    }
-  }
-  
-  const handleFloatingTextTouchMove = (e: React.TouchEvent) => {
-    if (!isDraggingText || !floatingText || !floatingTextRef.current) return
-    const canvas = canvasRef.current
-    if (!canvas) return
-    
-    const touch = e.touches[0]
-    const canvasRect = canvas.getBoundingClientRect()
-    const scaleX = canvas.width / canvasRect.width
-    const scaleY = canvas.height / canvasRect.height
-    
-    const newX = (touch.clientX - canvasRect.left - dragOffset.current.x) * scaleX
-    const newY = (touch.clientY - canvasRect.top - dragOffset.current.y + floatingText.fontSize * 0.3) * scaleY
-    
-    setFloatingText(prev => prev ? { ...prev, x: newX, y: newY } : null)
-  }
-  
-  const handleFloatingTextTouchEnd = () => {
-    setIsDraggingText(false)
-  }
+
+  // La zone grandit automatiquement quand le texte dépasse
+  useEffect(() => {
+    const ta = textAreaRef.current; const canvas = canvasRef.current
+    if (!ta || !canvas || !textBox) return
+    const need = ta.scrollHeight / (canvas.offsetHeight / canvas.height)
+    if (need > textBox.h + 1) setTextBox(p => p ? { ...p, h: need } : p)
+  }, [textBox?.text, textBox?.w, textBox?.fontSize])
+
+  // Changer d'outil fige la zone de texte en cours
+  useEffect(() => { if (tool !== 'text' && textBox) commitTextBox() }, [tool])
+
   return (
     <div className="flex flex-col h-full bg-neutral-50">
       {/* 🆕 Bandeau pour les élèves quand le prof partage */}
@@ -1486,12 +1476,12 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
         <div className="flex items-center gap-1 bg-neutral-100 rounded-lg p-1">
           {(['pen', 'highlighter', 'eraser', 'cursor', 'text'] as const).map(t => (
             <button key={t} onClick={() => setTool(t)} title={t} className={`w-8 h-8 flex items-center justify-center rounded text-sm transition ${tool === t ? 'bg-white shadow text-indigo-700' : 'text-neutral-500 hover:bg-white/60'}`}>
-              {t === 'pen' ? '✏️' : t === 'highlighter' ? '🖊️' : t === 'eraser' ? '⬜' : t === 'cursor' ? '🖱️' : 'ع'}
+              {t === 'pen' ? '✏️' : t === 'highlighter' ? '🖊️' : t === 'eraser' ? '⬜' : t === 'cursor' ? '🖱️' : 'T'}
             </button>
           ))}
         </div>
         <div className="flex gap-1">
-          {COLORS.map(c => <button key={c.value} onClick={() => setColor(c.value)} style={{ background: c.value }} className={`w-6 h-6 rounded-full border-2 transition ${color === c.value ? 'border-indigo-500 scale-110' : 'border-transparent'}`} title={c.label} />)}
+          {COLORS.map(c => <button key={c.value} onClick={() => { setColor(c.value); setTextBox(p => p ? { ...p, color: c.value } : p) }} style={{ background: c.value }} className={`w-6 h-6 rounded-full border-2 transition ${color === c.value ? 'border-indigo-500 scale-110' : 'border-transparent'}`} title={c.label} />)}
         </div>
         <input type="range" min="1" max="20" value={lineWidth} onChange={e => setLineWidth(Number(e.target.value))} className="w-20" />
         <div className="flex items-center gap-1 bg-neutral-100 rounded-lg p-1">
@@ -1499,13 +1489,12 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
         </div>
         <div className="flex gap-1 ml-auto">
           <button onClick={handleUndo} className="px-2 py-1 text-xs bg-neutral-100 hover:bg-neutral-200 rounded transition">↩ Annuler</button>
-          {floatingText && (
-            <button 
-              onClick={commitFloatingText} 
-              className="px-2 py-1 text-xs bg-green-50 hover:bg-green-100 text-green-700 rounded transition font-semibold animate-pulse"
-            >
-              ✓ Valider le texte
-            </button>
+          {textBox && (
+            <>
+              <button onClick={() => setTextBox(p => p ? { ...p, fontSize: Math.max(16, p.fontSize - 8) } : p)} className="px-2 py-1 text-xs bg-neutral-100 hover:bg-neutral-200 rounded transition" title="Réduire le texte">A−</button>
+              <button onClick={() => setTextBox(p => p ? { ...p, fontSize: Math.min(200, p.fontSize + 8) } : p)} className="px-2 py-1 text-xs bg-neutral-100 hover:bg-neutral-200 rounded transition" title="Agrandir le texte">A+</button>
+              <button onClick={commitTextBox} className="px-2 py-1 text-xs bg-green-50 hover:bg-green-100 text-green-700 rounded transition font-semibold">✓ Valider le texte</button>
+            </>
           )}
           <button onClick={handleClear} className="px-2 py-1 text-xs bg-red-50 hover:bg-red-100 text-red-600 rounded transition">🗑️ Effacer</button>
         </div>
@@ -1513,103 +1502,60 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
           {wsStatus === 'connected' ? '● En direct' : wsStatus === 'connecting' ? '⏳ Connexion…' : '✗ Déconnecté'}
         </span>
       </div>
-      <div 
-        className="flex-1 overflow-auto relative"
-        onClick={() => {
-          // 🆕 Si on clique ailleurs que sur le texte flottant, on l'imprime
-          if (floatingText && !isDraggingText) {
-            commitFloatingText()
-          }
-        }}
-      >
+      <div className="flex-1 overflow-auto relative">
         <canvas ref={canvasRef} width={1200} height={700} onMouseDown={startDraw} onMouseMove={draw} onMouseUp={stopDraw} onMouseLeave={stopDraw} onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={stopDraw} style={{ cursor: tool === 'cursor' ? 'default' : tool === 'eraser' ? 'crosshair' : tool === 'text' ? 'text' : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Ccircle cx='8' cy='8' r='7' fill='none' stroke='%23000' stroke-width='1'/%3E%3C/svg%3E") 8 8, crosshair`, display: 'block', touchAction: 'none', maxWidth: '100%' }} />
-        {/* 🆕 Texte flottant déplaçable */}
-        {floatingText && (() => {
+        {/* 🆕 Zone de texte type Word : saisie directe avec le clavier de l'utilisateur */}
+        {textBox && (() => {
           const canvas = canvasRef.current
-          const scaleX = canvas ? canvas.offsetWidth / canvas.width : 1
-          const scaleY = canvas ? canvas.offsetHeight / canvas.height : 1
-          const pixelLeft = (canvas?.offsetLeft ?? 0) + floatingText.x * scaleX
-          const pixelTop = (canvas?.offsetTop ?? 0) + floatingText.y * scaleY   // ← plus de "- fontSize*0.3"
-          const pixelFontSize = floatingText.fontSize * scaleY
-
+          const sx = canvas ? canvas.offsetWidth / canvas.width : 1
+          const sy = canvas ? canvas.offsetHeight / canvas.height : 1
           return (
-            <div
-              ref={floatingTextRef}
-              onMouseDown={handleFloatingTextMouseDown}
-              onMouseMove={handleFloatingTextMouseMove}
-              onMouseUp={handleFloatingTextMouseUp}
-              onTouchStart={handleFloatingTextTouchStart}
-              onTouchMove={handleFloatingTextTouchMove}
-              onTouchEnd={handleFloatingTextTouchEnd}
-              onDoubleClick={(e) => { e.stopPropagation(); commitFloatingText() }}
-              style={{
-                position: 'absolute',
-                left: `${pixelLeft}px`,
-                top: `${pixelTop}px`,
-                fontFamily: "'Amiri', serif",
-                fontSize: `${pixelFontSize}px`,
-                color: floatingText.color,
-                //direction: 'rtl',
-                direction: isRtlText(floatingText.text) ? 'rtl' : 'ltr',
-                cursor: isDraggingText ? 'grabbing' : 'grab',
-                userSelect: 'none',
-                padding: '8px 12px',
-                background: isDraggingText ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.08)',
-                border: `2px dashed ${isDraggingText ? '#6366f1' : '#a5b4fc'}`,
-                borderRadius: 8,
-                boxShadow: isDraggingText ? '0 8px 24px rgba(99,102,241,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-                transition: isDraggingText ? 'none' : 'background 0.2s, box-shadow 0.2s',
-                zIndex: 10,
-                transform: 'translate(-50%, -50%)',
-                pointerEvents: 'auto',
-              }}
-              title="Déplacez le texte • Double-cliquez pour valider"
-            >
-              {floatingText.text}
-              <div style={{
-                position: 'absolute', bottom: -28, left: '50%', transform: 'translateX(-50%)',
-                fontSize: 10, color: '#6366f1', background: 'white', padding: '2px 8px',
-                borderRadius: 10, border: '1px solid #c7d2fe', whiteSpace: 'nowrap',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-              }}>
-                ✋ Déplacez • Double-clic pour valider
-              </div>
+            <div style={{
+              position: 'absolute', zIndex: 10, boxSizing: 'border-box',
+              left: (canvas?.offsetLeft ?? 0) + textBox.x * sx, top: (canvas?.offsetTop ?? 0) + textBox.y * sy,
+              width: textBox.w * sx, height: textBox.h * sy,
+              border: '2px dashed #6366f1', borderRadius: 4,
+            }}>
+              {/* Barre pour déplacer */}
+              <div onPointerDown={dragTextBox('move')} title="Déplacer" style={{
+                position: 'absolute', left: -2, right: -2, top: -20, height: 18, cursor: 'move', touchAction: 'none',
+                background: '#6366f1', color: '#fff', fontSize: 10, lineHeight: '18px', textAlign: 'center',
+                borderRadius: '4px 4px 0 0', userSelect: 'none',
+              }}>✥ Déplacer</div>
+              <textarea
+                ref={textAreaRef}
+                autoFocus
+                dir="auto"
+                inputMode="text"
+                spellCheck
+                value={textBox.text}
+                onChange={e => setTextBox(p => p ? { ...p, text: e.target.value } : p)}
+                onKeyDown={e => {
+                  if (e.key === 'Escape') setTextBox(null)
+                  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); commitTextBox() }
+                }}
+                style={{
+                  width: '100%', height: '100%', boxSizing: 'border-box', border: 'none', outline: 'none', resize: 'none',
+                  overflow: 'hidden', background: 'transparent', padding: TEXT_PAD * sx,
+                  fontFamily: "'Amiri', serif", fontSize: textBox.fontSize * sy, lineHeight: TEXT_LINE_H, color: textBox.color,
+                }}
+              />
+              {/* Poignée de redimensionnement */}
+              <div onPointerDown={dragTextBox('resize')} title="Redimensionner" style={{
+                position: 'absolute', right: -9, bottom: -9, width: 18, height: 18, borderRadius: '50%',
+                background: '#6366f1', border: '2px solid #fff', cursor: 'nwse-resize', touchAction: 'none',
+              }} />
             </div>
           )
         })()}
         {remoteCursor && role === 'eleve' && <div style={{ position: 'absolute', left: remoteCursor.x, top: remoteCursor.y, pointerEvents: 'none', transform: 'translate(-50%,-50%)', width: 12, height: 12, borderRadius: '50%', background: 'rgba(99,102,241,.7)', boxShadow: '0 0 0 4px rgba(99,102,241,.2)' }} />}
       </div>
-      {showArabicKeyboard && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-5 max-w-md w-full shadow-xl">
-            <h4 className="font-semibold text-neutral-900 mb-3">✍️ Écrire sur le tableau</h4>
-            <textarea
-              autoFocus
-              dir="auto"
-              rows={3}
-              inputMode="text"
-              enterKeyHint="done"
-              autoCapitalize="sentences"
-              autoCorrect="on"
-              spellCheck
-              value={arabicText}
-              onChange={e => setArabicText(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleArabicConfirm() }
-                if (e.key === 'Escape') { setShowArabicKeyboard(false); setArabicText('') }
-              }}
-              placeholder="Votre texte…"
-              className="w-full border border-neutral-200 rounded px-3 py-2 mb-3 text-lg bg-neutral-50 focus:outline-none focus:border-indigo-400 resize-none"
-              style={{ fontFamily: "'Amiri',serif" }}
-            />
-            <div className="flex justify-end gap-2"><button onClick={() => { setShowArabicKeyboard(false); setArabicText('') }} className="px-3 py-1 text-sm text-neutral-600 hover:bg-neutral-100 rounded">Annuler</button> <button onClick={handleArabicConfirm} disabled={!arabicText.trim()} className="px-4 py-1 text-sm bg-indigo-600 text-white rounded disabled:opacity-50">Écrire</button></div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
 
+// ─── Composant ReadReceipts (Style Telegram) ─────────────────────────────
+// ─── Composant ReadReceipts (Style Telegram) AVEC DEBUG ─────────────────────────────
 function MessageReadReceipts({ msg, userId, user }: { 
   msg: Message; 
   userId: string; 
@@ -1701,7 +1647,6 @@ function MessageReadReceipts({ msg, userId, user }: {
   )
 }
 
-
 // ─── Icônes chat ───────────────────────────────────────────
 function ChatAttachIcon() {
 return (
@@ -1753,7 +1698,6 @@ fill="currentColor"
 
 // ─── Composant principal ──────────────────────────────────────────────────────
 export default function ClasseDetail({ role }: ClasseDetailProps) {
-
   const partage = usePartage()
   const { 
     syncedTab, 
@@ -1763,7 +1707,6 @@ export default function ClasseDetail({ role }: ClasseDetailProps) {
     isLive,
     setActiveSession
   } = partage
-
   const { id } = useParams<{ id: string }>()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
@@ -1803,6 +1746,11 @@ export default function ClasseDetail({ role }: ClasseDetailProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
+
+  // 🆕 AJOUTER CES 2 REFS POUR LES DEVOIRS
+  const devoirFilesInputRef = useRef<HTMLInputElement>(null)
+  const studentUploadInputRef = useRef<HTMLInputElement>(null)
+  const [currentUploadDevoirId, setCurrentUploadDevoirId] = useState<string | null>(null)
 
   // ── États popup sélection séance (si > 1 séance aujourd'hui) ──
   const [showSeanceSelectModal, setShowSeanceSelectModal] = useState(false)
@@ -1874,7 +1822,6 @@ export default function ClasseDetail({ role }: ClasseDetailProps) {
     { role: 'professeur', page: 1 },
     { skip: role !== 'admin' && role !== 'direction' }
   )
-  
   const adminProfIds = useMemo(
     () => (usersData?.results ?? []).map((u: any) => u.id),
     [usersData?.results]
@@ -2004,14 +1951,6 @@ export default function ClasseDetail({ role }: ClasseDetailProps) {
     { classe: activeClassId || '' },
     { skip: !activeClassId || !showClassInfo }
   )
-
-  // nouvelle query, indépendante de showClassInfo, seulement active sur l'onglet chat
-  const { data: chatInscriptions } = useGetInscriptionsQuery(
-    { classe: activeClassId || '' },
-    { skip: !activeClassId || activeTab !== 'chat' }
-  )
-
-  
   const activeClass = useMemo(() => classes.find(c => c.id === activeClassId), [classes, activeClassId])
 
   
@@ -2023,15 +1962,15 @@ export default function ClasseDetail({ role }: ClasseDetailProps) {
   
 
 
-    // ✅ Vérifie si le message image_motivation est destiné à l'élève connecté
-  //const isMotivationForMe = (msg: Message): boolean => {
-  //  if (msg.type_message !== 'image_motivation') return true
-   // const content = msg.contenu || ''
+/*     // ✅ Vérifie si le message image_motivation est destiné à l'élève connecté
+  const isMotivationForMe = (msg: Message): boolean => {
+    if (msg.type_message !== 'image_motivation') return true
+    const content = msg.contenu || ''
     // Si pas de préfixe WELCOME_, on affiche (fallback)
-   // if (!content.startsWith('WELCOME_')) return true
+    if (!content.startsWith('WELCOME_')) return true
     // Sinon, on vérifie que l'ID correspond
-   // return content.startsWith(`WELCOME_${user?.id}:`)
- // }
+    return content.startsWith(`WELCOME_${user?.id}:`)
+  } */
 
   // ✅ Extrait le contenu nettoyé (sans préfixe WELCOME_{id}:)
   const getCleanContent = (contenu: string | null | undefined): string => {
@@ -2041,55 +1980,39 @@ export default function ClasseDetail({ role }: ClasseDetailProps) {
   };
 
   // ✅ Extrait l'URL de l'image de motivation (utilise getCleanContent)
-  //const getMotivationImageUrl = (contenu: string | null | undefined): string => {
- //   const cleaned = getCleanContent(contenu);
-    // Si c'est une image de motivation, on retourne le chemin nettoyé
-    // Sinon on retourne une chaîne vide
-  //  if (cleaned && cleaned.startsWith('/')) {
-   //   return cleaned;
-  //  }
-  //  return '';
- // };
+  // ✅ Cette fonction est dans ton app Expo (elle ne s'exécute pas sur le Web)
+/*   const getMotivationImageUrl = (contenu: string | null | undefined): string => {
+    const cleaned = getCleanContent(contenu); // Renvoie "/04-shaikh-muqbil.jpeg"
+    if (!cleaned) return '';
 
+    // 📱 Astuce mobile : Si ça commence par "/", on le transforme en "./" 
+    // pour que la WebView (file://) le trouve à côté du index.html
+    if (cleaned.startsWith('/')) {
+      return './' + cleaned.substring(1); // Devient "./04-shaikh-muqbil.jpeg"
+    }
 
-  // ✅ 1. On définit la liste locale des images (exactement comme elles sont nommées dans ton dossier public/webapp)
-const LOCAL_MOTIVATION_IMAGES = [
-  '01-bienvenue.jpeg',
-  '02-muhammad-ibn-nadr.jpeg',
-  '03-jafar-as-sadiq.jpeg',
-  '04-shaikh-muqbil.jpeg',
-  '05-abou-hourayra.jpeg',
-  '06-les-4-questions.jpeg',
-  '07-noter-prenom.jpeg',
-  '08-rappel-comportement.jpeg',
-];
-
-// ✅ 2. Ta fonction de vérification reste inchangée (elle est parfaite)
-const isMotivationForMe = (msg: Message): boolean => {
-  if (msg.type_message !== 'image_motivation') return true;
-  const content = msg.contenu || '';
-  if (!content.startsWith('WELCOME_')) return true;
-  return content.startsWith(`WELCOME_${user?.id}:`);
-};
-
-// ✅ 3. La fonction "Magique" qui résout tout sans toucher à index.tsx
-const getMotivationImageUrl = (contenu: string | null | undefined): string => {
-  if (!contenu) return '';
+    return cleaned;
+  }; */
   
-  // Extrait le tag (ex: "WELCOME_123:img4" devient "img4")
-  const tag = contenu.replace(/^WELCOME_[^:]+:/, '');
-  
-  // Transforme "img4" en index 3 (car img1 = index 0)
-  const imgIndex = parseInt(tag.replace('img', ''), 10) - 1;
-  
-  // Si l'index est valide, on retourne le chemin local RELATIF (./)
-  if (imgIndex >= 0 && imgIndex < LOCAL_MOTIVATION_IMAGES.length) {
-    return '/' + LOCAL_MOTIVATION_IMAGES[imgIndex];
+
+  // ✅ 3. Fonction simplifiée : extrait le tag et retourne l'image importée
+  const getMotivationImageUrl = (contenu: string | null | undefined): string => {
+    if (!contenu) return ''
+    
+    // Extrait le tag (ex: "WELCOME_123:img4" devient "img4")
+    const tag = contenu.replace(/^WELCOME_[^:]+:/, '')
+    
+    // Retourne l'image importée correspondante (ou chaîne vide si tag invalide)
+    return MOTIVATION_IMAGES_MAP[tag] || ''
   }
-  
-  return '';
-};
-  
+
+  // ✅ 4. Ta fonction de vérification reste inchangée
+  const isMotivationForMe = (msg: Message): boolean => {
+    if (msg.type_message !== 'image_motivation') return true
+    const content = msg.contenu || ''
+    if (!content.startsWith('WELCOME_')) return true
+    return content.startsWith(`WELCOME_${user?.id}:`)
+  }
   
 
   const getFullUrl = (url: string | null | undefined) => {
@@ -2125,9 +2048,11 @@ const getMotivationImageUrl = (contenu: string | null | undefined): string => {
     const hasNonLues = annoncesActives.some((a: any) => !a.statut)
     
     const [leftPanelOpen, setLeftPanelOpen] = useState(true)
-    // ✅ Seuil élargi à 1024px : tablette = mode mobile, cohérent partout (web, natif, tous navigateurs)
-    const isMobileLayout = typeof window !== 'undefined' && window.innerWidth < 1025
-   
+
+    
+    // ✅ Détecte si on tourne dans l'app native (WebView Expo) — force le mode mobile
+    const isNativeApp = typeof window !== 'undefined' && !!(window as any).ReactNativeWebView
+    const isMobileLayout = isNativeApp || (typeof window !== 'undefined' && window.innerWidth < 768)
 
     
 
@@ -2265,6 +2190,8 @@ const getMotivationImageUrl = (contenu: string | null | undefined): string => {
       alert("Erreur lors de la suppression.")
     }
   }
+
+
   
   useEffect(() => { if (activeTab !== 'salle') navigate(`?tab=${activeTab}`, { replace: true }) }, [activeTab, navigate])
 
@@ -2471,7 +2398,6 @@ const getMotivationImageUrl = (contenu: string | null | undefined): string => {
 
     //if (window.innerWidth < 768) setLeftPanelOpen(false)
     if (isMobileLayout) setLeftPanelOpen(false)
-   
   }
 
   const isClasseLocked = (c: { statut?: string } | null | undefined) =>
@@ -2625,7 +2551,8 @@ const getMotivationImageUrl = (contenu: string | null | undefined): string => {
     partage.setActiveSession(activeClassId, defaultSeanceId, user?.id, user?.display_name)
   }, [activeClassId, defaultSeanceId, user?.id])
 
-     // 🆕 ÉCOUTEUR : Si le prof demande un changement d'onglet, tout le monde le suit
+
+  // 🆕 ÉCOUTEUR : Si le prof demande un changement d'onglet, tout le monde le suit
   useEffect(() => {
     if (syncedTab) {
       setActiveTab(syncedTab as any)
@@ -2639,9 +2566,6 @@ const getMotivationImageUrl = (contenu: string | null | undefined): string => {
       requestTabSync(activeTab)
     }
   }, [activeTab, role, liveKitSession, requestTabSync])
-
-  
-  
 
   // ═══════════════════════════════════════════════════════════════
   // 🆕 NOUVEAU : Gestion de l'enregistrement vocal
@@ -2682,7 +2606,6 @@ const stopRecording = () => {
   }
 };
   // ═══════════════════════════════════════════════════════════════
-
 
 
 // ═══════════════════════════════════════════════════════════════
@@ -2744,34 +2667,30 @@ const handleSendMessage = async (e: React.FormEvent) => {
 
 
 
-
   // 🆕 Filtrage des onglets pour directeur
   const availableTabs = useMemo(() => {
-  const base = [
-    // 🆕 Rediffusion : TOUJOURS visible pour tous les rôles
-    
-    { id: 'salle', icon: '🎥', label: 'Salle', hasAlert: unreadNotifs.some(n => n.classe === activeClassId && SALLE_BADGE_TYPES.includes(n.type)) },
-    { id: 'chat', icon: '💬', label: 'Chat', hasAlert: unreadNotifs.some(n => n.classe === activeClassId && CHAT_BADGE_TYPES.includes(n.type)) },
-    { id: 'tableau', icon: '🖊️', label: 'Tableau' },
-    { id: 'supports', icon: '📁', label: 'Supports' },
-    { id: 'editeur', icon: '📜', label: 'Présentation', hasAlert: false },
-    { id: 'livres', icon: '📚', label: 'Livres' },
-    { id: 'rediffusion', icon: '🎬', label: 'Rediffusion', hasAlert: false },
-    { id: 'infos', icon: '💰', label: 'Infos', hasAlert: showFactureBlink || unreadNotifs.some(n => n.classe === activeClassId && (INFOS_BADGE_TYPES[role] || []).includes(n.type)) },
-  ];
-  // 🆕 La direction voit aussi l'onglet Rediffusion (en plus de salle, chat, infos)
-  if (role === 'direction') return base.filter(t => ['rediffusion', 'salle', 'chat', 'infos'].includes(t.id));
-  return base;
-}, [role, unreadNotifs, activeClassId, showFactureBlink]);
+    const base = [
+      // 🆕 Rediffusion : TOUJOURS visible pour tous les rôles
+      
+      { id: 'salle', icon: '🎥', label: 'Salle', hasAlert: unreadNotifs.some(n => n.classe === activeClassId && SALLE_BADGE_TYPES.includes(n.type)) },
+      { id: 'chat', icon: '💬', label: 'Chat', hasAlert: unreadNotifs.some(n => n.classe === activeClassId && CHAT_BADGE_TYPES.includes(n.type)) },
+      { id: 'tableau', icon: '🖊️', label: 'Tableau' },
+      { id: 'supports', icon: '📁', label: 'Supports' },
+      { id: 'editeur', icon: '📜', label: 'Présentation', hasAlert: false },
+      { id: 'livres', icon: '📚', label: 'Livres' },
+      { id: 'rediffusion', icon: '🎬', label: 'Rediffusion', hasAlert: false },
+      { id: 'infos', icon: '💰', label: 'Infos', hasAlert: showFactureBlink || unreadNotifs.some(n => n.classe === activeClassId && (INFOS_BADGE_TYPES[role] || []).includes(n.type)) },
+    ];
+    // 🆕 La direction voit aussi l'onglet Rediffusion (en plus de salle, chat, infos)
+    if (role === 'direction') return base.filter(t => ['rediffusion', 'salle', 'chat', 'infos'].includes(t.id));
+    return base;
+  }, [role, unreadNotifs, activeClassId, showFactureBlink]);
 
-  
-
-useEffect(() => {
-  if (role === 'direction' && !['rediffusion', 'salle', 'chat', 'infos'].includes(activeTab)) {
-    setActiveTab('chat');
-  }
-}, [role, activeTab]);
-  
+ useEffect(() => {
+    if (role === 'direction' && !['rediffusion', 'salle', 'chat', 'infos'].includes(activeTab)) {
+      setActiveTab('chat');
+    }
+  }, [role, activeTab]);
 
   // ─── QueryFinModal ────────────────────────────────────────────────────────
   const QueryFinModal = () => {
@@ -2846,8 +2765,6 @@ useEffect(() => {
     return null
   }
 
-
-
   // ─── RENDER ───────────────────────────────────────────────────────────────
   if (!activeClassId && !loadingClasses && classes.length === 0) return (
     <div className="text-center py-12"><p className="text-neutral-600">Aucune classe disponible</p><button onClick={() => navigate(-1)} className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg">← Retour</button></div>
@@ -2859,18 +2776,19 @@ const classesFiltrees = classes.filter((cls: Class) =>
   !filterClasse || cls.nom.toLowerCase().includes(filterClasse.toLowerCase())
 )
   return (
-    <div style={{margin: -24, display: 'flex', height: '92vh', overflow: 'hidden', background: '#f0f2f5', fontFamily: "'DM Sans', 'Inter', system-ui, sans-serif" }}>
+    
+    <div style={{margin: -24, display: 'flex', height: 'calc(100vh - 140px)', overflow: 'hidden', background: '#f0f2f5', fontFamily: "'DM Sans', 'Inter', system-ui, sans-serif" }}>
       {/* ═══════════════════════════════════════════════════════════════
       PANNEAU LATÉRAL GAUCHE
       ═══════════════════════════════════════════════════════════════ 
-       
+      width: leftPanelOpen ? (window.innerWidth < 768 ? '100%' : 310) : 0,
+      minWidth: leftPanelOpen ? (window.innerWidth < 768 ? '100%' : 300) : 0,
+      maxWidth: window.innerWidth < 768 ? '100%' : 360,
       */}
       <aside style={{
-       
         width: leftPanelOpen ? (isMobileLayout ? '100%' : 310) : 0,
         minWidth: leftPanelOpen ? (isMobileLayout ? '100%' : 300) : 0,
         maxWidth: isMobileLayout ? '100%' : 360,
-      
         background: 'linear-gradient(180deg, #1e1b4b 0%, #312e81 40%, #1e1b4b 100%)',
         borderRight: 'none', position: 'relative', overflow: 'hidden', flexShrink: 0,  transition: 'width 0.3s ease, min-width 0.3s ease',
       }}>
@@ -2879,7 +2797,7 @@ const classesFiltrees = classes.filter((cls: Class) =>
           <div style={{ padding: '20px 16px 12px', position: 'relative', zIndex: 1, flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <div>
-                <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#fff', letterSpacing: '-0.3px' }}>{role === 'professeur' ? ' Mes cours' : role === 'admin' || role === 'direction' ? 'Classes observées' : ' Mes classes'}
+                <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#fff', letterSpacing: '-0.3px' }}>{role === 'professeur' ? ' Mes cours' : role === 'admin' || role === 'direction' ? ' Classes observées' : ' Mes classes'}
                   {showFactureBlink && (
                     <span
                       onClick={dismissFactureBlink}
@@ -3170,7 +3088,7 @@ const classesFiltrees = classes.filter((cls: Class) =>
       ZONE PRINCIPALE DROITE
       ═══════════════════════════════════════════════════════════════ */}
       <main className="main-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0,  display: (!activeClass && isMobileLayout) ? 'none' : 'flex'}}>
-      {!activeClass && !isMobileLayout ? (
+            {!activeClass && !isMobileLayout ? (
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f0f2f5' }}>
                 <div style={{ textAlign: 'center', color: '#94a3b8' }}>
                   <div style={{ fontSize: 64, marginBottom: 16, opacity: .5 }}></div>
@@ -3186,9 +3104,9 @@ const classesFiltrees = classes.filter((cls: Class) =>
               }}>
                 <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(rgba(255,255,255,.025) 1px, transparent 1px)', backgroundSize: '16px 16px', pointerEvents: 'none' }} />
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, position: 'relative', zIndex: 1, flex: 1, minWidth: 200 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(139,92,246,.2)', border: '2px solid rgba(139,92,246,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgb(255, 255, 255)', border: '2px solid rgba(139,92,246,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>
                     <button onClick={() => setLeftPanelOpen(p => !p)}
-                    title={leftPanelOpen ? 'Fermer le panneau' : 'Ouvrir le panneau'}>{leftPanelOpen ? '◀' : '▶'}</button>
+                    title={leftPanelOpen ? 'Fermer le panneau' : 'Ouvrir le panneau'}>{leftPanelOpen ? '◀' : '◀'}</button>
                     </div>
                   <div style={{ flex: 1, minWidth: 0, position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: 10 }}>
                     <button
@@ -3239,7 +3157,7 @@ const classesFiltrees = classes.filter((cls: Class) =>
                             <span style={{ fontSize: 9, color: 'rgba(255,255,255,.4)', display: 'block', marginBottom: 4 }}>Élèves inscrits ({inscritCount})</span>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                               {headerInscriptions?.results?.slice(0, 4).map((insc: any) => (
-                                <span key={insc.id} style={{ fontSize: 10, padding: '2px 6px', background: 'rgba(255,255,255,.08)', borderRadius: 8, color: '#c4b5fd' }}> {insc.eleve_nom}</span>
+                                <span key={insc.id} style={{ fontSize: 10, padding: '2px 6px', background: 'rgba(255,255,255,.08)', borderRadius: 8, color: '#c4b5fd' }}>👤 {insc.eleve_nom}</span>
                               ))}
                               {inscritCount > 4 && <span style={{ fontSize: 10, padding: '2px 6px', background: 'rgba(255,255,255,.08)', borderRadius: 8, color: 'rgba(255,255,255,.6)' }}>+{inscritCount - 4} autres</span>}
                             </div>
@@ -3250,7 +3168,7 @@ const classesFiltrees = classes.filter((cls: Class) =>
 
                     {role === 'admin' && (
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: 'rgba(251,191,36,.15)', border: '1.5px solid rgba(251,191,36,.4)', color: '#fbbf24' }}>
-                        Mode observation
+                         Mode observation
                       </span>
                     )}
                 {/* 📅 Aujourd'hui — texte simple si 1 séance, popup si plusieurs */}
@@ -3427,7 +3345,6 @@ const classesFiltrees = classes.filter((cls: Class) =>
                   </div>
                 )}
 
-                {/* 🆕 Whiteboard TOUJOURS MONTÉ (reste connecté en arrière-plan) */}
                 {activeClassId && defaultSeanceId && (
                   <div style={{
                     position: 'absolute',
@@ -3444,7 +3361,7 @@ const classesFiltrees = classes.filter((cls: Class) =>
                     />
                   </div>
                 )}
-                
+
                 {activeTab === 'salle' && !liveKitSession && (
                   <div style={{ display: 'flex', flex: 1, minHeight: 0, flexDirection: 'column' }}>
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(160deg, #0f1117 0%, #1a1d27 55%, #111827 100%)', position: 'relative', overflow: 'hidden', padding: '2rem' }}>
@@ -3673,27 +3590,6 @@ const classesFiltrees = classes.filter((cls: Class) =>
                                     )}
 
                                     {/* 🎵 AUDIO / VOCAL */}
-                                  {/*  {msg.type_message === 'audio' && fileUrl && (
-                                      <div style={{ padding: '8px 14px 12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: isMe ? 'rgba(255,255,255,0.6)' : '#f5f5f5', padding: '8px 12px', borderRadius: '24px' }}>
-                                          <span style={{ fontSize: '20px' }}>{msg.is_voice_note ? '🎤' : '🎵'}</span>
-                                          <audio 
-                                            controls 
-                                            src={fileUrl} 
-                                            style={{ height: '32px', maxWidth: '200px', outline: 'none' }} 
-                                            onError={(e) => console.error("Erreur chargement audio", e)}
-                                          />
-                                        </div>
-                                        {msg.is_voice_note && <span style={{ fontSize: '11px', color: '#666', fontStyle: 'italic' }}>Note vocale</span>}
-                                        {warning && (
-                                          <span style={{ fontSize: '10px', color: '#dc2626', background: '#fef2f2', padding: '4px 8px', borderRadius: '8px', border: '1px solid #fecaca', alignSelf: 'flex-start' }}>
-                                            ⚠️ {warning}
-                                          </span>
-                                        )}
-                                      </div>
-                                    )} */}
-
-                                    {/* 🎵 AUDIO / VOCAL */}
                                     {msg.type_message === 'audio' && fileUrl && (
                                       <div style={{ padding: '8px 14px 12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: isMe ? 'rgba(255,255,255,0.6)' : '#f5f5f5', padding: '8px 12px', borderRadius: '24px' }}>
@@ -3787,7 +3683,7 @@ const classesFiltrees = classes.filter((cls: Class) =>
                                       >
                                         ↩️
                                       </button>
-                                      {isMe && <MessageReadReceipts msg={msg} userId={user?.id ?? ''} user={user} />}
+                                        {isMe && <MessageReadReceipts msg={msg} userId={user?.id ?? ''} user={user} />}
                                     </div>
 
                                   </div>
@@ -3800,13 +3696,14 @@ const classesFiltrees = classes.filter((cls: Class) =>
                             
                       <div ref={messagesEndRef} />
                     </div>
-                    
+                      <input type="file" ref={photoInputRef} accept="image/*,video/*" multiple style={{ display: 'none' }} onChange={(e) => { if (e.target.files) setSelectedFiles(Array.from(e.target.files)); setShowAttachMenu(false); }} />
+                      <input type="file" ref={docInputRef} multiple style={{ display: 'none' }} onChange={(e) => { if (e.target.files) setSelectedFiles(Array.from(e.target.files)); setShowAttachMenu(false); }} />
+
+
                       <form onSubmit={handleSendMessage} style={{ padding: '10px 16px', background: '#f0f2f5', display: 'flex', flexDirection: 'column', gap: 8, borderTop: '1px solid rgba(0,0,0,.06)', position: 'relative' }}>
                         
                         {/* 1. Inputs fichiers cachés (séparés pour contrôler le type) */}
-                        <input type="file" ref={photoInputRef} accept="image/*,video/*" multiple style={{ display: 'none' }} onChange={(e) => { if (e.target.files) setSelectedFiles(Array.from(e.target.files)); setShowAttachMenu(false); }} />
-                        <input type="file" ref={docInputRef} multiple style={{ display: 'none' }} onChange={(e) => { if (e.target.files) setSelectedFiles(Array.from(e.target.files)); setShowAttachMenu(false); }} />
-
+                        
 
                         {/* 🆕 BANNIÈRE DE RÉPONSE (Style WhatsApp) */}
                         {replyToMessage && (
@@ -3952,7 +3849,27 @@ const classesFiltrees = classes.filter((cls: Class) =>
                           <div style={{ background: '#ede9fe', border: '2px solid #a78bfa', borderRadius: 12, padding: 16, marginBottom: 16 }}>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                               <input type="text" placeholder="Titre du devoir *" value={newDevoir.titre} onChange={e => setNewDevoir({ ...newDevoir, titre: e.target.value })} style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: '1px solid #c4b5fd', fontSize: 14, outline: 'none' }} autoFocus />
-                              <label style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid #c4b5fd', fontSize: 13, cursor: 'pointer', background: '#fff', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6 }}>📎 Fichiers<input type="file" multiple className="hidden" onChange={e => { if (e.target.files) setNewDevoir({ ...newDevoir, files: Array.from(e.target.files) }) }} style={{ display: 'none' }} /></label>
+                              
+                              <button
+                                type="button"
+                                onClick={() => devoirFilesInputRef.current?.click()}
+                                style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid #c4b5fd', fontSize: 13, cursor: 'pointer', background: '#fff', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6 }}
+                              >
+                                📎 Fichiers
+                              </button>
+                              <input
+                                ref={devoirFilesInputRef}
+                                type="file"
+                                multiple
+                                style={{ display: 'none' }}
+                                onChange={e => {
+                                  if (e.target.files) {
+                                    setNewDevoir({ ...newDevoir, files: Array.from(e.target.files) })
+                                    e.target.value = ''
+                                  }
+                                }}
+                              />
+                              
                             </div>
                             {newDevoir.files.length > 0 && <p style={{ fontSize: 12, color: '#7c3aed', marginTop: 6 }}>{newDevoir.files.length} fichier(s) : {newDevoir.files.map(f => f.name).join(', ')}</p>}
                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 10 }}>
@@ -3986,7 +3903,40 @@ const classesFiltrees = classes.filter((cls: Class) =>
                                     )}
                                   </div>
                                   {teacherFiles.length > 0 && (<div style={{ marginBottom: 10 }}><p style={{ fontSize: 12, color: '#64748b', marginBottom: 6, fontWeight: 600 }}>📎 Fichiers du devoir :</p><div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>{teacherFiles.map((file: any) => <button key={file.id} onClick={() => handleDownloadFile(file)} style={{ padding: '4px 10px', fontSize: 12, border: '1px solid #e2e8f0', borderRadius: 8, background: '#f8fafc', cursor: 'pointer' }}>📄 {file.nom_original}</button>)}</div></div>)}
-                                  {role === 'eleve' && isSubmitted && !isCloture && (<div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #f1f5f9' }}><p style={{ fontSize: 12, color: '#64748b', marginBottom: 6, fontWeight: 600 }}>📤 Votre copie :</p>{studentFiles.length > 0 && <p style={{ fontSize: 12, color: '#166834', marginBottom: 6 }}>✅ {studentFiles.map((f: any) => f.nom_original).join(', ')}</p>}<label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: 12, cursor: 'pointer' }}>{uploadingStudentFiles[devoir.id] ? 'Envoi…' : '📁 Uploader ma copie'}<input type="file" multiple style={{ display: 'none' }} disabled={uploadingStudentFiles[devoir.id] || isCloture} onChange={e => e.target.files && handleStudentUpload(devoir.id, e.target.files)} /></label></div>)}
+                                  {role === 'eleve' && isSubmitted && !isCloture && (<div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #f1f5f9' }}><p style={{ fontSize: 12, color: '#64748b', marginBottom: 6, fontWeight: 600 }}>📤 Votre copie :</p>{studentFiles.length > 0 && <p style={{ fontSize: 12, color: '#166834', marginBottom: 6 }}>✅ {studentFiles.map((f: any) => f.nom_original).join(', ')}</p>}
+                                  
+                                  
+                                  <button
+                                    type="button"
+                                    disabled={uploadingStudentFiles[devoir.id] || isCloture}
+                                    onClick={() => {
+                                      setCurrentUploadDevoirId(devoir.id)
+                                      setTimeout(() => studentUploadInputRef.current?.click(), 0)
+                                    }}
+                                    style={{ 
+                                      display: 'inline-flex', alignItems: 'center', gap: 6, 
+                                      padding: '6px 12px', borderRadius: 8, 
+                                      border: '1px solid #e2e8f0', background: '#f8fafc', 
+                                      fontSize: 12, cursor: 'pointer',
+                                      opacity: (uploadingStudentFiles[devoir.id] || isCloture) ? 0.5 : 1
+                                    }}
+                                  >
+                                    {uploadingStudentFiles[devoir.id] ? 'Envoi…' : '📁 Uploader ma copie'}
+                                  </button>
+                                  <input
+                                    ref={studentUploadInputRef}
+                                    type="file"
+                                    multiple
+                                    style={{ display: 'none' }}
+                                    onChange={e => {
+                                      if (e.target.files && currentUploadDevoirId) {
+                                        handleStudentUpload(currentUploadDevoirId, e.target.files)
+                                        e.target.value = '' // ✅ reset
+                                      }
+                                    }}
+                                  />
+                                  
+                                  </div>)}
                                   {isCloture && <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 6, fontStyle: 'italic' }}>🔒 Devoir clôturé.</p>}
                                 </div>
                               )
@@ -4009,6 +3959,7 @@ const classesFiltrees = classes.filter((cls: Class) =>
                   </div>
                 )}
 
+
                 {activeClassId && defaultSeanceId && (
                   <div style={{
                     position: 'absolute',
@@ -4027,13 +3978,13 @@ const classesFiltrees = classes.filter((cls: Class) =>
                     />
                   </div>
                 )}
-                
                 {activeTab === 'livres' && activeClassId && (
                   <LivresClasse
                     classeId={activeClassId}
                     role={role}
                   />
                 )}
+
                 
                 {activeTab === 'facture' && role === 'eleve' && (<div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: 15 }}>💰 Section Facture (à développer)</div>)}
 
@@ -4532,5 +4483,6 @@ const classesFiltrees = classes.filter((cls: Class) =>
       )}
       {showQueryFinModal && <QueryFinModal />}
     </div>
+  
   )
 }
