@@ -1201,7 +1201,8 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
   const [bgColor, setBgColor] = useState<'white' | 'grid' | 'lines'>('white')
     // 🆕 Zone de texte type Word : apparaît là où on clique, on tape directement, déplaçable/redimensionnable
   const [textBox, setTextBox] = useState<{
-    x: number; y: number; w: number; h: number   // coordonnées canvas
+    id?: string  // 🆕 ID si vient d'une zone committée
+    x: number; y: number; w: number; h: number
     text: string; color: string; fontSize: number
   } | null>(null)
   const textAreaRef = useRef<HTMLTextAreaElement>(null)
@@ -1360,7 +1361,16 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
 
   if (existing) {
     // ✅ Réactiver la zone en mode édition (comme dans Word)
-    setTextBox({ x: existing.x, y: existing.y, w: existing.w, h: existing.h, text: existing.text, color: existing.color, fontSize: existing.fontSize })
+    setTextBox({ 
+      id: existing.id,  // 🆕 On garde l'ID
+      x: existing.x, 
+      y: existing.y, 
+      w: existing.w, 
+      h: existing.h, 
+      text: existing.text, 
+      color: existing.color, 
+      fontSize: existing.fontSize 
+    })
     // Retirer de la liste des committées (elle redevient "active")
     setCommittedTextBoxes(prev => prev.filter(t => t.id !== existing.id))
     // Notifier les autres pour éviter les doublons
@@ -1628,6 +1638,7 @@ const deleteCommittedTextBox = (id: string) => {
         />
           
                 {/* 🆕 Zone de texte type Word : saisie directe avec le clavier de l'utilisateur */}
+        {/* 🆕 Zone de texte type Word : saisie directe avec le clavier de l'utilisateur */}
         {textBox && (() => {
           const canvas = canvasRef.current
           const sx = canvas ? canvas.offsetWidth / canvas.width : 1
@@ -1645,78 +1656,22 @@ const deleteCommittedTextBox = (id: string) => {
                 background: '#6366f1', color: '#fff', fontSize: 10, lineHeight: '18px', textAlign: 'center',
                 borderRadius: '4px 4px 0 0', userSelect: 'none',
               }}>✥ Déplacer</div>
-              <textarea
-                key={`tb-${textBox.x}-${textBox.y}-${textBox.text.length}`}
-                ref={textAreaRef}
-                autoFocus
-                dir="auto"
-                inputMode="text"
-                spellCheck
-                value={textBox.text}
-                onChange={e => setTextBox(p => p ? { ...p, text: e.target.value } : p)}
-                onKeyDown={e => {
-                  if (e.key === 'Escape') setTextBox(null)
-                  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); commitTextBox() }
-                }}
-                style={{
-                  width: '100%', height: '100%', boxSizing: 'border-box', border: 'none', outline: 'none', resize: 'none',
-                  overflow: 'hidden', background: 'transparent', padding: TEXT_PAD * sx,
-                  fontFamily: "'Amiri', serif", fontSize: textBox.fontSize * sy, lineHeight: TEXT_LINE_H, color: textBox.color,
-                }}
-              />
-              {/* Poignée de redimensionnement */}
-              <div onPointerDown={dragTextBox('resize')} title="Redimensionner" style={{
-                position: 'absolute', right: -9, bottom: -9, width: 18, height: 18, borderRadius: '50%',
-                background: '#6366f1', border: '2px solid #fff', cursor: 'nwse-resize', touchAction: 'none',
-              }} />
-            </div>
-          )
-        })()}
-
-        {/* 🆕 Zones de texte committées : survol = bordure en pointillés + bouton supprimer */}
-        {committedTextBoxes.map(tb => {
-          const isHovered = hoveredTextBoxId === tb.id
-          if (!isHovered) return null
-          const canvas = canvasRef.current
-          const sx = canvas ? canvas.offsetWidth / canvas.width : 1
-          const sy = canvas ? canvas.offsetHeight / canvas.height : 1
-          return (
-            <div
-              key={tb.id}
-              onClick={(e) => {
-                // Clic sur le conteneur = réouvrir en mode édition
-                e.stopPropagation()
-                setTextBox({ x: tb.x, y: tb.y, w: tb.w, h: tb.h, text: tb.text, color: tb.color, fontSize: tb.fontSize })
-                setCommittedTextBoxes(prev => prev.filter(t => t.id !== tb.id))
-                sendWs({ type: 'text_deleted', id: tb.id })
-                redrawCanvas()
-                if (role === 'professeur') {
-                  const dataUrl = canvasRef.current?.toDataURL()
-                  if (dataUrl) sendWs({ type: 'canvas_state', dataUrl })
-                }
-              }}
-              style={{
-                position: 'absolute',
-                zIndex: 9,
-                left: (canvas?.offsetLeft ?? 0) + tb.x * sx,
-                top: (canvas?.offsetTop ?? 0) + tb.y * sy,
-                width: tb.w * sx,
-                height: tb.h * sy,
-                border: '2px dashed #6366f1',
-                borderRadius: 4,
-                pointerEvents: 'auto', // ✅ Maintenant le conteneur est cliquable
-                background: 'rgba(99,102,241,0.05)',
-                transition: 'all 0.15s ease',
-                cursor: 'pointer',
-              }}
-            >
+              
               {/* 🆕 Bouton supprimer en haut à droite */}
               <button
                 onClick={(e) => {
-                  e.stopPropagation() // ✅ Empêche le clic de réouvrir la zone
-                  deleteCommittedTextBox(tb.id)
+                  e.stopPropagation()
+                  // Si la zone vient d'une zone committée, on notifie les autres
+                  if (textBox.id) {
+                    sendWs({ type: 'text_deleted', id: textBox.id })
+                    if (role === 'professeur') {
+                      const dataUrl = canvasRef.current?.toDataURL()
+                      if (dataUrl) sendWs({ type: 'canvas_state', dataUrl })
+                    }
+                  }
+                  setTextBox(null)
                 }}
-                title="Supprimer cette zone de texte"
+                title="Supprimer cette zone"
                 style={{
                   position: 'absolute',
                   top: -12,
@@ -1736,21 +1691,65 @@ const deleteCommittedTextBox = (id: string) => {
                   boxShadow: '0 2px 6px rgba(0,0,0,.2)',
                   padding: 0,
                   lineHeight: 1,
-                  transition: 'transform .15s, background .15s',
-                  zIndex: 10,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#dc2626'
-                  e.currentTarget.style.transform = 'scale(1.15)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = '#ef4444'
-                  e.currentTarget.style.transform = 'scale(1)'
+                  zIndex: 11,
                 }}
               >
                 ✕
               </button>
+              
+              <textarea
+                key={`tb-${textBox.x}-${textBox.y}-${textBox.text.length}`}
+                ref={textAreaRef}
+                autoFocus
+                dir="auto"
+                inputMode="text"
+                spellCheck
+                value={textBox.text}
+                onChange={e => setTextBox(p => p ? { ...p, text: e.target.value } : p)}
+                onKeyDown={e => {
+                  if (e.key === 'Escape') setTextBox(null)
+                  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); commitTextBox() }
+                }}
+                style={{
+                  width: '100%', height: '100%', boxSizing: 'border-box', border: 'none', outline: 'none', resize: 'none',
+                  overflow: 'hidden', background: 'transparent', padding: TEXT_PAD * sx,
+                  fontFamily: "'Amiri', serif", fontSize: textBox.fontSize * sy, lineHeight: TEXT_LINE_H, color: textBox.color,
+                }}
+              />
+              
+              {/* Poignée de redimensionnement */}
+              <div onPointerDown={dragTextBox('resize')} title="Redimensionner" style={{
+                position: 'absolute', right: -9, bottom: -9, width: 18, height: 18, borderRadius: '50%',
+                background: '#6366f1', border: '2px solid #fff', cursor: 'nwse-resize', touchAction: 'none',
+              }} />
             </div>
+          )
+        })()}
+
+        {/* 🆕 Zones de texte committées : survol = bordure en pointillés + bouton supprimer */}
+        {committedTextBoxes.map(tb => {
+          const isHovered = hoveredTextBoxId === tb.id
+          if (!isHovered) return null
+          const canvas = canvasRef.current
+          const sx = canvas ? canvas.offsetWidth / canvas.width : 1
+          const sy = canvas ? canvas.offsetHeight / canvas.height : 1
+          return (
+            <div
+              key={tb.id}
+              style={{
+                position: 'absolute',
+                zIndex: 9,
+                left: (canvas?.offsetLeft ?? 0) + tb.x * sx,
+                top: (canvas?.offsetTop ?? 0) + tb.y * sy,
+                width: tb.w * sx,
+                height: tb.h * sy,
+                border: '2px dashed #6366f1',
+                borderRadius: 4,
+                pointerEvents: 'none',  // ✅ Laisse le canvas gérer les clics
+                background: 'rgba(99,102,241,0.05)',
+                transition: 'all 0.15s ease',
+              }}
+            />
           )
         })}
 
