@@ -1673,7 +1673,6 @@ const deleteCommittedTextBox = (id: string) => {
           )
         })()}
 
-        {/* 🆕 Zones de texte committées : survol = bordure en pointillés (comme Word) */}
         {/* 🆕 Zones de texte committées : survol = bordure en pointillés + bouton supprimer */}
         {committedTextBoxes.map(tb => {
           const isHovered = hoveredTextBoxId === tb.id
@@ -1684,6 +1683,18 @@ const deleteCommittedTextBox = (id: string) => {
           return (
             <div
               key={tb.id}
+              onClick={(e) => {
+                // Clic sur le conteneur = réouvrir en mode édition
+                e.stopPropagation()
+                setTextBox({ x: tb.x, y: tb.y, w: tb.w, h: tb.h, text: tb.text, color: tb.color, fontSize: tb.fontSize })
+                setCommittedTextBoxes(prev => prev.filter(t => t.id !== tb.id))
+                sendWs({ type: 'text_deleted', id: tb.id })
+                redrawCanvas()
+                if (role === 'professeur') {
+                  const dataUrl = canvasRef.current?.toDataURL()
+                  if (dataUrl) sendWs({ type: 'canvas_state', dataUrl })
+                }
+              }}
               style={{
                 position: 'absolute',
                 zIndex: 9,
@@ -1693,15 +1704,16 @@ const deleteCommittedTextBox = (id: string) => {
                 height: tb.h * sy,
                 border: '2px dashed #6366f1',
                 borderRadius: 4,
-                pointerEvents: 'none',
+                pointerEvents: 'auto', // ✅ Maintenant le conteneur est cliquable
                 background: 'rgba(99,102,241,0.05)',
                 transition: 'all 0.15s ease',
+                cursor: 'pointer',
               }}
             >
               {/* 🆕 Bouton supprimer en haut à droite */}
               <button
                 onClick={(e) => {
-                  e.stopPropagation()
+                  e.stopPropagation() // ✅ Empêche le clic de réouvrir la zone
                   deleteCommittedTextBox(tb.id)
                 }}
                 title="Supprimer cette zone de texte"
@@ -1722,10 +1734,10 @@ const deleteCommittedTextBox = (id: string) => {
                   fontSize: 12,
                   fontWeight: 700,
                   boxShadow: '0 2px 6px rgba(0,0,0,.2)',
-                  pointerEvents: 'auto',
                   padding: 0,
                   lineHeight: 1,
                   transition: 'transform .15s, background .15s',
+                  zIndex: 10,
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = '#dc2626'
