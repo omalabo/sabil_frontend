@@ -1524,7 +1524,7 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
       const dx = (ev.clientX - start.px) * sx; const dy = (ev.clientY - start.py) * sy
       setTextBox(prev => !prev ? prev : mode === 'move'
         ? { ...prev, x: start.tb.x + dx, y: start.tb.y + dy }
-        : { ...prev, w: Math.max(120, start.tb.w + dx), h: Math.max(minH, start.tb.h + dy) })
+        : { ...prev, w: Math.max(220, start.tb.w + dx), h: Math.max(minH, start.tb.h + dy) })
     }
     const onUp = () => { el.removeEventListener('pointermove', onMove); el.removeEventListener('pointerup', onUp); el.removeEventListener('pointercancel', onUp) }
     el.addEventListener('pointermove', onMove); el.addEventListener('pointerup', onUp); el.addEventListener('pointercancel', onUp)
@@ -1566,13 +1566,7 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
         </div>
         <div className="flex gap-1 ml-auto">
           <button onClick={handleUndo} className="px-2 py-1 text-xs bg-neutral-100 hover:bg-neutral-200 rounded transition">↩ Annuler</button>
-          {textBox && (
-            <>
-              <button data-keep-textbox onClick={() => { setTextBox(p => p ? { ...p, fontSize: Math.max(16, p.fontSize - 8) } : p); textAreaRef.current?.focus() }} className="px-2 py-1 text-xs bg-neutral-100 hover:bg-neutral-200 rounded transition" title="Réduire le texte">A−</button>
-              <button data-keep-textbox onClick={() => { setTextBox(p => p ? { ...p, fontSize: Math.min(200, p.fontSize + 8) } : p); textAreaRef.current?.focus() }} className="px-2 py-1 text-xs bg-neutral-100 hover:bg-neutral-200 rounded transition" title="Agrandir le texte">A+</button>
-              <button onClick={commitTextBox} className="px-2 py-1 text-xs bg-green-50 hover:bg-green-100 text-green-700 rounded transition font-semibold">✓ Valider le texte</button>
-            </>
-          )}
+          
           <button onClick={handleClear} className="px-2 py-1 text-xs bg-red-50 hover:bg-red-100 text-red-600 rounded transition">🗑️ Effacer</button>
         </div>
         <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${wsStatus === 'connected' ? 'bg-green-100 text-green-700' : wsStatus === 'connecting' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-600'}`}>
@@ -1623,12 +1617,20 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
                 borderRadius: '4px 4px 0 0', userSelect: 'none',
               }}>✥ Déplacer</div>
 
-              {/* Bouton supprimer (en haut à droite) */}
-              <button type="button" onClick={deleteTextBox} title="Supprimer la zone de texte" style={{
-                position: 'absolute', right: -2, top: -20, width: 24, height: 18, padding: 0, border: 'none',
-                background: '#ef4444', color: '#fff', fontSize: 11, lineHeight: '18px', cursor: 'pointer',
-                borderRadius: '4px 4px 0 0',
-              }}>🗑</button>
+              {/* Boutons de la zone (en haut à droite) : A− A+ ✓ 🗑 */}
+              <div style={{ position: 'absolute', right: -2, top: -20, height: 18, display: 'flex', gap: 2 }}>
+                {([
+                  { label: 'A−', title: 'Réduire le texte', bg: '#6366f1', act: () => { setTextBox(p => p ? { ...p, fontSize: Math.max(16, p.fontSize - 8) } : p); textAreaRef.current?.focus() } },
+                  { label: 'A+', title: 'Agrandir le texte', bg: '#6366f1', act: () => { setTextBox(p => p ? { ...p, fontSize: Math.min(200, p.fontSize + 8) } : p); textAreaRef.current?.focus() } },
+                  { label: '✓', title: 'Valider le texte', bg: '#16a34a', act: commitTextBox },
+                  { label: '🗑', title: 'Supprimer la zone de texte', bg: '#ef4444', act: deleteTextBox },
+                ]).map(b => (
+                  <button key={b.label} type="button" onClick={b.act} title={b.title} style={{
+                    width: 26, height: 18, padding: 0, border: 'none', background: b.bg, color: '#fff',
+                    fontSize: 11, lineHeight: '18px', cursor: 'pointer', borderRadius: '4px 4px 0 0',
+                  }}>{b.label}</button>
+                ))}
+              </div>
               
               <textarea
                 ref={textAreaRef}
