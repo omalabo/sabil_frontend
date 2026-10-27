@@ -1177,6 +1177,20 @@ const layoutTextLines = (ctx: CanvasRenderingContext2D, text: string, fontSize: 
   return out
 }
 
+// Zone de texte en cours de saisie / d'édition
+interface TextBoxState {
+  id: number
+  x: number; y: number; w: number; h: number   // coordonnées canvas
+  text: string; color: string; fontSize: number
+  editing: boolean                             // true = on modifie un texte déjà validé
+}
+// Texte déjà validé (écrit sur le canvas) mais encore modifiable : on garde ce qu'il y avait dessous
+interface TextItem {
+  id: number
+  x: number; y: number; w: number; h: number
+  text: string; color: string; fontSize: number
+  under: ImageData; rx: number; ry: number
+}
 interface WhiteboardProps { classeId: string; seanceId: string; role: 'eleve' | 'professeur' | 'admin' }
 function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -1190,11 +1204,15 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
   const [color, setColor] = useState('#1a1a2e')
   const [lineWidth, setLineWidth] = useState(3)
   const [bgColor, setBgColor] = useState<'white' | 'grid' | 'lines'>('white')
-    // 🆕 Zone de texte type Word : apparaît là où on clique, on tape directement, déplaçable/redimensionnable
-  const [textBox, setTextBox] = useState<{
-    x: number; y: number; w: number; h: number   // coordonnées canvas
-    text: string; color: string; fontSize: number
-  } | null>(null)
+     // 🆕 Zone de texte type Word : apparaît là où on clique, on tape directement, déplaçable/redimensionnable
+  const [textBox, setTextBox] = useState<TextBoxState | null>(null)
+  const textBoxRef = useRef<TextBoxState | null>(null)
+  textBoxRef.current = textBox                       // toujours à jour (évite les valeurs périmées)
+  const [textItems, setTextItems] = useState<TextItem[]>([])   // textes validés, modifiables
+  const [hoverTextId, setHoverTextId] = useState<number | null>(null)
+  const nextTextId = useRef(1)
+  const boxWrapRef = useRef<HTMLDivElement>(null)
+  const commitRef = useRef<() => void>(() => {})
   const textAreaRef = useRef<HTMLTextAreaElement>(null)
   const lastTouchTs = useRef(0)
   
@@ -1285,7 +1303,8 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
     ctx.lineCap = 'round'; 
     ctx.lineJoin = 'round'; 
     fillBg(ctx, canvas, bgColor) 
-    
+
+    setTextItems([])
     // 🆕 Envoyer l'état complet du canvas après changement de fond
     if (role === 'professeur' && wsRef.current?.readyState === WebSocket.OPEN) {
       const dataUrl = canvas.toDataURL()
@@ -1312,10 +1331,10 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
       ctx.textAlign = 'start'       // 🆕
       ctx.textBaseline = 'alphabetic' // 🆕
     }
-    else if (data.type === 'clear') { fillBg(ctx, canvas, bgColor) }
+    else if (data.type === 'clear') { fillBg(ctx, canvas, bgColor); setTextItems([]) }
     else if (data.type === 'cursor' && role === 'eleve') { setRemoteCursor({ x: data.x, y: data.y }) }
     else if (data.type === 'canvas_state') { const img = new Image(); img.onload = () => ctx.drawImage(img, 0, 0); img.src = data.dataUrl }
-    else if (data.type === 'undo' && data.dataUrl) { const img = new Image(); img.onload = () => { fillBg(ctx, canvas, bgColor); ctx.drawImage(img, 0, 0) }; img.src = data.dataUrl }
+    else if (data.type === 'undo' && data.dataUrl) { setTextItems([]); const img = new Image(); img.onload = () => { fillBg(ctx, canvas, bgColor); ctx.drawImage(img, 0, 0) }; img.src = data.dataUrl }
   }, [bgColor, role])
   const getPos = (e: React.MouseEvent | React.TouchEvent, canvas: HTMLCanvasElement) => {
     const rect = canvas.getBoundingClientRect(); const sx = canvas.width / rect.width; const sy = canvas.height / rect.height
@@ -1329,11 +1348,14 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
         if (tool === 'text') {
           // un mousedown "émulé" juste après un toucher doit être ignoré (mobile)
           if (!('touches' in e) && Date.now() - lastTouchTs.current < 800) return
-          if (textBox) commitTextBox()   // fige la zone précédente (supprimée si vide)
-          flushSync(() => setTextBox({ x: pos.x, y: pos.y, w: 500, h: 48 * TEXT_LINE_H + TEXT_PAD * 2, text: '', color, fontSize: 48 }))
+          commitTextBox()   // valide la zone en cours (sans effet si vide ou déjà validée)
+          const nb: TextBoxState = { id: nextTextId.current++, x: pos.x, y: pos.y, w: 500, h: 48 * TEXT_LINE_H + TEXT_PAD * 2, text: '', color, fontSize: 48, editing: false }
+          textBoxRef.current = nb
+          flushSync(() => setTextBox(nb))
           textAreaRef.current?.focus()   // clavier de l'utilisateur prêt immédiatement
           return
         }
+        commitTextBox()
         if (textBox) commitTextBox()
     isDrawing.current = true; lastPos.current = pos
     const ctx = ctxRef.current; if (!ctx) return
@@ -1367,6 +1389,7 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
   const handleUndo = () => {
     const canvas = canvasRef.current; const ctx = ctxRef.current; if (!canvas || !ctx || !historyRef.current.length) return
     const prev = historyRef.current.pop()!; redoRef.current.push(ctx.getImageData(0, 0, canvas.width, canvas.height)); ctx.putImageData(prev, 0, 0)
+    setTextItems([])
     sendWs({ type: 'undo', dataUrl: canvas.toDataURL() })
     
     // 🆕 Envoyer l'état complet du canvas après undo
@@ -1384,6 +1407,7 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
     historyRef.current.push(ctx.getImageData(0, 0, canvas.width, canvas.height))
     redoRef.current = []
     fillBg(ctx, canvas, bgColor)
+    setTextItems([])
     sendWs({ type: 'clear' })
     
     // 🆕 Envoyer l'état complet du canvas après avoir effacé
@@ -1393,17 +1417,40 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
     }
   }
 
-    // 🆕 Fige la zone de texte sur le canvas et l'envoie aux autres (ligne par ligne)
+
+
+
+
+    // 🆕 Envoie l'image complète du canvas aux autres (même principe que l'annulation)
+  const syncCanvas = () => {
+    const canvas = canvasRef.current; if (!canvas) return
+    const dataUrl = canvas.toDataURL()
+    sendWs({ type: 'undo', dataUrl })
+    if (role === 'professeur') sendWs({ type: 'canvas_state', dataUrl })
+  }
+
+  // 🆕 Valide la zone de texte : l'écrit sur le canvas et la garde modifiable
   const commitTextBox = () => {
-    const tb = textBox
-    if (!tb) return
+    const tb = textBoxRef.current
+    if (!tb) return                       // déjà validée ou inexistante
+    textBoxRef.current = null             // évite une double validation
     setTextBox(null)
-    if (!tb.text.trim()) return
     const canvas = canvasRef.current; const ctx = ctxRef.current
     if (!canvas || !ctx) return
-    historyRef.current.push(ctx.getImageData(0, 0, canvas.width, canvas.height)); redoRef.current = []
+    if (!tb.text.trim()) { if (tb.editing) syncCanvas(); return }   // texte vidé = zone supprimée
+    if (!tb.editing) { historyRef.current.push(ctx.getImageData(0, 0, canvas.width, canvas.height)); redoRef.current = [] }
     const lh = tb.fontSize * TEXT_LINE_H
-    layoutTextLines(ctx, tb.text, tb.fontSize, tb.w - TEXT_PAD * 2).forEach((ln, i) => {
+    const lines = layoutTextLines(ctx, tb.text, tb.fontSize, tb.w - TEXT_PAD * 2)
+    const h = Math.max(tb.h, lines.length * lh + TEXT_PAD * 2)
+    // on mémorise ce qu'il y a sous la zone pour pouvoir la rééditer plus tard
+    const rx = Math.max(0, Math.floor(tb.x)); const ry = Math.max(0, Math.floor(tb.y))
+    const rw = Math.min(canvas.width, Math.ceil(tb.x + tb.w) + 2) - rx
+    const rh = Math.min(canvas.height, Math.ceil(tb.y + h) + 2) - ry
+    if (rw > 0 && rh > 0) {
+      const under = ctx.getImageData(rx, ry, rw, rh)
+      setTextItems(prev => [...prev, { id: tb.id, x: tb.x, y: tb.y, w: tb.w, h, text: tb.text, color: tb.color, fontSize: tb.fontSize, under, rx, ry }])
+    }
+    lines.forEach((ln, i) => {
       if (!ln.text) return
       const x = ln.rtl ? tb.x + tb.w - TEXT_PAD : tb.x + TEXT_PAD
       const y = tb.y + TEXT_PAD + i * lh + lh / 2
@@ -1413,11 +1460,55 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
       ctx.textAlign = ln.rtl ? 'right' : 'left'
       ctx.textBaseline = 'middle'
       ctx.fillText(ln.text, x, y)
-      sendWs({ type: 'text', text: ln.text, x, y, fontSize: tb.fontSize, color: tb.color, align: ln.rtl ? 'right' : 'left', dir: ln.rtl ? 'rtl' : 'ltr', baseline: 'middle' })
+      if (!tb.editing) sendWs({ type: 'text', text: ln.text, x, y, fontSize: tb.fontSize, color: tb.color, align: ln.rtl ? 'right' : 'left', dir: ln.rtl ? 'rtl' : 'ltr', baseline: 'middle' })
     })
     ctx.direction = 'ltr'; ctx.textAlign = 'start'; ctx.textBaseline = 'alphabetic'
+    if (tb.editing) syncCanvas()          // un texte modifié : on renvoie l'image complète
+  }
+  commitRef.current = commitTextBox
+
+  // 🆕 Supprime la zone de texte (bouton 🗑)
+  const deleteTextBox = () => {
+    const tb = textBoxRef.current
+    if (!tb) return
+    textBoxRef.current = null
+    setTextBox(null)
+    if (tb.editing) syncCanvas()          // le texte avait déjà été retiré du canvas en entrant en édition
   }
 
+  // 🆕 Rouvre un texte déjà validé pour le modifier / déplacer / redimensionner
+  const beginEditItem = (it: TextItem) => {
+    commitTextBox()
+    const canvas = canvasRef.current; const ctx = ctxRef.current
+    if (!canvas || !ctx) return
+    historyRef.current.push(ctx.getImageData(0, 0, canvas.width, canvas.height)); redoRef.current = []
+    ctx.putImageData(it.under, it.rx, it.ry)            // retire le texte du canvas
+    setTextItems(prev => prev.filter(i => i.id !== it.id))
+    setHoverTextId(null)
+    const nb: TextBoxState = { id: it.id, x: it.x, y: it.y, w: it.w, h: it.h, text: it.text, color: it.color, fontSize: it.fontSize, editing: true }
+    textBoxRef.current = nb
+    flushSync(() => setTextBox(nb))
+    const ta = textAreaRef.current
+    if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length) }
+  }
+
+  // Cliquer / toucher n'importe où en dehors de la zone la valide (sauf les boutons marqués data-keep-textbox)
+  useEffect(() => {
+    if (!textBox) return
+    const onDown = (e: PointerEvent) => {
+      const t = e.target as HTMLElement | null
+      if (boxWrapRef.current?.contains(t as Node)) return
+      if (t?.closest?.('[data-keep-textbox]')) return
+      commitRef.current()
+    }
+    document.addEventListener('pointerdown', onDown, true)
+    return () => document.removeEventListener('pointerdown', onDown, true)
+  }, [!!textBox])
+
+
+  
+  
+   
   // 🆕 Déplacer / redimensionner la zone de texte (souris + tactile)
   const dragTextBox = (mode: 'move' | 'resize') => (e: React.PointerEvent) => {
     if (!textBox) return
@@ -1467,7 +1558,7 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
           ))}
         </div>
         <div className="flex gap-1">
-          {COLORS.map(c => <button key={c.value} onClick={() => { setColor(c.value); setTextBox(p => p ? { ...p, color: c.value } : p) }} style={{ background: c.value }} className={`w-6 h-6 rounded-full border-2 transition ${color === c.value ? 'border-indigo-500 scale-110' : 'border-transparent'}`} title={c.label} />)}
+          {COLORS.map(c => <button key={c.value} data-keep-textbox onClick={() => { setColor(c.value); setTextBox(p => p ? { ...p, color: c.value } : p); textAreaRef.current?.focus() }} style={{ background: c.value }} className={`w-6 h-6 rounded-full border-2 transition ${color === c.value ? 'border-indigo-500 scale-110' : 'border-transparent'}`} title={c.label} />)}
         </div>
         <input type="range" min="1" max="20" value={lineWidth} onChange={e => setLineWidth(Number(e.target.value))} className="w-20" />
         <div className="flex items-center gap-1 bg-neutral-100 rounded-lg p-1">
@@ -1477,8 +1568,8 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
           <button onClick={handleUndo} className="px-2 py-1 text-xs bg-neutral-100 hover:bg-neutral-200 rounded transition">↩ Annuler</button>
           {textBox && (
             <>
-              <button onClick={() => setTextBox(p => p ? { ...p, fontSize: Math.max(16, p.fontSize - 8) } : p)} className="px-2 py-1 text-xs bg-neutral-100 hover:bg-neutral-200 rounded transition" title="Réduire le texte">A−</button>
-              <button onClick={() => setTextBox(p => p ? { ...p, fontSize: Math.min(200, p.fontSize + 8) } : p)} className="px-2 py-1 text-xs bg-neutral-100 hover:bg-neutral-200 rounded transition" title="Agrandir le texte">A+</button>
+              <button data-keep-textbox onClick={() => { setTextBox(p => p ? { ...p, fontSize: Math.max(16, p.fontSize - 8) } : p); textAreaRef.current?.focus() }} className="px-2 py-1 text-xs bg-neutral-100 hover:bg-neutral-200 rounded transition" title="Réduire le texte">A−</button>
+              <button data-keep-textbox onClick={() => { setTextBox(p => p ? { ...p, fontSize: Math.min(200, p.fontSize + 8) } : p); textAreaRef.current?.focus() }} className="px-2 py-1 text-xs bg-neutral-100 hover:bg-neutral-200 rounded transition" title="Agrandir le texte">A+</button>
               <button onClick={commitTextBox} className="px-2 py-1 text-xs bg-green-50 hover:bg-green-100 text-green-700 rounded transition font-semibold">✓ Valider le texte</button>
             </>
           )}
@@ -1490,13 +1581,36 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
       </div>
         <div className="flex-1 overflow-auto relative">
         <canvas ref={canvasRef} width={1200} height={700} onMouseDown={startDraw} onMouseMove={draw} onMouseUp={stopDraw} onMouseLeave={stopDraw} onTouchStart={startDraw} onTouchMove={draw} onTouchEnd={stopDraw} style={{ cursor: tool === 'cursor' ? 'default' : tool === 'eraser' ? 'crosshair' : tool === 'text' ? 'text' : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Ccircle cx='8' cy='8' r='7' fill='none' stroke='%23000' stroke-width='1'/%3E%3C/svg%3E") 8 8, crosshair`, display: 'block', touchAction: 'none', maxWidth: '100%' }} />
-                {/* 🆕 Zone de texte type Word : saisie directe avec le clavier de l'utilisateur */}
+
+
+        {/* 🆕 Textes déjà validés : survol/toucher = la zone réapparaît et redevient modifiable */}
+        {tool === 'text' && textItems.map(it => {
+          const canvas = canvasRef.current
+          const sx = canvas ? canvas.offsetWidth / canvas.width : 1
+          const sy = canvas ? canvas.offsetHeight / canvas.height : 1
+          return (
+            <div key={it.id}
+              onPointerEnter={() => setHoverTextId(it.id)}
+              onPointerLeave={() => setHoverTextId(null)}
+              onClick={() => beginEditItem(it)}
+              title="Modifier le texte"
+              style={{
+                position: 'absolute', zIndex: 5, boxSizing: 'border-box', cursor: 'pointer', borderRadius: 4,
+                left: (canvas?.offsetLeft ?? 0) + it.x * sx, top: (canvas?.offsetTop ?? 0) + it.y * sy,
+                width: it.w * sx, height: it.h * sy,
+                border: hoverTextId === it.id ? '2px dashed #6366f1' : '2px dashed transparent',
+              }} />
+          )
+        })}
+          
+          
+          {/* 🆕 Zone de texte type Word : saisie directe avec le clavier de l'utilisateur */}
         {textBox && (() => {
           const canvas = canvasRef.current
           const sx = canvas ? canvas.offsetWidth / canvas.width : 1
           const sy = canvas ? canvas.offsetHeight / canvas.height : 1
           return (
-            <div style={{
+            <div key={textBox.id} ref={boxWrapRef} style={{
               position: 'absolute', zIndex: 10, boxSizing: 'border-box',
               left: (canvas?.offsetLeft ?? 0) + textBox.x * sx, top: (canvas?.offsetTop ?? 0) + textBox.y * sy,
               width: textBox.w * sx, height: textBox.h * sy,
@@ -1508,6 +1622,14 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
                 background: '#6366f1', color: '#fff', fontSize: 10, lineHeight: '18px', textAlign: 'center',
                 borderRadius: '4px 4px 0 0', userSelect: 'none',
               }}>✥ Déplacer</div>
+
+              {/* Bouton supprimer (en haut à droite) */}
+              <button type="button" onClick={deleteTextBox} title="Supprimer la zone de texte" style={{
+                position: 'absolute', right: -2, top: -20, width: 24, height: 18, padding: 0, border: 'none',
+                background: '#ef4444', color: '#fff', fontSize: 11, lineHeight: '18px', cursor: 'pointer',
+                borderRadius: '4px 4px 0 0',
+              }}>🗑</button>
+              
               <textarea
                 ref={textAreaRef}
                 autoFocus
@@ -1517,7 +1639,7 @@ function CollaborativeWhiteboard({ classeId, seanceId, role }: WhiteboardProps) 
                 value={textBox.text}
                 onChange={e => setTextBox(p => p ? { ...p, text: e.target.value } : p)}
                 onKeyDown={e => {
-                  if (e.key === 'Escape') setTextBox(null)
+                  if (e.key === 'Escape') { e.preventDefault(); commitTextBox() }
                   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); commitTextBox() }
                 }}
                 style={{
