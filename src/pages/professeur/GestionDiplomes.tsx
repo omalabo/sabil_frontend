@@ -12,6 +12,7 @@ import { Diplome, ClasseOption } from '../../types'
 import SignaturePad from '../../components/shared/SignaturePad'
 import html2canvas from 'html2canvas'
 import diplomaBg from '../../assets/diplome-bg.jpg'
+import ProgressionModal from '../../components/shared/ProgressionModal'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type TabKey = 'all' | 'active' | 'cancelled'
@@ -201,6 +202,7 @@ export default function GestionDiplomes() {
   const [cancelDiplomeTarget, setCancelDiplomeTarget] = useState<Diplome | null>(null)
   const [deleteDiplomeTarget, setDeleteDiplomeTarget] = useState<Diplome | null>(null)
   const [cancelMotif, setCancelMotif] = useState('')
+  const [progressionTarget, setProgressionTarget] = useState<Diplome | null>(null)
 
   // Hooks RTK
   const statutFilter = tab === 'all' ? '' : tab === 'active' ? 'active' : 'cancelled'
@@ -376,6 +378,7 @@ export default function GestionDiplomes() {
                 setDeleteDiplomeTarget(d)
                 setMenuOpenId(null)
               }}
+              onProgression={() => setProgressionTarget(d)}
             />
           ))}
         </div>
@@ -454,6 +457,15 @@ export default function GestionDiplomes() {
           </div>
         </Modal>
       )}
+
+      {progressionTarget && (
+        <ProgressionModal
+          eleveId={progressionTarget.eleve}
+          eleveNom={progressionTarget.nom_eleve_diplome}
+          onClose={() => setProgressionTarget(null)}
+        />
+      )}
+      
     </div>
   )
 }
@@ -468,6 +480,7 @@ function DiplomeCard({
   onCancel,
   onReactivate,
   onDelete,
+  onProgression,
 }: {
   diplome: Diplome
   menuOpen: boolean
@@ -477,6 +490,7 @@ function DiplomeCard({
   onCancel: () => void
   onReactivate: () => void
   onDelete: () => void
+  onProgression: () => void
 }) {
   const isActive = diplome.statut === 'active'
   const fullUrl = diplome.image_diplome
@@ -563,6 +577,13 @@ function DiplomeCard({
             className="flex-1 px-3 py-1.5 bg-violet-100 hover:bg-violet-200 text-violet-700 text-xs font-semibold rounded-lg"
           >
             ✏️ Modifier
+          </button>
+
+          <button
+            onClick={onProgression}
+            className="flex-1 px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-semibold rounded-lg"
+          >
+            📈 Progression
           </button>
         </div>
       </div>
