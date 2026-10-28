@@ -9,7 +9,7 @@ import { ClasseOption } from '../../types'
 
 import SignaturePad from '../../components/shared/SignaturePad'
 import html2canvas from 'html2canvas'
-
+import ProgressionModal from '../../components/shared/ProgressionModal'
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface FormState {
   classe_id: string
@@ -277,6 +277,7 @@ export default function GenerateurDiplome() {
   const [submitted, setSubmitted] = useState(false)
   const [success, setSuccess] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [progressionOpen, setProgressionOpen] = useState(false)
 
   const previewRef = useRef<HTMLDivElement>(null)
   const exportRef = useRef<HTMLDivElement>(null) // ✅ ref pour l'export HD
@@ -625,6 +626,16 @@ const generateDiplomaImage = useCallback(async (): Promise<Blob> => {
             </div>
           </div>
 
+          <button
+            type="button"
+            onClick={() => setProgressionOpen(true)}
+            disabled={!form.eleve_id}
+            title={!form.eleve_id ? "Sélectionnez d'abord un élève" : ''}
+            className="w-full px-4 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold rounded-lg transition flex items-center justify-center gap-2"
+          >
+            📈 Progression de l'élève
+          </button>
+
           {/* Actions */}
           <div className="flex gap-3">
             <button
@@ -681,6 +692,13 @@ const generateDiplomaImage = useCallback(async (): Promise<Blob> => {
           </div>
         </div>
       </div>
+      {progressionOpen && form.eleve_id && (
+        <ProgressionModal
+          eleveId={form.eleve_id}
+          eleveNom={form.nom_eleve_diplome}
+          onClose={() => setProgressionOpen(false)}
+        />
+      )}
     </div>
   )
 }
