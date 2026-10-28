@@ -142,7 +142,7 @@ export const apiSlice = createApi({
     'CatalogueCours', 'PresencesFacturables','SuiviPresences','FacturesEmises','FactureAdmin',
      'FactureEleve',  'ClasseLight', 'AbsenceEleve', 'PresenceProf', 'AbsencesProfs','Planning','Absence',
      'TachesDirection', 'AdminsAssignables','AnnoncesGroupe', 'MesAnnonces','FacturesEleve','DirectionDashboard',
-      'Diplomes', 'ElevesClasse','Diplome','LivreClasse','MesDiplomes', 'MesEmissions'
+      'Diplomes', 'Progression', 'ElevesClasse','Diplome','LivreClasse','MesDiplomes', 'MesEmissions'
   ],
 
   endpoints: (builder) => ({
@@ -273,6 +273,25 @@ export const apiSlice = createApi({
     }),
 
 
+    // gestion des progression
+    getProgressionCatalogue: builder.query<any[], void>({
+      query: () => '/progressions/catalogue/',
+    }),
+     
+    getProgressionEleve: builder.query<any, string>({
+      query: (eleveId) => `/progressions/?eleve_id=${eleveId}`,
+      providesTags: (_r, _e, eleveId) => [{ type: 'Progression', id: eleveId }],
+    }),
+     
+    saveProgressionEleve: builder.mutation<
+      any,
+      { eleve_id: string; changes: { programme_code: string; item_code: string; statut: 'en_cours' | 'termine' | null }[] }
+    >({
+      query: (body) => ({ url: '/progressions/enregistrer/', method: 'PUT', body }),
+      invalidatesTags: (_r, _e, { eleve_id }) => [{ type: 'Progression', id: eleve_id }],
+    }),
+
+    
     // Élèves d'une classe (select dynamique formulaire diplôme)
     getElevesByClasse: builder.query<EleveOption[], string>({
       query: (classeId) => `classes/${classeId}/eleves/`,
@@ -1477,4 +1496,7 @@ export const {
   useReactivateDiplomeMutation,
   useUpdateDiplomeMutation,
   useDeleteDiplomeMutation,
+  useGetProgressionCatalogueQuery,
+  useGetProgressionEleveQuery,
+  useSaveProgressionEleveMutation,
 } = apiSlice
