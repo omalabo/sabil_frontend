@@ -13,6 +13,8 @@ import SignaturePad from '../../components/shared/SignaturePad'
 import html2canvas from 'html2canvas'
 import diplomaBg from '../../assets/diplome-bg.jpg'
 import ProgressionModal from '../../components/shared/ProgressionModal'
+import BadgePicker from '../../components/shared/BadgePicker'
+import { badgeInfo } from '../../components/shared/badges'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type TabKey = 'all' | 'active' | 'cancelled'
@@ -28,6 +30,7 @@ interface FormState {
   nom_enseignant: string
   delivre_at: string
   signature: string
+  badge: string
 }
 
 // ── Helpers (mêmes que GenerateurDiplome.tsx) ─────────────────────────────────
@@ -552,6 +555,11 @@ function DiplomeCard({
           {diplome.note_ecrite && (
             <span className="bg-neutral-100 px-2 py-0.5 rounded">✍️ {diplome.note_ecrite}/20</span>
           )}
+          {badgeInfo(diplome.badge) && (
+            <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded">
+              🏅 {badgeInfo(diplome.badge)!.label}
+            </span>
+          )}
         </div>
 
         <p className="text-xs text-neutral-400">
@@ -697,6 +705,7 @@ function EditModal({
     nom_enseignant: diplome.professeur_nom || '',
     delivre_at: diplome.delivre_at || '',
     signature: '', // on ne réaffiche pas l'ancienne signature
+    badge: diplome.badge || '',
   })
 
   const exportRef = useRef<HTMLDivElement>(null)
@@ -742,6 +751,7 @@ function EditModal({
       formData.append('note_ecrite', form.note_ecrite)
       formData.append('appreciation', form.appreciation)
       formData.append('delivre_at', form.delivre_at)
+      formData.append('badge', form.badge)   
       formData.append('image_diplome', imageBlob, `diplome-${form.nom_eleve_diplome}-${form.matiere}.png`)
       await onSave(formData)
     } catch (e) {
@@ -820,6 +830,7 @@ function EditModal({
               className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg"
             />
           </div>
+          <BadgePicker value={form.badge} onChange={(code) => handleChange('badge', code)} />
           <div>
             <label className="block text-xs font-medium text-neutral-600 mb-1">Signature (optionnel)</label>
             <SignaturePad onChange={(dataUrl) => handleChange('signature', dataUrl)} width={380} height={130} />
