@@ -1,6 +1,7 @@
 // ── src/pages/MesDiplomes.tsx ─────────────────────────────────────────────────
 import React, { useState } from 'react'
 import { useGetMyDiplomesQuery } from '../../store/apiSlice'
+import ProgressionBadge from '../../components/shared/ProgressionBadge'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface Diplome {
@@ -46,20 +47,6 @@ export default function MesDiplomes() {
     return (
       <div className="p-8 text-center text-neutral-500">
         ⏳ Chargement de vos diplômes…
-      </div>
-    )
-  }
-
-  if (!data.length) {
-    return (
-      <div className="max-w-2xl mx-auto p-8 text-center">
-        <div className="text-6xl mb-4"></div>
-        <h2 className="text-xl font-bold text-neutral-800 mb-2">
-          Aucun diplôme pour le moment
-        </h2>
-        <p className="text-neutral-500">
-          Vos attestations de réussite apparaîtront ici dès qu'elles seront délivrées par vos enseignants.
-        </p>
       </div>
     )
   }
@@ -130,6 +117,21 @@ export default function MesDiplomes() {
           Consultez, imprimez ou téléchargez vos attestations de réussite.
         </p>
       </header>
+
+      {/* ✅ Badge de progression (n'apparaît que si l'élève a déjà commencé un programme) */}
+      <ProgressionBadge />
+
+      {/* Aucun diplôme */}
+      {!data.length && (
+        <div className="max-w-2xl mx-auto p-8 text-center">
+          <h2 className="text-xl font-bold text-neutral-800 mb-2">
+            Aucun diplôme pour le moment
+          </h2>
+          <p className="text-neutral-500">
+            Vos attestations de réussite apparaîtront ici dès qu'elles seront délivrées par vos enseignants.
+          </p>
+        </div>
+      )}
 
       {/* Liste */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
