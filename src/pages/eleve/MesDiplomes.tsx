@@ -2,6 +2,7 @@
 import React, { useState } from 'react'
 import { useGetMyDiplomesQuery } from '../../store/apiSlice'
 import ProgressionBadge from '../../components/shared/ProgressionBadge'
+import { badgeInfo } from '../../components/shared/badges'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface Diplome {
@@ -16,6 +17,7 @@ interface Diplome {
   professeur_nom: string
   created_at: string
   image_diplome: string | null
+  badge?: string | null
 }
 
 // ── Helper pour construire l'URL absolue de l'image ───────────────────────────
@@ -170,7 +172,17 @@ export default function MesDiplomes() {
                     {d.matiere}
                   </h3>
                 </div>
-                <div className="text-3xl">🏆</div>
+                {badgeInfo(d.badge)?.src ? (
+                  <img
+                    src={badgeInfo(d.badge)!.src}
+                    alt={badgeInfo(d.badge)!.label}
+                    title={badgeInfo(d.badge)!.label}
+                    className="h-20 w-auto -mt-1 drop-shadow-md"
+                    draggable={false}
+                  />
+                ) : (
+                  <div className="text-3xl">🏆</div>
+                )}
               </div>
 
               <div className="text-sm text-neutral-600 space-y-1 mb-4">
