@@ -64,6 +64,7 @@ export interface Diplome {
   statut: 'active' | 'cancelled'
   annule_at: string | null
   motif_annulation: string | null
+  badge?: string | null
 }
 
 export interface CreateDiplomePayload {
