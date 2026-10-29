@@ -10,6 +10,7 @@ import { ClasseOption } from '../../types'
 import SignaturePad from '../../components/shared/SignaturePad'
 import html2canvas from 'html2canvas'
 import ProgressionModal from '../../components/shared/ProgressionModal'
+import BadgePicker from '../../components/shared/BadgePicker'
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface FormState {
   classe_id: string
@@ -22,6 +23,7 @@ interface FormState {
   nom_enseignant: string
   delivre_at: string
   signature: string // ✅ dataURL de la signature
+  badge: string
 }
 
 const INITIAL_FORM: FormState = {
@@ -35,6 +37,7 @@ const INITIAL_FORM: FormState = {
   nom_enseignant: '',
   delivre_at: new Date().toISOString().split('T')[0],
   signature: '',
+  badge: '',
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -399,6 +402,7 @@ const generateDiplomaImage = useCallback(async (): Promise<Blob> => {
       formData.append('note_ecrite', form.note_ecrite)
       formData.append('appreciation', form.appreciation)
       formData.append('delivre_at', form.delivre_at)
+      if (form.badge) formData.append('badge', form.badge)
       // ✅ Le fichier image
       formData.append(
         'image_diplome',
@@ -612,7 +616,8 @@ const generateDiplomaImage = useCallback(async (): Promise<Blob> => {
                 className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg focus:ring-2 focus:ring-violet-500 outline-none"
               />
             </div>
-
+            {/* 🏅 Badge */}
+              <BadgePicker value={form.badge} onChange={(code) => handleChange('badge', code)} />
             {/* ✅ SIGNATURE */}
             <div>
               <label className="block text-xs font-medium text-neutral-600 mb-1">
