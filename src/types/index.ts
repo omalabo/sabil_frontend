@@ -61,6 +61,7 @@ export interface Diplome {
   appreciation: string
   delivre_at: string      // YYYY-MM-DD
   created_at: string
+  image_diplome: string | null
   statut: 'active' | 'cancelled'
   annule_at: string | null
   motif_annulation: string | null
