@@ -111,13 +111,36 @@ export default function MesDiplomes() {
     win.document.close()
   }
 
+  // 🏅 Badges de tous les diplômes, sans doublons
+  const badgesUniques = Array.from(new Set((data as Diplome[]).map((d) => d.badge).filter(Boolean)))
+    .map((code) => badgeInfo(code as string))
+    .filter(Boolean) as NonNullable<ReturnType<typeof badgeInfo>>[]
+
   return (
     <div className="max-w-6xl mx-auto p-4 space-y-6">
-      <header>
-        <h1 className="text-2xl font-bold text-neutral-900"> Mes Diplômes</h1>
-        <p className="text-sm text-neutral-500 mt-0.5">
-          Consultez, imprimez ou téléchargez vos attestations de réussite.
-        </p>
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-neutral-900"> Mes Diplômes</h1>
+          <p className="text-sm text-neutral-500 mt-0.5">
+            Consultez, imprimez ou téléchargez vos attestations de réussite.
+          </p>
+        </div>
+
+        {/* 🏅 Badges listés horizontalement à droite du titre */}
+        {badgesUniques.length > 0 && (
+          <div className="flex gap-3 overflow-x-auto max-w-full md:max-w-[58%] pb-1 md:justify-end">
+            {badgesUniques.map((b) => (
+              <img
+                key={b.code}
+                src={b.src}
+                alt={b.label}
+                title={b.label}
+                draggable={false}
+                className="h-16 w-auto shrink-0 drop-shadow-md"
+              />
+            ))}
+          </div>
+        )}
       </header>
 
       {/* ✅ Badge de progression (n'apparaît que si l'élève a déjà commencé un programme) */}
