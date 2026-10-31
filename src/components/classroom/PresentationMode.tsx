@@ -19,6 +19,11 @@ export default function PresentationMode({
 }: Props) {
   const { data } = useGetLivresClasseQuery({ classe_id: classeId })
   const livres = (data?.results ?? data ?? []) as any[]
+  // Un document déposé par la direction n'est visible par la classe qu'une fois publié par le professeur
+  const livresVisibles = useMemo(
+    () => livres.filter(l => l.source !== 'direction' || l.publie_aux_eleves),
+    [livres]
+  )
 
   const isPresenter = role === 'professeur'
   const viewerRef = useRef<DocumentViewerHandle>(null)
@@ -50,8 +55,8 @@ export default function PresentationMode({
 
   const [selectedLivreId, setSelectedLivreId] = useState<string | null>(null)
   const livre = useMemo(
-    () => livres.find(l => l.id === (state.livreId || selectedLivreId)),
-    [livres, state.livreId, selectedLivreId]
+    () => livresVisibles.find(l => l.id === (state.livreId || selectedLivreId)),
+    [livresVisibles, state.livreId, selectedLivreId]
   )
 
   const [localPage, setLocalPage] = useState(1)
@@ -63,8 +68,8 @@ export default function PresentationMode({
   const annoPage = isPresenting ? state.page : localPage
 
   const readyLivres = useMemo(
-    () => livres.filter(l => ['pdf', 'image', 'docx'].includes(l.type_fichier)),
-    [livres]
+    () => livresVisibles.filter(l => ['pdf', 'image', 'docx'].includes(l.type_fichier)),
+    [livresVisibles]
   )
 
   useEffect(() => { setViewPage(null) }, [livre?.id])
