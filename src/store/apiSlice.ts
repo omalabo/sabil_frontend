@@ -616,6 +616,11 @@ previewAdminFacture: builder.mutation<FacturePreview, {
     invalidatesTags: [{ type: 'LivreClasse', id: 'LIST' }],
   }),
 
+  publierLivreClasse: builder.mutation<any, { id: string; publie: boolean }>({
+    query: ({ id, publie }) => ({ url: `/livres-classe/${id}/publier/`, method: 'PATCH', body: { publie } }),
+    invalidatesTags: ['LivresClasse'],
+  }),
+
     
 
     // ==================== SÉANCES ====================
@@ -1491,6 +1496,7 @@ export const {
   useGetLivresClasseQuery,
   useUploadLivreClasseMutation,
   useDeleteLivreClasseMutation,
+  usePublierLivreClasseMutation,
   useGetMyEmittedDiplomesQuery,
   useCancelDiplomeMutation,
   useReactivateDiplomeMutation,
