@@ -128,12 +128,12 @@ export default function LivresClasse({ classeId, role }: { classeId: string; rol
   // ─── Onglets internes ───
   const tabs: { id: SubTab; icon: string; label: string; count?: number; alert?: boolean }[] | null = isProf
     ? [
-        { id: 'bibliotheque', icon: '📚', label: 'Bibliothèque', count: bibliotheque.length },
+        { id: 'bibliotheque', icon: '📚', label: 'Supports', count: bibliotheque.length },
         { id: 'direction', icon: '🏛️', label: 'De la direction', count: enAttente, alert: enAttente > 0 },
       ]
     : isDirection
     ? [
-        { id: 'bibliotheque', icon: '📚', label: 'Bibliothèque', count: bibliotheque.length },
+        { id: 'bibliotheque', icon: '📚', label: 'Supports', count: bibliotheque.length },
         { id: 'direction', icon: '📤', label: 'Envoyés au professeur', count: depotsDirection.length },
       ]
     : null
@@ -252,7 +252,7 @@ export default function LivresClasse({ classeId, role }: { classeId: string; rol
             <span className="text-base leading-none">🔒</span>
             <p className="m-0">
               {isProf
-                ? "Ces fichiers sont visibles par vous seul. Utilisez « Publier aux élèves » pour les ajouter à la bibliothèque de la classe ; vous pouvez les retirer à tout moment."
+                ? "Ces fichiers sont visibles par vous seul. Utilisez « Publier aux élèves » pour les ajouter aux supports de la classe ; vous pouvez les retirer à tout moment."
                 : 'Seul le professeur de cette classe voit ces fichiers. Les élèves n\'y ont accès que si le professeur les publie.'}
             </p>
           </div>
