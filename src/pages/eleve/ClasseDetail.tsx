@@ -2815,14 +2815,14 @@ const handleSendMessage = async (e: React.FormEvent) => {
     { id: 'infos', icon: '💰', label: 'Infos', hasAlert: showFactureBlink || unreadNotifs.some(n => n.classe === activeClassId && (INFOS_BADGE_TYPES[role] || []).includes(n.type)) },
   ];
   // 🆕 La direction voit aussi l'onglet Rediffusion (en plus de salle, chat, infos)
-  if (role === 'direction') return base.filter(t => ['rediffusion', 'salle', 'chat', 'infos'].includes(t.id));
+  if (role === 'direction') return base.filter(t => ['rediffusion', 'salle', 'chat', 'infos', 'editeur', 'livres'].includes(t.id));
   return base;
 }, [role, unreadNotifs, activeClassId, showFactureBlink]);
 
   
 
 useEffect(() => {
-  if (role === 'direction' && !['rediffusion', 'salle', 'chat', 'infos'].includes(activeTab)) {
+  if (role === 'direction' && !['rediffusion', 'salle', 'chat', 'infos', 'editeur', 'livres'].includes(activeTab)) {
     setActiveTab('chat');
   }
 }, [role, activeTab]);
